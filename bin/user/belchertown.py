@@ -2139,6 +2139,72 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         db_binder:        An instance of weewx.manager.DBBinder from which the
                           data should be extracted
     """
+    def get_custom_sql_data(self, binding, archive, line_options):
+        """
+        Execute custom SQL query and return formatted data for Highcharts
+        
+        Args:
+            binding: Database binding
+            archive: Database manager
+            line_options: Dictionary containing custom SQL configuration
+            
+        Returns:
+            Dictionary containing formatted data for charts
+        """
+        loginf("=== get_custom_sql_data method called ===")  # ADD THIS LINE
+        loginf("line_options received: %s" % str(line_options))  # ADD THIS LINE
+        
+        try:
+            custom_sql_query = line_options.get('custom_sql_query', '')
+            loginf("DEBUG: custom_sql_query 2 = '%s'" % custom_sql_query)  # ADD THIS LINE
+            x_column = line_options.get('x_column', None)
+            y_column = line_options.get('y_column', None)
+            
+            if not custom_sql_query:
+                logerr("Custom SQL query is empty for series")
+                return {"use_sql_labels": False, "xAxis_groupby_labels": [], "obsdata": []}
+            
+            logdbg("Executing custom SQL query: %s" % custom_sql_query)
+            
+            # Execute the custom SQL query
+            query_results = archive.genSql(custom_sql_query)
+            
+            xAxis_labels = []
+            obsvalues = []
+            
+            for row in query_results:
+                if x_column and y_column:
+                    # If specific columns are defined, use them by name
+                    # This would require column name mapping which is complex
+                    # For now, assume first column is X, second is Y
+                    if len(row) >= 2:
+                        xAxis_labels.append(row[0])
+                        obsvalues.append(float(row[1]) if row[1] is not None else None)
+                else:
+                    # Default behavior: first column is X, second is Y
+                    if len(row) >= 2:
+                        xAxis_labels.append(row[0])
+                        obsvalues.append(float(row[1]) if row[1] is not None else None)
+                    elif len(row) == 1:
+                        # Only one column, use index as X
+                        xAxis_labels.append(len(xAxis_labels) + 1)
+                        obsvalues.append(float(row[0]) if row[0] is not None else None)
+            
+            logdbg("Custom SQL query returned %d rows" % len(obsvalues))
+            
+            # Return data in the same format as standard xAxis_groupby queries
+            data = {
+                "use_sql_labels": False,  # Let the chart use predefined xAxis_categories
+                "xAxis_groupby_labels": xAxis_labels,
+                "obsdata": obsvalues,
+            }
+            
+            return data
+            
+        except Exception as e:
+            logerr("Error executing custom SQL query: %s" % str(e))
+            logerr("Query was: %s" % custom_sql_query)
+            return {"use_sql_labels": False, "xAxis_groupby_labels": [], "obsdata": []}
 
     def run(self):
         """Main entry point for file generation."""
@@ -2780,7 +2846,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                         weatherRange_obs_lookup,
                         wind_rose_color,
                         special_target_unit,
-                        obs_round
+                        obs_round,
+                        line_options  # ADD THIS PARAMETER
                     )
 
                     # Build the final series data JSON
@@ -2851,8 +2918,19 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         weatherRange_obs_lookup,
         wind_rose_color,
         special_target_unit,
-        obs_round
+        obs_round,
+        line_options=None  # ADD THIS LINE
     ):
+        
+
+        # Check if this is a custom SQL series
+        loginf("=== Checking for custom SQL: line_options=%s ===" % str(line_options))  # ADD THIS
+        if line_options and line_options.get('use_custom_sql', 'false').lower() == 'true':
+            loginf("Custom SQL detected, bypassing standard observation processing")
+            return self.get_custom_sql_data(binding, archive, line_options)
+        else:
+            loginf("No custom SQL detected, continuing with standard processing")  # ADD THIS
+
         """
         Get the SQL vectors for the observation, the aggregate type and the
         interval of time
