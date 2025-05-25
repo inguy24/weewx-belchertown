@@ -13,7 +13,9 @@
             <div class="wx-stn-name">
 		#if $page == "graphs"
                 <h1>$obs.label.graphs_page_header</h1>
-		#else if $page == "records"
+		#else if $page == "marine"
+                <h1>$obs.label.marine_page_header</h1>
+                #else if $page == "records"
                 <h1>$obs.label.records_page_header</h1>
 		#else if $page == "reports"
                 <h1>$obs.label.reports_page_header</h1>

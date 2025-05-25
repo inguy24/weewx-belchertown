@@ -144,7 +144,7 @@
         <link rel="icon" href="$relative_url/favicon.ico" />
         
         #if $Extras.has_key('googleAnalyticsId') and $page != "kiosk"
-        <!-- Global Site Tag (gtag.js) - Google Analytics -->
+        <!-- Google tag (gtag.js) -->
         <script async src="https://www.googletagmanager.com/gtag/js?id=$Extras.googleAnalyticsId"></script>
         <script>
             window.dataLayer = window.dataLayer || [];
@@ -198,9 +198,10 @@
                                         #if $Extras.has_key('highcharts_enabled') and $Extras.highcharts_enabled == '1'
                                         <li class="menu-item menu-item-1"><a href="$relative_url/graphs/" itemprop="url"><span itemprop="name">$obs.label.nav_graphs</span></a></li>
                                         #end if
-                                        <li class="menu-item menu-item-2"><a href="$relative_url/records/" itemprop="url"><span itemprop="name">$obs.label.nav_records</span></a></li>
-                                        <li class="menu-item menu-item-3"><a href="$relative_url/reports/" itemprop="url"><span itemprop="name">$obs.label.nav_reports</span></a></li>
-                                        <li class="menu-item menu-item-4"><a href="$relative_url/about/" itemprop="url"><span itemprop="name">$obs.label.nav_about</span></a></li>
+                                        <li class="menu-item menu-item-2"><a href="$relative_url/marine/" itemprop="url"><span itemprop="name">$obs.label.nav_marine</span></a></li>		
+                                        <li class="menu-item menu-item-3"><a href="$relative_url/records/" itemprop="url"><span itemprop="name">$obs.label.nav_records</span></a></li>
+                                        <li class="menu-item menu-item-4"><a href="$relative_url/reports/" itemprop="url"><span itemprop="name">$obs.label.nav_reports</span></a></li>
+                                        <li class="menu-item menu-item-5"><a href="$relative_url/about/" itemprop="url"><span itemprop="name">$obs.label.nav_about</span></a></li>
                                         #if $Extras.has_key('theme_toggle_enabled') and $Extras.theme_toggle_enabled == '1'
                                         <label class="themeSwitchLabel">
                                             <input type="checkbox" id="themeSwitch" $themeSwitchChecked>
