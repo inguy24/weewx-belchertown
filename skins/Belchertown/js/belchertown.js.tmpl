@@ -48,6 +48,7 @@ function belchertown_debug(message) {
     }
 }
 
+#raw
 /**
  * Phase 2.1: Date Range File Detection Functions
  * Belchertown Date Range Dropdowns - Frontend Integration
@@ -225,11 +226,11 @@ function buildDateRangeFileList(groupName, groupConfig) {
  */
 function formatRollingDisplayName(range) {
     const rangeMap = {
+        '1d': 'Last 24 Hours',
         '7d': 'Last 7 Days',
         '30d': 'Last 30 Days',
         '60d': 'Last 60 Days',
         '90d': 'Last 90 Days',
-        '1d': 'Last 24 Hours',
         '14d': 'Last 2 Weeks',
         '365d': 'Last Year'
     };
@@ -277,7 +278,11 @@ function getDateRangeInfo(groupName) {
  * @returns {Array} Array of group names with date range functionality
  */
 function getDateRangeEnabledGroups() {
-    return Array.from(belchertown_daterange_groups.keys());
+    var groups = [];
+    belchertown_daterange_groups.forEach(function(value, key) {
+        groups.push(key);
+    });
+    return groups;
 }
 
 /**
@@ -527,53 +532,146 @@ function handleDateRangeSelection(filename, displayName, groupName, containerId)
     belchertown_debug("Date Range UI: Selected " + displayName + " (" + filename + ") for " + containerId);
     
     // Update button text
-    const buttonSelector = '[data-container-id="' + containerId + '"] .selected-range-text';
+    var buttonSelector = '[data-container-id="' + containerId + '"] .selected-range-text';
     jQuery(buttonSelector).text(displayName);
     
     // Show loading indicator
-    const loadingSelector = '[data-container-id="' + containerId + '"] .date-range-loading';
+    var loadingSelector = '[data-container-id="' + containerId + '"] .date-range-loading';
     jQuery(loadingSelector).show();
     
     // Close dropdown
-    const dropdownSelector = '[data-container-id="' + containerId + '"] .dropdown-toggle';
+    var dropdownSelector = '[data-container-id="' + containerId + '"] .dropdown-toggle';
     jQuery(dropdownSelector).dropdown('toggle');
     
-    // Load the new chart data (Phase 4 functionality)
+    // Load the new chart data using the enhanced implementation
     loadChartWithDateRange(filename, containerId, groupName)
-        .then(() => {
+        .then(function() {
             // Hide loading indicator on success
             jQuery(loadingSelector).hide();
+            belchertown_debug("Date Range UI: Successfully loaded " + filename);
         })
-        .catch((error) => {
+        .catch(function(error) {
             // Hide loading indicator and show error
             jQuery(loadingSelector).hide();
             belchertown_debug("Date Range UI: Error loading chart - " + error.message);
             
             // Reset button text on error
             jQuery(buttonSelector).text('Error - Try Again');
-            setTimeout(() => {
+            setTimeout(function() {
                 jQuery(buttonSelector).text(displayName);
             }, 3000);
+            
+            // Optionally show user-friendly error message
+            if (typeof error.message === 'string' && error.message.length > 0) {
+                // You could add a toast notification or alert here if desired
+                console.warn("Chart loading failed: " + error.message);
+            }
         });
 }
 
 /**
- * Placeholder function for chart loading (Phase 4 will implement this)
- * @param {string} filename - The JSON filename to load
- * @param {string} containerId - The chart container ID
- * @param {string} groupName - The chart group name
+ * Phase 4B: Complete Frontend Integration for Date Range Dropdowns
+ * Replace the placeholder loadChartWithDateRange() with functional implementation
+ * 
+ * INTEGRATION INSTRUCTIONS:
+ * Replace the existing placeholder function in belchertown.js.tmpl with this code
+ */
+
+/**
+ * Load chart with specific date range by calling existing showChart() method
+ * This maintains backward compatibility while adding date range functionality
+ * 
+ * @param {string} filename - The JSON filename to load (e.g., "test_ranges_7d.json")
+ * @param {string} containerId - The chart container ID (not used but kept for compatibility)
+ * @param {string} groupName - The chart group name (e.g., "test_ranges")
  * @returns {Promise} Promise that resolves when chart is loaded
  */
+
 function loadChartWithDateRange(filename, containerId, groupName) {
     return new Promise((resolve, reject) => {
-        // Phase 4 will implement the actual chart loading logic
-        // For now, just simulate loading
-        setTimeout(() => {
-            belchertown_debug("Date Range UI: Chart loading placeholder - would load " + filename);
-            resolve();
-        }, 500);
+        belchertown_debug("Date Range: Loading chart from file: " + filename + " for group: " + groupName);
+        
+        try {
+            // Extract the base filename without .json extension
+            var jsonFileBase = filename.replace('.json', '');
+            
+            // Determine if we need prepend_renderTo based on current page context
+            var usePrependRenderTo = false;
+            
+            // Check if we're on the "all" graphs page by looking for graph-outer-all class
+            if (jQuery('.graph-outer-all').length > 0) {
+                usePrependRenderTo = true;
+                belchertown_debug("Date Range: Detected 'all' graphs page, using prepend_renderTo");
+            }
+            
+            // Clear existing charts for this group before loading new ones
+            clearChartsForGroup(groupName, usePrependRenderTo);
+            
+            // Call the existing showChart method with the date range filename
+            // This maintains full backward compatibility
+            showChart(jsonFileBase, usePrependRenderTo);
+            
+            // The showChart function is async but doesn't return a promise
+            // We'll resolve after a short delay to allow chart rendering
+            setTimeout(function() {
+                belchertown_debug("Date Range: Chart loading completed for " + filename);
+                resolve();
+            }, 1000);
+            
+        } catch (error) {
+            belchertown_debug("Date Range: Error loading chart - " + error.message);
+            reject(error);
+        }
     });
 }
+
+/**
+ * Clear existing charts for a specific group before loading new date range
+ * This prevents chart overlap and ensures clean transitions
+ * 
+ * @param {string} groupName - The chart group name
+ * @param {boolean} usePrependRenderTo - Whether to use prepended container IDs
+ */
+function clearChartsForGroup(groupName, usePrependRenderTo) {
+    belchertown_debug("Date Range: Clearing existing charts for group: " + groupName);
+    
+    try {
+        // Get all chart containers for this group
+        var containerSelector;
+        
+        if (usePrependRenderTo) {
+            // For "all" graphs page, containers are prefixed with group name
+            containerSelector = '[id^="' + groupName + '_"]';
+        } else {
+            // For single group pages, find containers that match group charts
+            // We'll identify these by looking for existing Highcharts instances
+            containerSelector = '[id*="chart"], [id*="roseplt"], [id*="Graph"], [id*="Info"]';
+        }
+        
+        jQuery(containerSelector).each(function() {
+            var $container = jQuery(this);
+            var containerId = $container.attr('id');
+            
+            // Check if this container has a Highcharts chart
+            var chart = Highcharts.charts.find(function(chart) {
+                return chart && chart.renderTo && chart.renderTo.id === containerId;
+            });
+            
+            if (chart) {
+                belchertown_debug("Date Range: Destroying chart in container: " + containerId);
+                chart.destroy();
+            }
+            
+            // Clear the container HTML to ensure clean slate
+            $container.empty();
+        });
+        
+    } catch (error) {
+        belchertown_debug("Date Range: Error clearing charts - " + error.message);
+        // Continue anyway - chart loading might still work
+    }
+}
+
 
 /**
  * Create monthly selector UI with dual dropdowns for year and month
@@ -659,24 +757,24 @@ function createMonthlySelector(monthlyFiles, groupName, containerId) {
  */
 function attachMonthlySelectors(groupName) {
     // Handle year change - update available months
-    jQuery(`.monthly-year-select[data-group-name="${groupName}"]`).off('change.monthly').on('change.monthly', function() {
-        const $yearSelect = jQuery(this);
-        const selectedYear = $yearSelect.val();
-        const containerId = $yearSelect.data('container-id');
-        const monthSelectId = `monthly-month-${containerId}`;
+    jQuery('.monthly-year-select[data-group-name="' + groupName + '"]').off('change.monthly').on('change.monthly', function() {
+        var yearSelect = jQuery(this);
+        var selectedYear = yearSelect.val();
+        var containerId = yearSelect.data('container-id');
+        var monthSelectId = 'monthly-month-' + containerId;
         
         updateAvailableMonths(groupName, selectedYear, monthSelectId);
     });
     
     // Handle Go button click
-    jQuery(`.monthly-go-button[data-group-name="${groupName}"]`).off('click.monthly').on('click.monthly', function() {
-        const $button = jQuery(this);
-        const containerId = $button.data('container-id');
-        const yearSelectId = $button.data('year-select');
-        const monthSelectId = $button.data('month-select');
+    jQuery('.monthly-go-button[data-group-name="' + groupName + '"]').off('click.monthly').on('click.monthly', function() {
+        var button = jQuery(this);
+        var containerId = button.data('container-id');
+        var yearSelectId = button.data('year-select');
+        var monthSelectId = button.data('month-select');
         
-        const selectedYear = jQuery(`#${yearSelectId}`).val();
-        const selectedMonth = jQuery(`#${monthSelectId}`).val();
+        var selectedYear = jQuery('#' + yearSelectId).val();
+        var selectedMonth = jQuery('#' + monthSelectId).val();
         
         if (!selectedMonth) {
             alert('Please select a month');
@@ -684,25 +782,25 @@ function attachMonthlySelectors(groupName) {
         }
         
         // Build filename and display name
-        const filename = `${groupName}_${selectedYear}-${selectedMonth}.json`;
-        const monthNames = [
+        var filename = groupName + '_' + selectedYear + '-' + selectedMonth + '.json';
+        var monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
         ];
-        const displayName = monthNames[parseInt(selectedMonth) - 1] + ' ' + selectedYear;
+        var displayName = monthNames[parseInt(selectedMonth) - 1] + ' ' + selectedYear;
         
         // Find the actual chart container (not the dropdown container)
-        const chartContainerId = containerId;
+        var chartContainerId = containerId;
         
         handleDateRangeSelection(filename, displayName, groupName, chartContainerId);
     });
     
     // Initialize month options for default year selection
-    jQuery(`.monthly-year-select[data-group-name="${groupName}"]`).each(function() {
-        const $yearSelect = jQuery(this);
-        const selectedYear = $yearSelect.val();
-        const containerId = $yearSelect.data('container-id');
-        const monthSelectId = `monthly-month-${containerId}`;
+    jQuery('.monthly-year-select[data-group-name="' + groupName + '"]').each(function() {
+        var yearSelect = jQuery(this);
+        var selectedYear = yearSelect.val();
+        var containerId = yearSelect.data('container-id');
+        var monthSelectId = 'monthly-month-' + containerId;
         
         if (selectedYear) {
             updateAvailableMonths(groupName, selectedYear, monthSelectId);
@@ -717,33 +815,36 @@ function attachMonthlySelectors(groupName) {
  * @param {string} monthSelectId - The month select element ID
  */
 function updateAvailableMonths(groupName, selectedYear, monthSelectId) {
-    const dateRangeInfo = getDateRangeInfo(groupName);
+    var dateRangeInfo = getDateRangeInfo(groupName);
     if (!dateRangeInfo) return;
     
     // Find available months for the selected year
-    const availableMonths = dateRangeInfo.monthlyRanges
-        .filter(f => f.year === selectedYear)
-        .map(f => f.month)
-        .sort();
+    var availableMonths = [];
+    for (var i = 0; i < dateRangeInfo.monthlyRanges.length; i++) {
+        if (dateRangeInfo.monthlyRanges[i].year === selectedYear) {
+            availableMonths.push(dateRangeInfo.monthlyRanges[i].month);
+        }
+    }
+    availableMonths.sort();
     
-    const $monthSelect = jQuery(`#${monthSelectId}`);
+    var monthSelect = jQuery('#' + monthSelectId);
     
     // Enable/disable month options based on availability
-    $monthSelect.find('option').each(function() {
-        const $option = jQuery(this);
-        const monthValue = $option.val();
+    monthSelect.find('option').each(function() {
+        var option = jQuery(this);
+        var monthValue = option.val();
         
         if (monthValue === '') return; // Skip "Select Month" option
         
-        if (availableMonths.includes(monthValue)) {
-            $option.prop('disabled', false).show();
+        if (availableMonths.indexOf(monthValue) !== -1) {
+            option.prop('disabled', false).show();
         } else {
-            $option.prop('disabled', true).hide();
+            option.prop('disabled', true).hide();
         }
     });
     
     // Reset month selection
-    $monthSelect.val('');
+    monthSelect.val('');
 }
 
 /**
@@ -763,7 +864,7 @@ function applyDateRangeTheme() {
  * This should be called after charts are loaded but before they're rendered
  */
 function initializeDateRangeDropdowns() {
-    const enabledGroups = getDateRangeEnabledGroups();
+    var enabledGroups = getDateRangeEnabledGroups();
     
     if (enabledGroups.length === 0) {
         belchertown_debug("Date Range UI: No chart groups have date range functionality enabled");
@@ -772,15 +873,17 @@ function initializeDateRangeDropdowns() {
     
     belchertown_debug("Date Range UI: Initializing dropdowns for " + enabledGroups.length + " groups");
     
-    enabledGroups.forEach(groupName => {
-        // Use setTimeout to ensure chart containers exist before inserting dropdowns
-        setTimeout(() => {
-            insertDateRangeDropdowns(groupName);
-        }, 100);
-    });
+    for (var i = 0; i < enabledGroups.length; i++) {
+        (function(groupName) {
+            // Use setTimeout to ensure chart containers exist before inserting dropdowns
+            setTimeout(function() {
+                insertDateRangeDropdowns(groupName);
+            }, 100);
+        })(enabledGroups[i]);
+    }
     
     // Apply initial theme
-    setTimeout(() => {
+    setTimeout(function() {
         applyDateRangeTheme();
     }, 200);
 }
@@ -789,20 +892,35 @@ function initializeDateRangeDropdowns() {
 // Call initializeDateRangeDropdowns() after showChart() calls are made
 // For example, in the homepage after showChart(homepage_graphgroup) is called
 
-jQuery(document).ready(function() {
-    // Universal initialization - load date range configuration on every page
-    // This ensures date range dropdowns work regardless of where charts are placed
+/**
+ * Integration hook for the main Belchertown initialization
+ * Add this to the existing jQuery(document).ready() section in belchertown.js.tmpl
+ */
+function integrateDateRangeSystem() {
+    // This should be called after loadDateRangeConfiguration() succeeds
     loadDateRangeConfiguration().then(function(success) {
         if (success) {
             belchertown_debug("Date Range: Configuration loaded successfully");
-            // Initialize dropdowns after a short delay to ensure charts are created
+            
+            // Initialize dropdowns after a delay to ensure charts are created
             setTimeout(function() {
                 initializeDateRangeDropdowns();
             }, 1000);
+            
+            // Hook into existing chart loading events if needed
+            // This allows date range dropdowns to appear even when charts are loaded dynamically
+            
         } else {
             belchertown_debug("Date Range: Configuration failed to load");
         }
     });
+}
+#end raw
+
+jQuery(document).ready(function() {
+    // Universal initialization - load date range configuration on every page
+    // This ensures date range dropdowns work regardless of where charts are placed
+    integrateDateRangeSystem();
     
     // Bootstrap hover tooltips
     jQuery(function() {
@@ -1205,7 +1323,7 @@ function highcharts_tooltip_factory(obsvalue, point_obsType, highchartsReturn = 
             ordinal = "$ordinate_names[12]"; // W
         } else if (obsvalue >= 281.26 && obsvalue <= 303.75) {
             ordinal = "$ordinate_names[13]"; // WNW
-        } else if (obsvalue >= 303.76 && obsvalue <= 326.25) {
+        } else if (obsvalue >= 303.76 && apsvalue <= 326.25) {
             ordinal = "$ordinate_names[14]"; // NW
         } else if (obsvalue >= 326.26 && obsvalue <= 348.75) {
             ordinal = "$ordinate_names[15]"; // NNW
@@ -2235,6 +2353,7 @@ function update_forecast_data(data) {
 }
 
 #end if
+
 //  function to display selected forecast according to value of interval (1, 3 or 24); 0 hides all forecasts
 function forecast_select(interval) {
         if (interval == 0) {
