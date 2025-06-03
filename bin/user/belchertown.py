@@ -3630,11 +3630,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     line_options = accumulateLeaves(self.chart_dict[chart_group][plotname][line_name])
 
                     if plotname == "avgclimate2025":
-                        logdbg("TRACE %s: aggregate_interval after accumulateLeaves = %s" % (line_name, line_options.get('aggregate_interval')))
-                        logdbg("AVGCLIMATE DEBUG for %s:" % line_name)
-                        logdbg("  accumulateLeaves result keys: %s" % str(list(line_options.keys())))
-                        agg_int_value = line_options.get('aggregate_interval', 'STILL_NOT_FOUND')
-                        logdbg("  aggregate_interval from accumulateLeaves: %s" % str(agg_int_value))
+                        loginf("AVGCLIMATE TRACE: %s aggregate_interval = %s" % (line_name, line_options.get('aggregate_interval')))
                         
                     # Find the observation type
                     observation_type = line_options.get("observation_type", line_name)
@@ -3658,13 +3654,12 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                             aggregate_interval_raw = line_options.get("aggregate_interval")
                             logdbg("REGEN DEBUG: aggregate_interval_raw = %s (type: %s)" % (str(aggregate_interval_raw), type(aggregate_interval_raw)))
                             if plotname == "avgclimate2025":
-                                logdbg("TRACE %s: aggregate_interval_raw before nominal_spans = %s" % (line_name, aggregate_interval_raw))
+                                loginf("AVGCLIMATE BEFORE nominal_spans: %s raw = %s" % (line_name, aggregate_interval_raw))
 
+                            aggregate_interval = weeutil.weeutil.nominal_spans(aggregate_interval_raw) 
 
-                            aggregate_interval = weeutil.weeutil.nominal_spans(aggregate_interval_raw)
-                            logdbg("REGEN DEBUG: nominal_spans result = %s (type: %s)" % (str(aggregate_interval), type(aggregate_interval)))
                             if plotname == "avgclimate2025":
-                                logdbg("TRACE %s: aggregate_interval after nominal_spans = %s" % (line_name, aggregate_interval))
+                                loginf("AVGCLIMATE AFTER nominal_spans: %s result = %s" % (line_name, aggregate_interval))
                             
                         except KeyError:
                             logdbg("Aggregate interval required for aggregate type %s, skipping line type %s" % (aggregate_type, observation_type))
