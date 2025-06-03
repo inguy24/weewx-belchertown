@@ -408,6 +408,8 @@ class getData(SearchList):
                     timespan_chart_list.append(plotname)
             charts[chart_timespan] = timespan_chart_list
 
+            print(f"DEBUG: chart_timespan={chart_timespan}, timespan_chart_list={timespan_chart_list}")
+
         # Create a dict of chart group titles for use on the graphs page
         # header. If no title defined, use the chart group name
         graphpage_titles = OrderedDict()
@@ -2206,8 +2208,52 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             logerr("Query was: %s" % custom_sql_query)
             return {"use_sql_labels": False, "xAxis_groupby_labels": [], "obsdata": []}
 
+    def convert_time_length_to_seconds(self, time_length_value):
+        """
+        Convert time_length values to seconds for aggregate_interval calculations.
+        
+        Args:
+            time_length_value: Can be int (seconds), string digit, or keyword
+            
+        Returns:
+            int: Time length in seconds, or None if conversion fails
+        """
+        try:
+            if isinstance(time_length_value, int):
+                return time_length_value
+            elif isinstance(time_length_value, str):
+                if time_length_value.isdigit():
+                    return int(time_length_value)
+                else:
+                    # Keyword mappings based on weewx timespan patterns
+                    keyword_mappings = {
+                        "today": 86400,
+                        "week": 604800, 
+                        "month": 2592000,
+                        "year": 31536000,
+                        "hour_ago_to_now": 3600,
+                        "day_ago_to_now": 86400,
+                        "week_ago_to_now": 604800,
+                        "month_ago_to_now": 2592000,
+                        "year_ago_to_now": 31536000
+                    }
+                    return keyword_mappings.get(time_length_value, None)
+            return None
+        except (ValueError, TypeError):
+            return None
+        
     def run(self):
         """Main entry point for file generation."""
+    # TEST nominal_spans behavior
+        try:
+            loginf("Testing nominal_spans('month'): %s" % str(weeutil.weeutil.nominal_spans("month")))
+        except Exception as e:
+            loginf("nominal_spans('month') failed with error: %s" % str(e))
+        
+        try:
+            loginf("Testing nominal_spans(2629800): %s" % str(weeutil.weeutil.nominal_spans(2629800)))
+        except Exception as e:
+            loginf("nominal_spans(2629800) failed with error: %s" % str(e))
 
         chart_config_path = os.path.join(
             self.config_dict["WEEWX_ROOT"],
@@ -2227,6 +2273,83 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             self.chart_dict = configobj.ConfigObj(
                 default_chart_config_path, file_error=True
             )
+
+        date_range_groups = {}
+        
+        for chart_group in self.chart_dict.sections:
+            try:
+                # Get the accumulated options for this chart group
+                group_options = accumulateLeaves(self.chart_dict[chart_group])
+                
+                # Check if date ranges are enabled for this group
+                enable_date_ranges = group_options.get('enable_date_ranges', 'false')
+                if isinstance(enable_date_ranges, bool):
+                    enable_date_ranges = str(enable_date_ranges).lower()
+                else:
+                    enable_date_ranges = str(enable_date_ranges).lower()
+                
+                if enable_date_ranges in ('true', '1', 'yes'):
+                    loginf("Date range functionality enabled for chart group: %s" % chart_group)
+                    
+                    # Parse rolling ranges (7d, 30d, etc.)
+                    rolling_ranges_raw = group_options.get('rolling_ranges', [])
+                    rolling_ranges = []
+                    
+                    # Handle both string and list inputs from configobj
+                    if isinstance(rolling_ranges_raw, list):
+                        # Already a list from configobj
+                        rolling_ranges = [r.strip() for r in rolling_ranges_raw if r and r.strip()]
+                    elif isinstance(rolling_ranges_raw, str):
+                        # String that needs splitting
+                        if rolling_ranges_raw:
+                            rolling_ranges = [r.strip() for r in rolling_ranges_raw.split(',') if r.strip()]
+                    
+                    # Parse available years (2024, 2023, etc.)
+                    available_years_raw = group_options.get('available_years', [])
+                    available_years = []
+                    
+                    # Handle both string and list inputs from configobj
+                    if isinstance(available_years_raw, list):
+                        # Already a list from configobj
+                        available_years = [str(y).strip() for y in available_years_raw if y and str(y).strip()]
+                    elif isinstance(available_years_raw, str):
+                        # String that needs splitting
+                        if available_years_raw:
+                            available_years = [y.strip() for y in available_years_raw.split(',') if y.strip()]
+                    
+                    # Check if monthly breakdown is enabled
+                    enable_monthly = group_options.get('enable_monthly_breakdown', 'false')
+                    if isinstance(enable_monthly, bool):
+                        enable_monthly_breakdown = enable_monthly
+                    else:
+                        enable_monthly_breakdown = str(enable_monthly).lower() in ('true', '1', 'yes')
+                    
+                    # Store the configuration for this chart group
+                    date_range_groups[chart_group] = {
+                        'rolling_ranges': rolling_ranges,
+                        'available_years': available_years,
+                        'enable_monthly_breakdown': enable_monthly_breakdown
+                    }
+                    
+                    # Debug logging
+                    if rolling_ranges:
+                        logdbg("  Rolling ranges: %s" % ', '.join(rolling_ranges))
+                    if available_years:
+                        logdbg("  Available years: %s" % ', '.join(available_years))
+                    if enable_monthly_breakdown:
+                        logdbg("  Monthly breakdown: enabled")
+                    
+            except Exception as e:
+                # Log error but continue processing - don't break existing functionality
+                logerr("Error processing date range configuration for chart group '%s': %s" % (chart_group, e))
+                import traceback
+                logdbg("Full traceback: %s" % traceback.format_exc())
+                continue
+
+        if date_range_groups:
+            loginf("Found %d chart group(s) with date range functionality enabled" % len(date_range_groups))
+        else:
+            logdbg("No chart groups have date range functionality enabled")
 
         self.converter = weewx.units.Converter.fromSkinDict(self.skin_dict)
         self.formatter = weewx.units.Formatter.fromSkinDict(self.skin_dict)
@@ -2386,6 +2509,9 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 plottype = plot_options.get("type", "line")
                 output[chart_group][plotname]["options"]["type"] = plottype
 
+                # Extract force_full_year option for null padding control
+                force_full_year = to_bool(plot_options.get("force_full_year", False))
+
                 # gapsize has to be in milliseconds. Take the graphs.conf value
                 # and multiply by 1000
                 gapsize = plot_options.get(
@@ -2470,6 +2596,12 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     start_at_beginning_of_month = to_bool(
                         line_options.get("start_at_beginning_of_month", False)
                     )  # Should our timespan start at the beginning of a month?
+
+                    # DEBUG: Check timespan calculation inputs
+                    print(f"DEBUG: time_length={time_length}")
+                    print(f"DEBUG: year_specific={year_specific}")  
+                    print(f"DEBUG: force_full_year={force_full_year}")
+
                     if time_length == "today":
                         minstamp, maxstamp = archiveDaySpan(timespan.stop)
                     elif time_length == "week":
@@ -2847,7 +2979,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                         wind_rose_color,
                         special_target_unit,
                         obs_round,
-                        line_options  # ADD THIS PARAMETER
+                        line_options,
+                        force_full_year
                     )
 
                     # Build the final series data JSON
@@ -2896,11 +3029,1028 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             with open(json_filename, mode="w") as jf:
                 jf.write(json.dumps(output[chart_group], indent=4))
 
+            if chart_group in date_range_groups:
+                loginf("Generating date range variations for chart group: %s" % chart_group)
+                try:
+                    self.generate_date_range_variations(
+                        chart_group, 
+                        output[chart_group], 
+                        date_range_groups[chart_group],
+                        html_dest_dir,
+                        archive  # NEW: pass database manager for bounds checking
+                    )
+                except Exception as e:
+                    # Log error but continue - don't break base chart generation
+                    logerr("Error generating date range variations for '%s': %s" % (chart_group, e))
+                    import traceback
+                    logdbg("Full traceback: %s" % traceback.format_exc())
+
             # Save the graphs.conf to a json file for future debugging
             chart_json_filename = html_dest_dir + "/graphs.json"
             with open(chart_json_filename, mode="w") as cjf:
                 cjf.write(json.dumps(self.chart_dict, indent=4))
+    
+    def generate_date_range_variations(self, chart_group, base_output, date_range_config, html_dest_dir, archive):
+        """
+        Generate additional JSON files for rolling, yearly, and monthly date ranges.
+        Enhanced with database bounds filtering and optimized generation logic.
+        
+        Args:
+            chart_group: The name of the chart group (e.g., "test_ranges")
+            base_output: The base chart data structure
+            date_range_config: Dict containing rolling_ranges, available_years, enable_monthly_breakdown
+            html_dest_dir: Directory where JSON files should be written
+            archive: Database manager for bounds checking
+        """
+        
+        generated_files = []
+        
+        try:
+            # Get database bounds and filter configuration
+            start_ts, stop_ts, valid_years, valid_months = self.get_database_bounds_info(archive)
+            
+            if not valid_years:
+                logdbg("No valid years found in database, skipping date range generation for %s" % chart_group)
+                return
+            
+            filtered_years, filtered_months = self.filter_date_config_to_database(
+                date_range_config, valid_years, valid_months
+            )
+            
+            # Generate rolling range files (7d, 30d, etc.) - ALWAYS generated
+            rolling_ranges = date_range_config.get('rolling_ranges', [])
+            if isinstance(rolling_ranges, str):
+                rolling_ranges = [r.strip() for r in rolling_ranges.split(',') if r.strip()]
+            
+            for period in rolling_ranges:
+                if period:  # Skip empty periods
+                    try:
+                        rolling_filename = os.path.join(html_dest_dir, "%s_%s.json" % (chart_group, period))
+                        rolling_output = self.generate_rolling_range_data(chart_group, base_output, period)
+                        
+                        with open(rolling_filename, mode="w") as rf:
+                            rf.write(json.dumps(rolling_output, indent=4))
+                        
+                        generated_files.append("%s_%s.json" % (chart_group, period))
+                        logdbg("Generated rolling range file: %s_%s.json" % (chart_group, period))
+                        
+                    except Exception as e:
+                        logerr("Error generating rolling range file for %s_%s: %s" % (chart_group, period, e))
+            
+            # Check monthly breakdown setting to determine generation strategy
+            enable_monthly_breakdown = date_range_config.get('enable_monthly_breakdown', False)
+            if isinstance(enable_monthly_breakdown, str):
+                enable_monthly_breakdown = enable_monthly_breakdown.lower() in ('true', '1', 'yes')
+            
+            if enable_monthly_breakdown:
+                # MONTHLY BREAKDOWN ENABLED: Generate only monthly files, skip yearly files
+                loginf("Monthly breakdown enabled for '%s' - generating monthly files only" % chart_group)
+                
+                for (year, month) in filtered_months:
+                    month_str = "%02d" % month  # Zero-pad month (01, 02, etc.)
+                    try:
+                        monthly_filename = os.path.join(html_dest_dir, "%s_%s-%s.json" % (chart_group, year, month_str))
+                        monthly_output = self.generate_monthly_range_data(chart_group, base_output, str(year), month_str)
+                        
+                        with open(monthly_filename, mode="w") as mf:
+                            mf.write(json.dumps(monthly_output, indent=4))
+                        
+                        generated_files.append("%s_%s-%s.json" % (chart_group, year, month_str))
+                        logdbg("Generated monthly range file: %s_%s-%s.json" % (chart_group, year, month_str))
+                        
+                    except Exception as e:
+                        logerr("Error generating monthly range file for %s_%s-%s: %s" % (chart_group, year, month_str, e))
+                
+                logdbg("Monthly breakdown mode - skipped yearly file generation for '%s'" % chart_group)
+                
+            else:
+                # YEARLY BREAKDOWN: Generate only yearly files, skip monthly files
+                loginf("Yearly breakdown enabled for '%s' - generating yearly files only" % chart_group)
+                
+                for year in filtered_years:
+                    try:
+                        yearly_filename = os.path.join(html_dest_dir, "%s_%s.json" % (chart_group, year))
+                        yearly_output = self.generate_yearly_range_data(chart_group, base_output, str(year))
+                        
+                        with open(yearly_filename, mode="w") as yf:
+                            yf.write(json.dumps(yearly_output, indent=4))
+                        
+                        generated_files.append("%s_%s.json" % (chart_group, year))
+                        logdbg("Generated yearly range file: %s_%s.json" % (chart_group, year))
+                        
+                    except Exception as e:
+                        logerr("Error generating yearly range file for %s_%s: %s" % (chart_group, year, e))
+                
+                logdbg("Yearly breakdown mode - skipped monthly file generation for '%s'" % chart_group)
+            
+            if generated_files:
+                loginf("Successfully generated %d date range files for chart group '%s'" % (len(generated_files), chart_group))
+                if enable_monthly_breakdown:
+                    loginf("  - %d monthly files (filtered to actual data)" % len([f for f in generated_files if '-' in f and f.endswith('.json')]))
+                else:
+                    loginf("  - %d yearly files (filtered to actual data)" % len([f for f in generated_files if '-' not in f and f.endswith('.json') and not any(p in f for p in rolling_ranges)]))
+                loginf("  - %d rolling range files" % len([f for f in generated_files if any(p in f for p in rolling_ranges)]))
+            else:
+                logdbg("No date range files generated for chart group '%s'" % chart_group)
+                
+        except Exception as e:
+            logerr("Error in generate_date_range_variations for chart group '%s': %s" % (chart_group, e))
+            import traceback
+            logdbg("Full traceback: %s" % traceback.format_exc())
+            
+    def generate_rolling_range_data(self, chart_group, base_output, period):
+        """
+        Generate chart data for rolling time periods (7d, 30d, etc.)
+        
+        Args:
+            chart_group: Chart group name
+            base_output: Base chart structure to copy
+            period: Rolling period (e.g., '7d', '30d')
+            
+        Returns:
+            Modified chart data with updated time_length
+        """
+        
+        # Create a deep copy of the base output to avoid modifying the original
+        import copy
+        rolling_output = copy.deepcopy(base_output)
+        
+        # Convert period format (7d, 30d) to seconds for time_length
+        period_seconds = self.parse_period_to_seconds(period)
+        
+        if period_seconds:
+            # Update time_length for all plotnames in this chart group
+            for plotname in rolling_output:
+                if plotname not in ['belchertown_version', 'generated_timestamp', 'colors', 'chartgroup_title', 'tooltip_date_format', 'credits', 'credits_url', 'credits_position']:
+                    # This is a plot, regenerate its data with the new timespan
+                    try:
+                        rolling_output[plotname] = self.regenerate_plot_data(chart_group, plotname, period_seconds)
+                        print("DEBUG: After assignment, rolling_output[%s]['options']['gapsize']:" % plotname, rolling_output[plotname]["options"].get("gapsize", "NOT SET"))
+                    except Exception as e:
+                        logdbg("Error regenerating plot data for %s.%s with period %s: %s" % (chart_group, plotname, period, e))
+        
+        print("DEBUG: Final rolling_output gapsize for chart1:", rolling_output.get("chart1", {}).get("options", {}).get("gapsize", "NOT FOUND"))
+        return rolling_output
 
+    def generate_yearly_range_data(self, chart_group, base_output, year):
+        """
+        Generate chart data for specific years (2024, 2023, etc.)
+        
+        Args:
+            chart_group: Chart group name
+            base_output: Base chart structure to copy  
+            year: Year string (e.g., '2024', '2023')
+            
+        Returns:
+            Modified chart data with year_specific time_length
+        """
+        
+        import copy
+        yearly_output = copy.deepcopy(base_output)
+        
+        # Update the chart data to use year_specific timespan
+        for plotname in yearly_output:
+            if plotname not in ['belchertown_version', 'generated_timestamp', 'colors', 'chartgroup_title', 'tooltip_date_format', 'credits', 'credits_url', 'credits_position']:
+                try:
+                    yearly_output[plotname] = self.regenerate_plot_data(chart_group, plotname, 'year_specific', year_specific=year, force_full_year=True)
+                except Exception as e:
+                    logdbg("Error regenerating plot data for %s.%s with year %s: %s" % (chart_group, plotname, year, e))
+        
+        return yearly_output
+
+    def generate_monthly_range_data(self, chart_group, base_output, year, month):
+        """
+        Generate chart data for specific months (2024-01, 2024-02, etc.)
+        
+        Args:
+            chart_group: Chart group name
+            base_output: Base chart structure to copy
+            year: Year string (e.g., '2024') 
+            month: Month string (e.g., '01', '02')
+            
+        Returns:
+            Modified chart data with month_specific time_length
+        """
+        
+        import copy
+        monthly_output = copy.deepcopy(base_output)
+        
+        # Update the chart data to use month_specific timespan
+        for plotname in monthly_output:
+            if plotname not in ['belchertown_version', 'generated_timestamp', 'colors', 'chartgroup_title', 'tooltip_date_format', 'credits', 'credits_url', 'credits_position']:
+                try:
+                    monthly_output[plotname] = self.regenerate_plot_data(chart_group, plotname, 'month_specific', year_specific=year, month_specific=month)
+                except Exception as e:
+                    logdbg("Error regenerating plot data for %s.%s with year-month %s-%s: %s" % (chart_group, plotname, year, month, e))
+        
+        return monthly_output
+
+    def parse_period_to_seconds(self, period):
+        """
+        Convert period strings (7d, 30d, 1h) to seconds
+        
+        Args:
+            period: Period string (e.g., '7d', '30d', '1h')
+            
+        Returns:
+            Number of seconds, or None if parsing fails
+        """
+        
+        try:
+            if period.endswith('d'):
+                # Days
+                days = int(period[:-1])
+                return days * 86400  # 86400 seconds per day
+            elif period.endswith('h'):
+                # Hours  
+                hours = int(period[:-1])
+                return hours * 3600  # 3600 seconds per hour
+            elif period.endswith('w'):
+                # Weeks
+                weeks = int(period[:-1])
+                return weeks * 604800  # 604800 seconds per week
+            else:
+                logerr("Unknown period format: %s" % period)
+                return None
+        except ValueError as e:
+            logerr("Error parsing period '%s': %s" % (period, e))
+            return None
+
+    def regenerate_plot_data(self, chart_group, plotname, time_length, year_specific=None, month_specific=None, force_full_year=False, is_rolling_range=False):    
+        # Debug config right at the start
+        plot_config = self.chart_dict[chart_group][plotname]
+        logdbg("EARLY DEBUG: Raw plot_config keys: %s" % list(plot_config.keys()))
+        if plotname == "avgclimate2025":
+            loginf("REGENERATE DEBUG: chart_group=%s, plotname=%s" % (chart_group, plotname))
+            loginf("REGENERATE DEBUG: time_length=%s, is_rolling_range=%s" % (time_length, is_rolling_range))
+            loginf("REGENERATE DEBUG: year_specific=%s, month_specific=%s" % (year_specific, month_specific))
+        
+        for line_name in plot_config.sections:
+            line_config_raw = plot_config[line_name]
+            logdbg("EARLY DEBUG: %s raw aggregate_interval = %s" % (line_name, line_config_raw.get('aggregate_interval', 'NOT_FOUND')))
+        """
+        Regenerate plot data with different time parameters
+        
+        This method replicates the chart generation logic from the main run() method
+        but with modified time_length parameters.
+        
+        Args:
+            chart_group: Chart group name
+            plotname: Plot name within the chart group
+            time_length: Time length (seconds or special strings like 'year_specific')
+            year_specific: Year for year_specific time_length
+            month_specific: Month for month_specific time_length
+            
+        Returns:
+            Regenerated plot data structure
+        """
+        loginf("DEBUG: regenerate_plot_data called with time_length=%s (type: %s)" % (time_length, type(time_length)))
+        if is_rolling_range:
+            loginf("DEBUG: Detected rolling range with %d seconds" % time_length)
+        else:
+            loginf("DEBUG: Not a rolling range, time_length is: %s" % str(time_length))
+        try:
+            # Get the chart configuration for this specific plot
+            plot_config = self.chart_dict[chart_group][plotname]
+            plot_options = accumulateLeaves(plot_config)
+            
+            # Setup label dict for text and titles
+            try:
+                d = self.skin_dict["Labels"]["Generic"]
+            except KeyError:
+                d = {}
+            label_dict = weeutil.weeutil.KeyDict(d)
+            
+            # Setup database binding
+            binding = plot_options.get(
+                "data_binding",
+                self.config_dict["StdReport"].get("data_binding", "wx_binding"),
+            )
+            archive = self.db_binder.get_manager(binding)
+            
+            # Create the plot data structure
+            plot_data = {
+                "series": OrderedDict(),
+                "options": {}
+            }
+            print("DEBUG: plot_data structure created")
+
+            # Basic plot options
+            plot_data["options"]["renderTo"] = plotname
+            plot_data["options"]["chart_group"] = chart_group
+            plot_data["options"]["title"] = plot_options.get("title", "")
+            plot_data["options"]["subtitle"] = plot_options.get("subtitle", "")
+            plot_data["options"]["type"] = plot_options.get("type", "line")
+            
+            # Handle gapsize, connectNulls, etc.
+            #gapsize = plot_options.get("gapsize", 300)
+            #if gapsize:
+            #    plot_data["options"]["gapsize"] = int(gapsize) * 1000
+
+            plot_data["options"]["connectNulls"] = plot_options.get("connectNulls", "false")
+            
+            # Handle xAxis options
+            xAxis_groupby = plot_options.get("xAxis_groupby", None)
+            xAxis_categories = plot_options.get("xAxis_categories", "")
+            if isinstance(xAxis_categories, list) is False:
+                xAxis_categories = xAxis_categories.split()
+            plot_data["options"]["xAxis_categories"] = xAxis_categories
+            
+            # Handle other options
+            plot_data["options"]["plot_tooltip_date_format"] = plot_options.get("tooltip_date_format", None)
+            plot_data["options"]["css_width"] = plot_options.get("width", "")
+            plot_data["options"]["css_height"] = plot_options.get("height", "")
+            
+            legend = plot_options.get("legend", None)
+            if legend is None:
+                plot_data["options"]["legend"] = "true"
+            else:
+                plot_data["options"]["legend"] = legend
+                
+            exporting = plot_options.get("exporting", None)
+            if exporting is not None and to_bool(exporting):
+                plot_data["options"]["exporting"] = "true"
+            else:
+                plot_data["options"]["exporting"] = "false"
+            
+            # Generate timespan for the modified time_length
+            start_ts = archive.firstGoodStamp()
+            stop_ts = archive.lastGoodStamp()
+            timespan = weeutil.weeutil.TimeSpan(start_ts, stop_ts)
+            
+            plotgen_ts = self.gen_ts
+            if not plotgen_ts:
+                plotgen_ts = stop_ts
+                if not plotgen_ts:
+                    plotgen_ts = time.time()
+            
+# COMPLETE TIMESPAN CALCULATION LOGIC 
+# This needs to REPLACE the existing incomplete timespan section in regenerate_plot_data()
+
+# First, extract the required variables from plot_options (ADD THIS BEFORE timespan calculation):
+            time_ago = int(plot_options.get("time_ago", 1))
+            day_specific = plot_options.get("day_specific", 1)
+            start_at_midnight = to_bool(plot_options.get("start_at_midnight", False))
+            start_at_whole_hour = to_bool(plot_options.get("start_at_whole_hour", False))
+            start_at_beginning_of_month = to_bool(plot_options.get("start_at_beginning_of_month", False))
+
+            # Calculate the timespan based on the time_length parameter
+            if time_length == "today":
+                minstamp, maxstamp = archiveDaySpan(timespan.stop)
+            elif time_length == "week":
+                week_start = to_int(
+                    self.config_dict["Station"].get("week_start", 6)
+                )
+                minstamp, maxstamp = archiveWeekSpan(timespan.stop, week_start)
+            elif time_length == "month":
+                minstamp, maxstamp = archiveMonthSpan(timespan.stop)
+            elif time_length == "year":
+                minstamp, maxstamp = archiveYearSpan(timespan.stop)
+            elif time_length == "days_ago":
+                minstamp, maxstamp = archiveDaySpan(
+                    timespan.stop, days_ago=time_ago
+                )
+            elif time_length == "weeks_ago":
+                week_start = to_int(
+                    self.config_dict["Station"].get("week_start", 6)
+                )
+                minstamp, maxstamp = archiveWeekSpan(
+                    timespan.stop, week_start, weeks_ago=time_ago
+                )
+            elif time_length == "months_ago":
+                minstamp, maxstamp = archiveMonthSpan(
+                    timespan.stop, months_ago=time_ago
+                )
+            elif time_length == "years_ago":
+                minstamp, maxstamp = archiveYearSpan(
+                    timespan.stop, years_ago=time_ago
+                )
+            elif time_length == "day_specific":
+                # Set an arbitrary hour within the specific day to get
+                # that full day timespan and not the day before.
+                # e.g. 1pm
+                day_dt = datetime.datetime.strptime(
+                    str(year_specific)
+                    + "-"
+                    + str(month_specific)
+                    + "-"
+                    + str(day_specific)
+                    + " 13",
+                    "%Y-%m-%d %H",
+                )
+                daystamp = int(time.mktime(day_dt.timetuple()))
+                minstamp, maxstamp = archiveDaySpan(daystamp)
+            elif time_length == "month_specific":
+                # Set an arbitrary day within the specific month to get
+                # that full month timespan and not the day before.
+                # e.g. 5th day
+                month_dt = datetime.datetime.strptime(
+                    str(year_specific) + "-" + str(month_specific) + "-5",
+                    "%Y-%m-%d",
+                )
+                monthstamp = int(time.mktime(month_dt.timetuple()))
+                minstamp, maxstamp = archiveMonthSpan(monthstamp)
+            elif time_length == "year_specific":
+                if force_full_year:
+                    # Force full calendar year (Jan 1 to Jan 1 of next year)
+                    start_dt = datetime.datetime(int(year_specific), 1, 1, 0, 0, 0)
+                    end_dt = datetime.datetime(int(year_specific) + 1, 1, 1, 0, 0, 0)
+                    minstamp = int(time.mktime(start_dt.timetuple()))
+                    maxstamp = int(time.mktime(end_dt.timetuple()))
+                else:
+                    # Original behavior - use actual data span
+                    year_dt = datetime.datetime.strptime(
+                        str(year_specific) + "-8-1", "%Y-%m-%d"
+                    )
+                    yearstamp = int(time.mktime(year_dt.timetuple()))
+                    minstamp, maxstamp = archiveYearSpan(yearstamp)
+
+            elif time_length == "year_to_now":
+                minstamp, maxstamp = self.timespan_year_to_now(timespan.stop)
+            elif time_length == "hour_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, hour_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, hour_delta=time_ago
+                    )
+            elif time_length == "day_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, day_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, day_delta=time_ago
+                    )
+            elif time_length == "week_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, week_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, week_delta=time_ago
+                    )
+            elif time_length == "month_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, month_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, month_delta=time_ago
+                    )
+            elif time_length == "year_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, year_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, year_delta=time_ago
+                    )
+            elif time_length == "timestamp_ago_to_now":
+                if start_at_midnight:
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(time_ago), timespan.stop
+                    )
+                else:
+                    minstamp, maxstamp = TimeSpan(time_ago, timespan.stop)
+            elif time_length == "timespan_specific":
+                minstamp = plot_options.get("timespan_start", None)
+                maxstamp = plot_options.get("timespan_stop", None)
+                if minstamp is None or maxstamp is None:
+                    raise Warning(
+                        "Error trying to create timespan_specific graph. "
+                        "You are missing either timespan_start or timespan_stop options."
+                    )
+            elif time_length == "all":
+                minstamp = start_ts
+                maxstamp = stop_ts
+            else:
+                # Rolling timespans using seconds
+                
+                # Convert to int() for minstamp math and for
+                # point_timestamp conditional later
+                time_length = int(time_length)
+                
+                # Take the generation time and subtract the time_length
+                # to get our start time
+                if start_at_midnight:
+                    span_start = plotgen_ts - time_length
+                    minstamp = startOfDay(span_start)
+                else:
+                    minstamp = plotgen_ts - time_length
+                maxstamp = plotgen_ts
+
+            if start_at_whole_hour:
+                minstamp -= minstamp % 3600
+            
+            if start_at_beginning_of_month:
+                start_ts_temp, stop_ts_temp = archiveMonthSpan(minstamp)
+                minstamp = start_ts_temp
+            
+            print("DEBUG: About to enter enhanced gapsize section")
+            print("DEBUG: time_length type:", type(time_length), "value:", time_length)
+            # =============================================================================
+            # ENHANCED GAPSIZE ADJUSTMENT FOR ROLLING RANGES 
+            # =============================================================================
+            # Apply proportional gapsize adjustment for rolling ranges
+            try:
+                print("DEBUG: time_length =", time_length, "type =", type(time_length))
+                
+                if is_rolling_range:   # Rolling range detection
+                    print("DEBUG: This is a rolling range")
+                    
+                    # Get original gapsize from configuration
+                    original_gapsize_raw = plot_options.get("gapsize", 300)
+                    original_gapsize = int(original_gapsize_raw)
+                    
+                    # Get original time_length from plot_options
+                    original_time_length = plot_options.get("time_length", 86400)
+                    
+                    # Convert to seconds
+                    if isinstance(original_time_length, str):
+                        original_seconds = int(original_time_length)
+                    else:
+                        original_seconds = int(original_time_length)
+                    
+                    # Calculate proportional adjustment
+                    if original_seconds > 0:
+                        ratio = time_length / original_seconds
+                        adjusted_gapsize = int(original_gapsize * ratio)
+                        plot_data["options"]["gapsize"] = adjusted_gapsize * 1000
+                        
+                        print("DEBUG: GAPSIZE ADJUSTED! %d -> %d (ratio: %.3f)" % 
+                            (original_gapsize, adjusted_gapsize, ratio))
+                    else:
+                        plot_data["options"]["gapsize"] = int(plot_options.get("gapsize", 300)) * 1000
+                else:
+                    # For non-rolling ranges (yearly, monthly), use original gapsize
+                    print("DEBUG: Not a rolling range, using original gapsize")
+                    original_gapsize = int(plot_options.get("gapsize", 300))
+                    plot_data["options"]["gapsize"] = original_gapsize * 1000
+                    print("DEBUG: Set gapsize to:", original_gapsize)
+                    
+            except Exception as e:
+                print("DEBUG: ERROR in gapsize section:", str(e))
+                # Fallback
+                plot_data["options"]["gapsize"] = int(plot_options.get("gapsize", 300)) * 1000
+
+            # =============================================================================
+            # FIX: Initialize yAxis_label for chart options (was missing in original code)
+            # =============================================================================
+            chart_yAxis_label = ""
+            
+            # Generate series data for each observation in this plot
+            print("DEBUG: About to start series generation loop")
+            for line_name in plot_config.sections:
+                try:
+                    plot_data["series"][line_name] = {}
+                    plot_data["series"][line_name]["obsType"] = line_name
+                    
+                    line_options = accumulateLeaves(self.chart_dict[chart_group][plotname][line_name])
+
+                    if plotname == "avgclimate2025":
+                        logdbg("TRACE %s: aggregate_interval after accumulateLeaves = %s" % (line_name, line_options.get('aggregate_interval')))
+                        logdbg("AVGCLIMATE DEBUG for %s:" % line_name)
+                        logdbg("  accumulateLeaves result keys: %s" % str(list(line_options.keys())))
+                        agg_int_value = line_options.get('aggregate_interval', 'STILL_NOT_FOUND')
+                        logdbg("  aggregate_interval from accumulateLeaves: %s" % str(agg_int_value))
+                        
+                    # Find the observation type
+                    observation_type = line_options.get("observation_type", line_name)
+                    weatherRange_obs_lookup = line_options.get("range_type", None)
+                    
+                    # Get custom name
+                    name = line_options.get("name", None)
+                    if not name:
+                        if weatherRange_obs_lookup is not None:
+                            name = label_dict[weatherRange_obs_lookup]
+                        else:
+                            name = label_dict[observation_type]
+                    
+                    # Look for aggregation type
+                    aggregate_type = line_options.get("aggregate_type")
+                    if aggregate_type in (None, "", "None", "none"):
+                        aggregate_type = aggregate_interval = None
+                    else:
+                        try:
+                            # Add debug for regenerate_plot_data nominal_spans processing
+                            aggregate_interval_raw = line_options.get("aggregate_interval")
+                            logdbg("REGEN DEBUG: aggregate_interval_raw = %s (type: %s)" % (str(aggregate_interval_raw), type(aggregate_interval_raw)))
+                            if plotname == "avgclimate2025":
+                                logdbg("TRACE %s: aggregate_interval_raw before nominal_spans = %s" % (line_name, aggregate_interval_raw))
+
+
+                            aggregate_interval = weeutil.weeutil.nominal_spans(aggregate_interval_raw)
+                            logdbg("REGEN DEBUG: nominal_spans result = %s (type: %s)" % (str(aggregate_interval), type(aggregate_interval)))
+                            if plotname == "avgclimate2025":
+                                logdbg("TRACE %s: aggregate_interval after nominal_spans = %s" % (line_name, aggregate_interval))
+                            
+                        except KeyError:
+                            logdbg("Aggregate interval required for aggregate type %s, skipping line type %s" % (aggregate_type, observation_type))
+                            continue
+                    
+                    # Check for average type
+                    average_type = line_options.get("average_type")
+                    if average_type in (None, "", "None", "none"):
+                        average_type = None
+                    
+                    # =============================================================================
+                    # ROLLING RANGE AGGREGATE INTERVAL ADJUSTMENT
+                    # Proportionally adjust aggregate_interval for rolling ranges to reduce 
+                    # data point density and improve chart readability
+                    # =============================================================================
+                    
+                    if is_rolling_range:
+                        # This is a rolling range - calculate proportional adjustment
+                        try:
+                            # Get the original time_length from plot configuration
+                            original_time_length_value = plot_options.get("time_length", 86400)
+                            original_time_length_seconds = self.convert_time_length_to_seconds(original_time_length_value)
+                            
+                            if original_time_length_seconds is not None and original_time_length_seconds > 0:
+                                # For rolling ranges, ensure we have an aggregate_interval to work with
+                                if aggregate_interval is None:
+                                    # No aggregation specified - use weewx archive interval as default
+                                    try:
+                                        default_aggregate_interval = int(self.config_dict["StdArchive"]["archive_interval"])
+                                    except KeyError:
+                                        default_aggregate_interval = 300  # 5 minutes default
+                                    
+                                    # Set aggregate_type and aggregate_interval for rolling ranges
+                                    aggregate_type = "avg"  # Default aggregation type for rolling ranges
+                                    aggregate_interval = default_aggregate_interval
+                                    
+                                    logdbg("Rolling range: No aggregate_interval specified, using weewx archive interval %s seconds with %s aggregation" % 
+                                           (default_aggregate_interval, aggregate_type))
+                                
+                                # Calculate the ratio between rolling range and original timespan
+                                ratio = time_length / original_time_length_seconds
+                                
+                                # Store original aggregate_interval as minimum bound
+                                original_aggregate_interval = aggregate_interval
+                                
+                                # Calculate adjusted aggregate_interval
+                                adjusted_aggregate_interval = int(aggregate_interval * ratio)
+                                
+                                # Apply bounds checking - use original as minimum
+                                if adjusted_aggregate_interval < original_aggregate_interval:
+                                    adjusted_aggregate_interval = original_aggregate_interval
+                                
+                                # Debug logging for testing and troubleshooting
+                                logdbg("Rolling range aggregate_interval adjustment for %s.%s.%s:" % (chart_group, plotname, line_name))
+                                logdbg("  Original time_length: %s (%s seconds)" % (original_time_length_value, original_time_length_seconds))
+                                logdbg("  Rolling time_length: %s seconds" % time_length)
+                                logdbg("  Original aggregate_interval: %s seconds" % original_aggregate_interval)
+                                logdbg("  Calculated ratio: %.3f" % ratio)
+                                logdbg("  Adjusted aggregate_interval: %s seconds" % adjusted_aggregate_interval)
+                                
+                                # Use the adjusted interval
+                                aggregate_interval = adjusted_aggregate_interval
+                                
+                                loginf("Applied rolling range adjustment: %s.%s.%s - %ss intervals for %sd timespan" % 
+                                       (chart_group, plotname, line_name, adjusted_aggregate_interval, time_length // 86400))
+                            else:
+                                # Conversion failed - log error but continue processing other charts
+                                logerr("Rolling range aggregate_interval adjustment failed for %s.%s.%s: " % (chart_group, plotname, line_name) +
+                                       "Could not convert original time_length '%s' to seconds. " % original_time_length_value +
+                                       "Using original aggregate_interval. Please verify chart configuration.")
+                                
+                        except Exception as e:
+                            # Graceful failure for rolling range charts - log error but continue processing other charts
+                            logerr("Rolling range aggregate_interval adjustment error for %s.%s.%s: %s. " % (chart_group, plotname, line_name, e) +
+                                   "Using original aggregate_interval. Please verify chart configuration.")
+ 
+                    # Handle mirrored values, special units, etc.
+                    mirrored_value = line_options.get("mirrored_value", None)
+                    special_target_unit = line_options.get("unit", None)
+                    
+                    # =============================================================================
+                    # FIX: Calculate unit_label for yAxis_label calculation
+                    # =============================================================================
+                    if observation_type == "rainTotal":
+                        obs_label = "rain"
+                    elif (
+                        observation_type == "weatherRange"
+                        and weatherRange_obs_lookup is not None
+                    ):
+                        obs_label = weatherRange_obs_lookup
+                    else:
+                        obs_label = observation_type
+                    
+                    unit_label = line_options.get(
+                        "yAxis_label_unit",
+                        self.formatter.get_label_string(
+                            special_target_unit if special_target_unit else self.converter.getTargetUnit(obs_label, aggregate_type)[0]
+                        ),
+                    )
+                    
+                    # =============================================================================
+                    # FIX: Add missing yAxis_label calculation (replicate from main run() method)
+                    # =============================================================================
+                    yAxisLabel_config = line_options.get("yAxis_label", None)
+                    # Set a default yAxis label if graphs.conf yAxis_label is
+                    # none and there's a unit_label - e.g. Temperature (F)
+                    if yAxisLabel_config is None and unit_label:
+                        yAxis_label = name + " (" + unit_label.strip() + ")"
+                    elif yAxisLabel_config and unit_label:
+                        yAxis_label = (
+                            yAxisLabel_config + " (" + unit_label.strip() + ")"
+                        )
+                    elif yAxisLabel_config:
+                        yAxis_label = yAxisLabel_config
+                    else:
+                        # Unknown observation, set the default label to ""
+                        yAxis_label = ""
+                    
+                    # Store the first yAxis_label for chart options
+                    if not chart_yAxis_label:
+                        chart_yAxis_label = yAxis_label
+                    
+                    plot_data["series"][line_name]["yAxis_label"] = yAxis_label
+                    
+                    # ============================================================================
+                    # FIX: Setup wind_rose_color properly (was missing in original code)
+                    # ============================================================================
+                    wind_rose_color = {}
+                    wind_rose_color[0] = line_options.get("beauford0", "#7cb5ec")
+                    wind_rose_color[1] = line_options.get("beauford1", "#b2df8a")
+                    wind_rose_color[2] = line_options.get("beauford2", "#f7a35c")
+                    wind_rose_color[3] = line_options.get("beauford3", "#8c6bb1")
+                    wind_rose_color[4] = line_options.get("beauford4", "#dd3497")
+                    wind_rose_color[5] = line_options.get("beauford5", "#e4d354")
+                    wind_rose_color[6] = line_options.get("beauford6", "#268bd2")
+                    
+                    # ============================================================================
+                    # FIX: Setup obs_round properly (was missing in original code)
+                    # ============================================================================
+                    obs_round = None
+                    # Check if user specified decimals in numberFormat
+                    try:
+                        plot_line_config = self.chart_dict[chart_group][plotname][line_name]
+                        if (plot_line_config.get("numberFormat", {}).get("decimals") is not None):
+                            obs_round = float(plot_line_config["numberFormat"]["decimals"])
+                    except (KeyError, ValueError, TypeError):
+                        pass
+                    
+                    if obs_round is None:
+                        # Add rounding from weewx.conf/skin.conf so Highcharts can use it
+                        if observation_type == "rainTotal":
+                            rounding_obs_lookup = "rain"
+                        elif observation_type == "weatherRange":
+                            rounding_obs_lookup = line_options.get("range_type", observation_type)
+                        elif observation_type == "haysChart":
+                            rounding_obs_lookup = "windSpeed"
+                        else:
+                            rounding_obs_lookup = observation_type
+                        try:
+                            obs_group = weewx.units.obs_group_dict[rounding_obs_lookup]
+                            obs_unit = self.converter.group_unit_dict[obs_group]
+                            obs_round = self.skin_dict["Units"]["StringFormats"].get(
+                                obs_unit, "0"
+                            )[2]
+                        except:
+                            # Not a valid weewx schema name - maybe this is windRose or something?
+                            obs_round = -1
+                    
+                    # Add rounding to series
+                    plot_data["series"][line_name]["rounding"] = obs_round
+                    
+                    # =============================================================================
+                    # FIX: Preserve YAML hierarchy - copy series-level config directly
+                    # This replicates the logic from the main run() method and preserves the
+                    # natural YAML structure without hardcoded filtering
+                    # =============================================================================
+                    for highcharts_config, highcharts_value in self.chart_dict[chart_group][plotname][line_name].items():
+                        plot_data["series"][line_name][highcharts_config] = highcharts_value
+                    
+                    # Override any highcharts series configs with standardized data
+                    # (This ensures our calculated values take precedence, following main run() method pattern)
+                    plot_data["series"][line_name]["obsType"] = line_name
+                    plot_data["series"][line_name]["name"] = name
+                    plot_data["series"][line_name]["yAxis_label"] = yAxis_label
+                    plot_data["series"][line_name]["rounding"] = obs_round
+                    
+                    # Set the yAxis min and max if present
+                    yAxis_min = line_options.get("yAxis_min", None)
+                    if yAxis_min:
+                        plot_data["series"][line_name]["yAxis_min"] = yAxis_min
+                    yAxis_max = line_options.get("yAxis_max", None)
+                    if yAxis_max:
+                        plot_data["series"][line_name]["yAxis_max"] = yAxis_max
+                    
+                    # Setup polar charts
+                    polar = line_options.get("polar", None)
+                    if polar is not None and to_bool(polar):
+                        plot_data["series"][line_name]["polar"] = "true"
+                    else:
+                        plot_data["series"][line_name]["polar"] = "false"
+                    
+                    # ============================================================================
+                    # FIXED: Call get_observation_data with proper wind_rose_color and obs_round
+                    # ============================================================================
+                    # Get observation data with the modified timespan
+                    series_data = self.get_observation_data(
+                        binding,
+                        archive,
+                        observation_type,
+                        minstamp,
+                        maxstamp,
+                        aggregate_type,
+                        aggregate_interval,
+                        average_type,
+                        time_length,
+                        xAxis_groupby,
+                        xAxis_categories,
+                        mirrored_value,
+                        weatherRange_obs_lookup,
+                        wind_rose_color,  # ✅ FIXED: Now properly configured
+                        special_target_unit,
+                        obs_round,  # ✅ FIXED: Now properly calculated
+                        line_options,
+                        force_full_year  # ADD THIS PARAMETER (it's already available in regenerate_plot_data)
+                    )
+                    
+                    # Add the series data
+                    if isinstance(series_data, dict):
+                        if "use_sql_labels" in series_data:
+                            if series_data["use_sql_labels"]:
+                                plot_data["options"]["xAxis_categories"] = series_data["xAxis_groupby_labels"]
+                        elif "weatherRange" in series_data:
+                            plot_data["series"][line_name]["range_unit"] = series_data["range_unit"]
+                            plot_data["series"][line_name]["range_unit_label"] = series_data["range_unit_label"]
+                        
+                        plot_data["series"][line_name]["data"] = list(series_data["obsdata"])
+                    else:
+                        plot_data["series"][line_name]["data"] = list(series_data)
+                    
+                    # Convert numeric options to float
+                    plot_data["series"][line_name] = self.highcharts_series_options_to_float(plot_data["series"][line_name])
+                    
+                except Exception as e:
+                    logerr("Error generating series data for %s.%s.%s: %s" % (chart_group, plotname, line_name, e))
+                    loginf("FULL ERROR DETAILS: %s" % str(e))
+                    import traceback
+                    loginf("TRACEBACK: %s" % traceback.format_exc()) 
+                    
+                    return {
+                        "series": {},
+                        "options": {
+                            "renderTo": plotname,
+                            "chart_group": chart_group,
+                            "title": "Error generating chart",
+                            "subtitle": "",
+                            "type": "line"
+                        }
+                    }
+            
+            # =============================================================================
+            # FIX: Add missing chart options (replicate from main run() method)
+            # =============================================================================
+            # Set the chart-level yAxis_label
+            plot_data["options"]["yAxis_label"] = chart_yAxis_label
+            
+            # Custom CSS class
+            css_class = plot_options.get("css_class", None)
+            plot_data["options"]["css_class"] = css_class
+            
+            logdbg("Successfully regenerated plot data for %s.%s" % (chart_group, plotname))
+            print("DEBUG: Returning plot_data structure:")
+            print("DEBUG: plot_data keys:", list(plot_data.keys()))
+            print("DEBUG: plot_data['options'] keys:", list(plot_data["options"].keys()))
+            print("DEBUG: plot_data['options']['gapsize']:", plot_data["options"].get("gapsize", "NOT SET"))
+            return plot_data
+            
+        except Exception as e:
+            logerr("Error in regenerate_plot_data for %s.%s: %s" % (chart_group, plotname, e))
+            # Return a basic empty structure on error
+            return {
+                "series": {},
+                "options": {
+                    "renderTo": plotname,
+                    "chart_group": chart_group,
+                    "title": "Error generating chart",
+                    "subtitle": "",
+                    "type": "line"
+                }
+            }
+
+    def get_database_bounds_info(self, archive):
+        """Get actual database range and derive valid years/months
+        
+        Returns:
+            start_ts: First timestamp with data
+            stop_ts: Last timestamp with data  
+            valid_years: List of years with any data [2022, 2023, 2024, 2025]
+            valid_months: List of (year, month) tuples with data [(2022, 8), (2022, 9), ...]
+        """
+        import datetime
+        
+        try:
+            # Get actual database bounds
+            start_ts = archive.firstGoodStamp()
+            stop_ts = archive.lastGoodStamp()
+            
+            if start_ts is None or stop_ts is None:
+                logdbg("Database bounds not available, using empty ranges")
+                return start_ts, stop_ts, [], []
+            
+            # Convert to datetime objects for easier manipulation
+            start_dt = datetime.datetime.fromtimestamp(start_ts)
+            stop_dt = datetime.datetime.fromtimestamp(stop_ts)
+            
+            # Derive valid years (all years that have any data)
+            valid_years = list(range(start_dt.year, stop_dt.year + 1))
+            
+            # Derive valid months (all year/month combinations with data)
+            valid_months = []
+            current_dt = datetime.datetime(start_dt.year, start_dt.month, 1)
+            end_dt = datetime.datetime(stop_dt.year, stop_dt.month, 1)
+            
+            while current_dt <= end_dt:
+                valid_months.append((current_dt.year, current_dt.month))
+                # Move to next month
+                if current_dt.month == 12:
+                    current_dt = current_dt.replace(year=current_dt.year + 1, month=1)
+                else:
+                    current_dt = current_dt.replace(month=current_dt.month + 1)
+            
+            logdbg("Database bounds: %s to %s" % (start_dt.strftime("%Y-%m"), stop_dt.strftime("%Y-%m")))
+            logdbg("Valid years: %s" % valid_years)
+            logdbg("Valid months: %d month combinations" % len(valid_months))
+            
+            return start_ts, stop_ts, valid_years, valid_months
+            
+        except Exception as e:
+            logerr("Error getting database bounds info: %s" % e)
+            return None, None, [], []
+
+    def filter_date_config_to_database(self, date_range_config, valid_years, valid_months):
+        """Filter user config against actual database bounds
+        
+        Args:
+            date_range_config: Chart group configuration from graphs.conf
+            valid_years: Years with actual data
+            valid_months: (year, month) combinations with actual data
+            
+        Returns:
+            filtered_years: available_years filtered to data bounds
+            filtered_months: valid month combinations for generation
+        """
+        
+        # Get user-configured years
+        config_years = date_range_config.get('available_years', [])
+        if isinstance(config_years, str):
+            # Handle comma-separated string format from configobj
+            config_years = [y.strip() for y in config_years.split(',') if y.strip()]
+        
+        # Convert to integers for comparison
+        try:
+            config_years = [int(year) for year in config_years if year]
+        except (ValueError, TypeError):
+            logdbg("Invalid year format in available_years, using empty list")
+            config_years = []
+        
+        # Filter years to only those with actual data
+        filtered_years = [year for year in config_years if year in valid_years]
+        
+        # Filter months to only valid combinations that user wants
+        filtered_months = []
+        for year in filtered_years:
+            for month in range(1, 13):
+                if (year, month) in valid_months:
+                    filtered_months.append((year, month))
+        
+        # Log filtering results
+        if config_years != filtered_years:
+            loginf("Filtered available_years from %s to %s based on database bounds" % (config_years, filtered_years))
+        
+        skipped_months = (len(filtered_years) * 12) - len(filtered_months)
+        if skipped_months > 0:
+            logdbg("Skipped %d monthly files outside database bounds" % skipped_months)
+        
+        return filtered_years, filtered_months
+               
     def get_observation_data(
         self,
         binding,
@@ -2919,7 +4069,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         wind_rose_color,
         special_target_unit,
         obs_round,
-        line_options=None  # ADD THIS LINE
+        line_options=None,
+        force_full_year=False
     ):
         
 
@@ -3353,7 +4504,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)
 
             min_obs_vt = self.converter.convert(obs_vt)
 
@@ -3373,8 +4524,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
-
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)
+            
             max_obs_vt = self.converter.convert(obs_vt)
 
             # Get avg values
@@ -3393,8 +4544,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
-
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)
+            
             avg_obs_vt = self.converter.convert(obs_vt)
 
             obs_unit = avg_obs_vt[1]
@@ -3450,7 +4601,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)          
             
             min_obs_vt = self.converter.convert(obs_vt)
 
@@ -3470,7 +4621,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)          
             
             max_obs_vt = self.converter.convert(obs_vt)
 
@@ -3759,6 +4910,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                             subqry_groupby,
                             order_sql
                         )
+            # debug to check SQL query
+            print(f"DEBUG: sql_lookup = {sql_lookup}")
 
             # Setup values for the converter
             try:
@@ -3774,15 +4927,14 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             
             try:
                 query = archive.genSql(sql_lookup)
-            except:
+                query_list = list(query)
+            except Exception as e:
                 raise Warning(
-                    "SQL error in"
-                    "sql_lookup"
-                    "The error is: %s"
-                        % (error)                    
+                    "SQL error in xAxis_groupby processing. "
+                    "Query was: %s. Error was: %s" % (sql_lookup, str(e))
                 )
                 
-            for row in query:
+            for row in query_list:  # This will now work
                 xAxis_labels.append(row[0])
                 row_tuple = (row[1], obs_unit_from_target_unit, obs_group)
                 if special_target_unit:
@@ -3796,6 +4948,27 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 for i in obsvalues:
                     if i is not None:
                         i = -i
+
+            # Add null padding for full year display when explicitly requested
+            if force_full_year and xAxis_groupby == "month":
+                # Ensure all 12 months (1-12) are present, padding missing months with nulls
+                padded_labels = []
+                padded_values = []
+                
+                for month in range(1, 13):  # Jan=1 through Dec=12
+                    if month in xAxis_labels:
+                        # This month has data from SQL query, use the existing result
+                        index = xAxis_labels.index(month)
+                        padded_labels.append(month)
+                        padded_values.append(obsvalues[index])
+                    else:
+                        # This month has no data, add null to create gap
+                        padded_labels.append(month)
+                        padded_values.append(None)
+                
+                # Replace the SQL results with null-padded versions
+                xAxis_labels = padded_labels
+                obsvalues = padded_values
 
             # Return a dict which has the value for if we need to add labels
             # from sql or not.
@@ -3811,7 +4984,9 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "xAxis_groupby_labels": "",
                     "obsdata": obsvalues,
                 }
+
             return data
+            # Debug for checking SQL query
 
         # Begin standard observation lookups
         try:
@@ -3828,7 +5003,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 % (binding, obs_lookup, e)
             )
 
-        self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+        self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)       
         
         if special_target_unit:
             logdbg("unit_group=%s source_unit=%s special_target_unit=%s" % (obs_vt[2],obs_vt[1],special_target_unit))
@@ -3908,28 +5083,62 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
 
         return data
 
-    def insert_null_value_timestamps_to_end_ts(self, time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, interval):
+    def insert_null_value_timestamps(self, time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, interval, force_full_year=False):
         """
-        In weewx 4.5.1 xtypes.py was modified to not return any data points which didn't exist in the archive database.
-        This function adds the 'future' data points from the last timestamp in the list up until end_ts with None entries.
-        This means that graphs still have the option of showing a full day or month or year on the x axis depending on the time_length specfied.       
+        Add null data points at beginning and end of timespan to ensure full coverage.
+        - Beginning: from start_ts to first actual data point (e.g., 2022 Jan-August nulls) - only when force_full_year=True
+        - End: from last actual data point to end_ts (e.g., 2025 current date-December nulls)
+        This ensures graphs show full calendar year axis with proper null padding.
         """
-        count = 0
-
-        if interval is not None:
+        
+        if interval is None:
+            return
+        
+        # Convert ValueTuples to mutable lists
+        time_start_list = list(time_start_vt[0])
+        time_stop_list = list(time_stop_vt[0]) 
+        obs_list = list(obs_vt[0])
+        
+        beginning_count = 0
+        end_count = 0
+        
+        # Handle beginning padding (for cases like 2022 data starting in August)
+        if force_full_year and len(time_start_list) > 0:
+            first_timestamp = time_start_list[0]
+            if first_timestamp > start_ts:
+                # Add null points from start_ts to first_timestamp
+                beginning_timestamps = []
+                ts = start_ts
+                while ts < first_timestamp:
+                    beginning_timestamps.append(ts)
+                    ts += interval
+                    beginning_count += 1
+                
+                # Prepend to existing lists
+                time_start_list = beginning_timestamps + time_start_list
+                time_stop_list = beginning_timestamps + time_stop_list
+                obs_list = [None] * beginning_count + obs_list
+        
+        # Handle end padding (original logic for future dates)
+        if len(time_start_list) > 0:
             try:
-                ts = time_start_vt[0][-1] + interval
+                ts = time_start_list[-1] + interval
             except:
                 ts = start_ts
+        else:
+            ts = start_ts
 
-            while ts < end_ts:
-                time_start_vt[0].append(ts)
-                time_stop_vt[0].append(ts)
-                ts = ts + interval
-                count = count + 1
+        while ts < end_ts:
+            time_start_list.append(ts)
+            time_stop_list.append(ts)
+            obs_list.append(None)
+            ts += interval
+            end_count += 1
 
-        for i in range(count):
-           obs_vt[0].append(None)
+        # Update the original ValueTuple objects by replacing their contents
+        time_start_vt[0][:] = time_start_list
+        time_stop_vt[0][:] = time_stop_list
+        obs_vt[0][:] = obs_list
 
     def round_none(self, value, places):
         """Round value to 'places' places but also permit a value of None"""
