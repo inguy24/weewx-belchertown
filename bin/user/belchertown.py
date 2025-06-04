@@ -2208,52 +2208,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             logerr("Query was: %s" % custom_sql_query)
             return {"use_sql_labels": False, "xAxis_groupby_labels": [], "obsdata": []}
 
-    def convert_time_length_to_seconds(self, time_length_value):
-        """
-        Convert time_length values to seconds for aggregate_interval calculations.
-        
-        Args:
-            time_length_value: Can be int (seconds), string digit, or keyword
-            
-        Returns:
-            int: Time length in seconds, or None if conversion fails
-        """
-        try:
-            if isinstance(time_length_value, int):
-                return time_length_value
-            elif isinstance(time_length_value, str):
-                if time_length_value.isdigit():
-                    return int(time_length_value)
-                else:
-                    # Keyword mappings based on weewx timespan patterns
-                    keyword_mappings = {
-                        "today": 86400,
-                        "week": 604800, 
-                        "month": 2592000,
-                        "year": 31536000,
-                        "hour_ago_to_now": 3600,
-                        "day_ago_to_now": 86400,
-                        "week_ago_to_now": 604800,
-                        "month_ago_to_now": 2592000,
-                        "year_ago_to_now": 31536000
-                    }
-                    return keyword_mappings.get(time_length_value, None)
-            return None
-        except (ValueError, TypeError):
-            return None
-        
     def run(self):
         """Main entry point for file generation."""
-    # TEST nominal_spans behavior
-        try:
-            loginf("Testing nominal_spans('month'): %s" % str(weeutil.weeutil.nominal_spans("month")))
-        except Exception as e:
-            loginf("nominal_spans('month') failed with error: %s" % str(e))
-        
-        try:
-            loginf("Testing nominal_spans(2629800): %s" % str(weeutil.weeutil.nominal_spans(2629800)))
-        except Exception as e:
-            loginf("nominal_spans(2629800) failed with error: %s" % str(e))
 
         chart_config_path = os.path.join(
             self.config_dict["WEEWX_ROOT"],
@@ -2509,9 +2465,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 plottype = plot_options.get("type", "line")
                 output[chart_group][plotname]["options"]["type"] = plottype
 
-                # Extract force_full_year option for null padding control
-                force_full_year = to_bool(plot_options.get("force_full_year", False))
-
                 # gapsize has to be in milliseconds. Take the graphs.conf value
                 # and multiply by 1000
                 gapsize = plot_options.get(
@@ -2596,12 +2549,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     start_at_beginning_of_month = to_bool(
                         line_options.get("start_at_beginning_of_month", False)
                     )  # Should our timespan start at the beginning of a month?
-
-                    # DEBUG: Check timespan calculation inputs
-                    print(f"DEBUG: time_length={time_length}")
-                    print(f"DEBUG: year_specific={year_specific}")  
-                    print(f"DEBUG: force_full_year={force_full_year}")
-
                     if time_length == "today":
                         minstamp, maxstamp = archiveDaySpan(timespan.stop)
                     elif time_length == "week":
@@ -2979,8 +2926,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                         wind_rose_color,
                         special_target_unit,
                         obs_round,
-                        line_options,
-                        force_full_year
+                        line_options  # ADD THIS PARAMETER
                     )
 
                     # Build the final series data JSON
@@ -3185,11 +3131,9 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     # This is a plot, regenerate its data with the new timespan
                     try:
                         rolling_output[plotname] = self.regenerate_plot_data(chart_group, plotname, period_seconds)
-                        print("DEBUG: After assignment, rolling_output[%s]['options']['gapsize']:" % plotname, rolling_output[plotname]["options"].get("gapsize", "NOT SET"))
                     except Exception as e:
                         logdbg("Error regenerating plot data for %s.%s with period %s: %s" % (chart_group, plotname, period, e))
         
-        print("DEBUG: Final rolling_output gapsize for chart1:", rolling_output.get("chart1", {}).get("options", {}).get("gapsize", "NOT FOUND"))
         return rolling_output
 
     def generate_yearly_range_data(self, chart_group, base_output, year):
@@ -3276,18 +3220,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             logerr("Error parsing period '%s': %s" % (period, e))
             return None
 
-    def regenerate_plot_data(self, chart_group, plotname, time_length, year_specific=None, month_specific=None, force_full_year=False, is_rolling_range=False):    
-        # Debug config right at the start
-        plot_config = self.chart_dict[chart_group][plotname]
-        logdbg("EARLY DEBUG: Raw plot_config keys: %s" % list(plot_config.keys()))
-        if plotname == "avgclimate2025":
-            loginf("REGENERATE DEBUG: chart_group=%s, plotname=%s" % (chart_group, plotname))
-            loginf("REGENERATE DEBUG: time_length=%s, is_rolling_range=%s" % (time_length, is_rolling_range))
-            loginf("REGENERATE DEBUG: year_specific=%s, month_specific=%s" % (year_specific, month_specific))
-        
-        for line_name in plot_config.sections:
-            line_config_raw = plot_config[line_name]
-            logdbg("EARLY DEBUG: %s raw aggregate_interval = %s" % (line_name, line_config_raw.get('aggregate_interval', 'NOT_FOUND')))
+    def regenerate_plot_data(self, chart_group, plotname, time_length, year_specific=None, month_specific=None, force_full_year=False):
+
         """
         Regenerate plot data with different time parameters
         
@@ -3304,11 +3238,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         Returns:
             Regenerated plot data structure
         """
-        loginf("DEBUG: regenerate_plot_data called with time_length=%s (type: %s)" % (time_length, type(time_length)))
-        if is_rolling_range:
-            loginf("DEBUG: Detected rolling range with %d seconds" % time_length)
-        else:
-            loginf("DEBUG: Not a rolling range, time_length is: %s" % str(time_length))
+        
         try:
             # Get the chart configuration for this specific plot
             plot_config = self.chart_dict[chart_group][plotname]
@@ -3333,8 +3263,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 "series": OrderedDict(),
                 "options": {}
             }
-            print("DEBUG: plot_data structure created")
-
+            
             # Basic plot options
             plot_data["options"]["renderTo"] = plotname
             plot_data["options"]["chart_group"] = chart_group
@@ -3343,10 +3272,10 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             plot_data["options"]["type"] = plot_options.get("type", "line")
             
             # Handle gapsize, connectNulls, etc.
-            #gapsize = plot_options.get("gapsize", 300)
-            #if gapsize:
-            #    plot_data["options"]["gapsize"] = int(gapsize) * 1000
-
+            gapsize = plot_options.get("gapsize", 300)
+            if gapsize:
+                plot_data["options"]["gapsize"] = int(gapsize) * 1000
+            
             plot_data["options"]["connectNulls"] = plot_options.get("connectNulls", "false")
             
             # Handle xAxis options
@@ -3464,7 +3393,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     )
                     yearstamp = int(time.mktime(year_dt.timetuple()))
                     minstamp, maxstamp = archiveYearSpan(yearstamp)
-
             elif time_length == "year_to_now":
                 minstamp, maxstamp = self.timespan_year_to_now(timespan.stop)
             elif time_length == "hour_ago_to_now":
@@ -3568,70 +3496,19 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 start_ts_temp, stop_ts_temp = archiveMonthSpan(minstamp)
                 minstamp = start_ts_temp
             
-            print("DEBUG: About to enter enhanced gapsize section")
-            print("DEBUG: time_length type:", type(time_length), "value:", time_length)
-            # =============================================================================
-            # ENHANCED GAPSIZE ADJUSTMENT FOR ROLLING RANGES 
-            # =============================================================================
-            # Apply proportional gapsize adjustment for rolling ranges
-            try:
-                print("DEBUG: time_length =", time_length, "type =", type(time_length))
-                
-                if is_rolling_range:   # Rolling range detection
-                    print("DEBUG: This is a rolling range")
-                    
-                    # Get original gapsize from configuration
-                    original_gapsize_raw = plot_options.get("gapsize", 300)
-                    original_gapsize = int(original_gapsize_raw)
-                    
-                    # Get original time_length from plot_options
-                    original_time_length = plot_options.get("time_length", 86400)
-                    
-                    # Convert to seconds
-                    if isinstance(original_time_length, str):
-                        original_seconds = int(original_time_length)
-                    else:
-                        original_seconds = int(original_time_length)
-                    
-                    # Calculate proportional adjustment
-                    if original_seconds > 0:
-                        ratio = time_length / original_seconds
-                        adjusted_gapsize = int(original_gapsize * ratio)
-                        plot_data["options"]["gapsize"] = adjusted_gapsize * 1000
-                        
-                        print("DEBUG: GAPSIZE ADJUSTED! %d -> %d (ratio: %.3f)" % 
-                            (original_gapsize, adjusted_gapsize, ratio))
-                    else:
-                        plot_data["options"]["gapsize"] = int(plot_options.get("gapsize", 300)) * 1000
-                else:
-                    # For non-rolling ranges (yearly, monthly), use original gapsize
-                    print("DEBUG: Not a rolling range, using original gapsize")
-                    original_gapsize = int(plot_options.get("gapsize", 300))
-                    plot_data["options"]["gapsize"] = original_gapsize * 1000
-                    print("DEBUG: Set gapsize to:", original_gapsize)
-                    
-            except Exception as e:
-                print("DEBUG: ERROR in gapsize section:", str(e))
-                # Fallback
-                plot_data["options"]["gapsize"] = int(plot_options.get("gapsize", 300)) * 1000
-
             # =============================================================================
             # FIX: Initialize yAxis_label for chart options (was missing in original code)
             # =============================================================================
             chart_yAxis_label = ""
             
             # Generate series data for each observation in this plot
-            print("DEBUG: About to start series generation loop")
             for line_name in plot_config.sections:
                 try:
                     plot_data["series"][line_name] = {}
                     plot_data["series"][line_name]["obsType"] = line_name
                     
-                    line_options = accumulateLeaves(self.chart_dict[chart_group][plotname][line_name])
-
-                    if plotname == "avgclimate2025":
-                        loginf("AVGCLIMATE TRACE: %s aggregate_interval = %s" % (line_name, line_options.get('aggregate_interval')))
-                        
+                    line_options = accumulateLeaves(plot_config[line_name])
+                    
                     # Find the observation type
                     observation_type = line_options.get("observation_type", line_name)
                     weatherRange_obs_lookup = line_options.get("range_type", None)
@@ -3650,17 +3527,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                         aggregate_type = aggregate_interval = None
                     else:
                         try:
-                            # Add debug for regenerate_plot_data nominal_spans processing
-                            aggregate_interval_raw = line_options.get("aggregate_interval")
-                            logdbg("REGEN DEBUG: aggregate_interval_raw = %s (type: %s)" % (str(aggregate_interval_raw), type(aggregate_interval_raw)))
-                            if plotname == "avgclimate2025":
-                                loginf("AVGCLIMATE BEFORE nominal_spans: %s raw = %s" % (line_name, aggregate_interval_raw))
-
-                            aggregate_interval = weeutil.weeutil.nominal_spans(aggregate_interval_raw) 
-
-                            if plotname == "avgclimate2025":
-                                loginf("AVGCLIMATE AFTER nominal_spans: %s result = %s" % (line_name, aggregate_interval))
-                            
+                            aggregate_interval = weeutil.weeutil.nominal_spans(line_options.get("aggregate_interval"))
                         except KeyError:
                             logdbg("Aggregate interval required for aggregate type %s, skipping line type %s" % (aggregate_type, observation_type))
                             continue
@@ -3670,72 +3537,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     if average_type in (None, "", "None", "none"):
                         average_type = None
                     
-                    # =============================================================================
-                    # ROLLING RANGE AGGREGATE INTERVAL ADJUSTMENT
-                    # Proportionally adjust aggregate_interval for rolling ranges to reduce 
-                    # data point density and improve chart readability
-                    # =============================================================================
-                    
-                    if is_rolling_range:
-                        # This is a rolling range - calculate proportional adjustment
-                        try:
-                            # Get the original time_length from plot configuration
-                            original_time_length_value = plot_options.get("time_length", 86400)
-                            original_time_length_seconds = self.convert_time_length_to_seconds(original_time_length_value)
-                            
-                            if original_time_length_seconds is not None and original_time_length_seconds > 0:
-                                # For rolling ranges, ensure we have an aggregate_interval to work with
-                                if aggregate_interval is None:
-                                    # No aggregation specified - use weewx archive interval as default
-                                    try:
-                                        default_aggregate_interval = int(self.config_dict["StdArchive"]["archive_interval"])
-                                    except KeyError:
-                                        default_aggregate_interval = 300  # 5 minutes default
-                                    
-                                    # Set aggregate_type and aggregate_interval for rolling ranges
-                                    aggregate_type = "avg"  # Default aggregation type for rolling ranges
-                                    aggregate_interval = default_aggregate_interval
-                                    
-                                    logdbg("Rolling range: No aggregate_interval specified, using weewx archive interval %s seconds with %s aggregation" % 
-                                           (default_aggregate_interval, aggregate_type))
-                                
-                                # Calculate the ratio between rolling range and original timespan
-                                ratio = time_length / original_time_length_seconds
-                                
-                                # Store original aggregate_interval as minimum bound
-                                original_aggregate_interval = aggregate_interval
-                                
-                                # Calculate adjusted aggregate_interval
-                                adjusted_aggregate_interval = int(aggregate_interval * ratio)
-                                
-                                # Apply bounds checking - use original as minimum
-                                if adjusted_aggregate_interval < original_aggregate_interval:
-                                    adjusted_aggregate_interval = original_aggregate_interval
-                                
-                                # Debug logging for testing and troubleshooting
-                                logdbg("Rolling range aggregate_interval adjustment for %s.%s.%s:" % (chart_group, plotname, line_name))
-                                logdbg("  Original time_length: %s (%s seconds)" % (original_time_length_value, original_time_length_seconds))
-                                logdbg("  Rolling time_length: %s seconds" % time_length)
-                                logdbg("  Original aggregate_interval: %s seconds" % original_aggregate_interval)
-                                logdbg("  Calculated ratio: %.3f" % ratio)
-                                logdbg("  Adjusted aggregate_interval: %s seconds" % adjusted_aggregate_interval)
-                                
-                                # Use the adjusted interval
-                                aggregate_interval = adjusted_aggregate_interval
-                                
-                                loginf("Applied rolling range adjustment: %s.%s.%s - %ss intervals for %sd timespan" % 
-                                       (chart_group, plotname, line_name, adjusted_aggregate_interval, time_length // 86400))
-                            else:
-                                # Conversion failed - log error but continue processing other charts
-                                logerr("Rolling range aggregate_interval adjustment failed for %s.%s.%s: " % (chart_group, plotname, line_name) +
-                                       "Could not convert original time_length '%s' to seconds. " % original_time_length_value +
-                                       "Using original aggregate_interval. Please verify chart configuration.")
-                                
-                        except Exception as e:
-                            # Graceful failure for rolling range charts - log error but continue processing other charts
-                            logerr("Rolling range aggregate_interval adjustment error for %s.%s.%s: %s. " % (chart_group, plotname, line_name, e) +
-                                   "Using original aggregate_interval. Please verify chart configuration.")
- 
                     # Handle mirrored values, special units, etc.
                     mirrored_value = line_options.get("mirrored_value", None)
                     special_target_unit = line_options.get("unit", None)
@@ -3882,8 +3683,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                         wind_rose_color,  # ✅ FIXED: Now properly configured
                         special_target_unit,
                         obs_round,  # ✅ FIXED: Now properly calculated
-                        line_options,
-                        force_full_year  # ADD THIS PARAMETER (it's already available in regenerate_plot_data)
+                        line_options
                     )
                     
                     # Add the series data
@@ -3904,20 +3704,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     
                 except Exception as e:
                     logerr("Error generating series data for %s.%s.%s: %s" % (chart_group, plotname, line_name, e))
-                    loginf("FULL ERROR DETAILS: %s" % str(e))
-                    import traceback
-                    loginf("TRACEBACK: %s" % traceback.format_exc()) 
-                    
-                    return {
-                        "series": {},
-                        "options": {
-                            "renderTo": plotname,
-                            "chart_group": chart_group,
-                            "title": "Error generating chart",
-                            "subtitle": "",
-                            "type": "line"
-                        }
-                    }
+                    continue
             
             # =============================================================================
             # FIX: Add missing chart options (replicate from main run() method)
@@ -3930,10 +3717,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             plot_data["options"]["css_class"] = css_class
             
             logdbg("Successfully regenerated plot data for %s.%s" % (chart_group, plotname))
-            print("DEBUG: Returning plot_data structure:")
-            print("DEBUG: plot_data keys:", list(plot_data.keys()))
-            print("DEBUG: plot_data['options'] keys:", list(plot_data["options"].keys()))
-            print("DEBUG: plot_data['options']['gapsize']:", plot_data["options"].get("gapsize", "NOT SET"))
             return plot_data
             
         except Exception as e:
@@ -4064,8 +3847,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         wind_rose_color,
         special_target_unit,
         obs_round,
-        line_options=None,
-        force_full_year=False
+        line_options=None  # ADD THIS LINE
     ):
         
 
@@ -4499,7 +4281,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
 
             min_obs_vt = self.converter.convert(obs_vt)
 
@@ -4519,7 +4301,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
             
             max_obs_vt = self.converter.convert(obs_vt)
 
@@ -4539,7 +4321,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
             
             avg_obs_vt = self.converter.convert(obs_vt)
 
@@ -4596,7 +4378,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)          
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)            
             
             min_obs_vt = self.converter.convert(obs_vt)
 
@@ -4616,7 +4398,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)          
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)            
             
             max_obs_vt = self.converter.convert(obs_vt)
 
@@ -4905,8 +4687,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                             subqry_groupby,
                             order_sql
                         )
-            # debug to check SQL query
-            print(f"DEBUG: sql_lookup = {sql_lookup}")
 
             # Setup values for the converter
             try:
@@ -4922,14 +4702,15 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             
             try:
                 query = archive.genSql(sql_lookup)
-                query_list = list(query)
-            except Exception as e:
+            except:
                 raise Warning(
-                    "SQL error in xAxis_groupby processing. "
-                    "Query was: %s. Error was: %s" % (sql_lookup, str(e))
+                    "SQL error in"
+                    "sql_lookup"
+                    "The error is: %s"
+                        % (error)                    
                 )
                 
-            for row in query_list:  # This will now work
+            for row in query:
                 xAxis_labels.append(row[0])
                 row_tuple = (row[1], obs_unit_from_target_unit, obs_group)
                 if special_target_unit:
@@ -4943,27 +4724,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 for i in obsvalues:
                     if i is not None:
                         i = -i
-
-            # Add null padding for full year display when explicitly requested
-            if force_full_year and xAxis_groupby == "month":
-                # Ensure all 12 months (1-12) are present, padding missing months with nulls
-                padded_labels = []
-                padded_values = []
-                
-                for month in range(1, 13):  # Jan=1 through Dec=12
-                    if month in xAxis_labels:
-                        # This month has data from SQL query, use the existing result
-                        index = xAxis_labels.index(month)
-                        padded_labels.append(month)
-                        padded_values.append(obsvalues[index])
-                    else:
-                        # This month has no data, add null to create gap
-                        padded_labels.append(month)
-                        padded_values.append(None)
-                
-                # Replace the SQL results with null-padded versions
-                xAxis_labels = padded_labels
-                obsvalues = padded_values
 
             # Return a dict which has the value for if we need to add labels
             # from sql or not.
@@ -4979,9 +4739,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "xAxis_groupby_labels": "",
                     "obsdata": obsvalues,
                 }
-
             return data
-            # Debug for checking SQL query
 
         # Begin standard observation lookups
         try:
@@ -4998,7 +4756,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 % (binding, obs_lookup, e)
             )
 
-        self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval, force_full_year)       
+        self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)        
         
         if special_target_unit:
             logdbg("unit_group=%s source_unit=%s special_target_unit=%s" % (obs_vt[2],obs_vt[1],special_target_unit))
@@ -5078,10 +4836,10 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
 
         return data
 
-    def insert_null_value_timestamps(self, time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, interval, force_full_year=False):
+    def insert_null_value_timestamps(self, time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, interval):
         """
         Add null data points at beginning and end of timespan to ensure full coverage.
-        - Beginning: from start_ts to first actual data point (e.g., 2022 Jan-August nulls) - only when force_full_year=True
+        - Beginning: from start_ts to first actual data point (e.g., 2022 Jan-August nulls)
         - End: from last actual data point to end_ts (e.g., 2025 current date-December nulls)
         This ensures graphs show full calendar year axis with proper null padding.
         """
@@ -5098,7 +4856,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         end_count = 0
         
         # Handle beginning padding (for cases like 2022 data starting in August)
-        if force_full_year and len(time_start_list) > 0:
+        if len(time_start_list) > 0:
             first_timestamp = time_start_list[0]
             if first_timestamp > start_ts:
                 # Add null points from start_ts to first_timestamp
