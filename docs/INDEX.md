@@ -18,8 +18,12 @@
 
 ## Reference
 
-- [weather-skin.md](reference/weather-skin.md) — Belchertown architecture, config, database schema
-- [CREDENTIALS.md](reference/CREDENTIALS.md) — API keys, DB passwords, SSH details (not committed)
+- [SERVER-INVENTORY.md](reference/SERVER-INVENTORY.md) — **Authoritative map of what lives where** (containers, paths, MQTT chain, sync mechanism). Snapshot date 2026-04-29.
+- [REPO-VS-SERVER-DIFF-2026-04-29.md](reference/REPO-VS-SERVER-DIFF-2026-04-29.md) — File-by-file comparison of live skin vs each branch on the fork
+- [weewx-5.3/](reference/weewx-5.3/) — WeeWX 5.3.1 documentation (markdown source, 98 files). **Use this** — the server runs 5.3.1.
+- [WEEWX-USERGUIDE-4.10.html](reference/WEEWX-USERGUIDE-4.10.html), [WEEWX-CUSTOMIZING-4.10.html](reference/WEEWX-CUSTOMIZING-4.10.html), [WEEWX-UPGRADING-4.10.html](reference/WEEWX-UPGRADING-4.10.html) — WeeWX 4.10 docs (legacy; partial overlap with 5.x)
+- [../reference/weather-skin.md](../reference/weather-skin.md) — Belchertown architecture facts (corrected 2026-04-29)
+- [../reference/CREDENTIALS.md](../reference/CREDENTIALS.md) — API keys, DB passwords, SSH details (gitignored)
 
 ## Archive
 

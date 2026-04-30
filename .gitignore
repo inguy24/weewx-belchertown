@@ -7,6 +7,8 @@ reference/CREDENTIALS.md
 # IDE & OS
 .vscode/
 .idea/
+.claude/
+.mcp.json
 *.swp
 *.swo
 *~

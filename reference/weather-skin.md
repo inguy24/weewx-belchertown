@@ -6,10 +6,22 @@ Load alongside [rules/weather-skin.md](../rules/weather-skin.md) when working on
 
 - **Public hostname:** `weather.shaneburkhardt.com`
 - **Container:** `cloud` (on Ratbert LXD host)
-- **Container IP:** 192.168.7.2
-- **Reverse proxy:** nginx-proxy-manager (NPM) on Ratbert
-- **HTTPS:** Let's Encrypt cert via certbot (issued 2026-04-25, shared with `cloud.shaneburkhardt.com`)
+- **Container IP:** 192.168.7.2 (eth0 on `br-vlan7`); also 10.0.1.3 on `br-internal`
+- **HTTPS termination:** **Apache on the cloud container at port 443** (NOT nginx-proxy-manager). Vhost: `/etc/apache2/sites-enabled/weather-ssl.conf`. Cert: `/etc/letsencrypt/live/weather.shaneburkhardt.com/`
+- **DocumentRoot:** `/var/www/weewx/` on cloud (which is the SAME filesystem as `/var/www/weewx/` on the weewx container — see "Static site sync" below)
+- **Cert renewal:** certbot.timer (daily); cert issued 2026-04-25
+- **NPM role:** **Not used for `weather.shaneburkhardt.com`.** Same hosting model as `cloud.shaneburkhardt.com` (Nextcloud) — Apache on the cloud container terminates TLS directly. NPM is in the path for *other* hostnames but not this one. (Confirmed by user 2026-04-29.)
 - **Access:** `ssh ratbert "lxc exec cloud -- <command>"`
+
+### Static site sync (weewx → cloud)
+
+The site is "synced" via an LXD shared disk, NOT rsync/cron/Ftp/Rsync skins:
+
+- Ratbert host directory `/mnt/weewx/` is bind-mounted into both containers:
+  - weewx container: `lxc config device weewx-output`, mount path `/var/www/weewx`
+  - cloud container: `lxc config device weewx-web`, mount path `/var/www/weewx`
+- weewx writes generated HTML; Apache on cloud reads from the same files instantly.
+- **Implication:** any change weewx makes is live immediately. There is no "deploy" step.
 
 ## Weewx engine
 
@@ -18,7 +30,8 @@ Load alongside [rules/weather-skin.md](../rules/weather-skin.md) when working on
 - **Database:** MariaDB 10.11 (shared with Kodi)
 - **Database host:** Same weewx container (localhost or 192.168.2.121 from remote)
 - **Data tables:** `archive` (historical data), `current_observation` (live conditions)
-- **Weewx version:** [check docs/reference/WEEWX-VERSION.md or run `weewxd --version` in container]
+- **Weewx version:** 5.3.1 (verified 2026-04-29)
+- **WeeWX docs to consult:** [docs/reference/weewx-5.3/](../docs/reference/weewx-5.3/) (markdown source from GitHub tag v5.3.1) — note that the v4.10 HTML guides in [docs/reference/](../docs/reference/) are for the **previous major version** and many sections do not apply
 
 ### Database credentials
 
@@ -29,11 +42,12 @@ See `reference/CREDENTIALS.md` for:
 
 ### Skin location (weewx container)
 
-- **Active skin:** `/home/weewx/skins/Belchertown/`
-- **Skin config:** `/home/weewx/skins/Belchertown/skin.conf`
-- **Templates:** `/home/weewx/skins/Belchertown/html/`
-- **Static assets:** `/home/weewx/skins/Belchertown/css/`, `/home/weewx/skins/Belchertown/js/`
-- **Generated output:** Published to web root (exact path: check weewx.conf station section)
+- **Active skin:** `/etc/weewx/skins/Belchertown/`
+- **Skin config:** `/etc/weewx/skins/Belchertown/skin.conf`  *(server-side has CUSTOMIZATIONS not in repo — see [docs/reference/REPO-VS-SERVER-DIFF-2026-04-29.md](../docs/reference/REPO-VS-SERVER-DIFF-2026-04-29.md))*
+- **Templates:** `/etc/weewx/skins/Belchertown/*.html.tmpl`, `*.inc`
+- **Static assets:** `/etc/weewx/skins/Belchertown/style.css`, `/etc/weewx/skins/Belchertown/js/belchertown.js.tmpl`
+- **Python backend:** `/etc/weewx/bin/user/belchertown.py` (server has hand-edited `belchertown.py.bak` proving local modifications)
+- **Generated output:** `/var/www/weewx/` on the weewx container — see "Public site serving" below
 
 ### Weewx main config
 
@@ -78,6 +92,16 @@ In `/etc/weewx/weewx.conf` (or skin.conf):
 
 **Evaluation task:** Clone each candidate, test locally, document findings in `docs/planning/WEATHER-EVALUATION-PLAN.md`.
 
+## MQTT real-time data chain
+
+- **Broker:** EMQX on cloud container (Erlang `beam.smp`). Ports: `1883` MQTT/TCP, `8083` MQTT/WS, `18083` admin dashboard.
+- **Publisher (weewx → broker):** `matthewwall/weewx-mqtt` extension at `/etc/weewx/bin/user/mqtt.py`. Configured under `[StdRESTful][[MQTT]]` in `/etc/weewx/weewx.conf`.
+  - **🚨 KNOWN BUG (2026-04-29):** the `server_url` line uses scheme `mgtt://` instead of `mqtt://` — typo. The extension cannot parse it, so weewx is publishing nothing to the broker. This is the root cause of regular users not seeing live data.
+- **Subscriber (browser):** Belchertown skin connects via WSS to `wss://weather.shaneburkhardt.com:443/mqtt`, topic `weewx/loop`, user `weewx-web`. Configured in `weewx.conf` `[StdReport][[Belchertown]][[[Extras]]]`.
+- **TLS + WS-upgrade proxy:** Apache vhost `weather-ssl.conf` rewrites `^/mqtt(.*)` to `ws://localhost:8083/mqtt$1` when `Upgrade: websocket` is present.
+
+The proxy chain is wired correctly. The only break is the publisher typo.
+
 ## Accessing the weather site for testing
 
 ### From DILBERT
@@ -89,11 +113,12 @@ ssh ratbert "lxc exec weewx -- bash"
 # Or run commands directly
 ssh ratbert "lxc exec weewx -- systemctl status weewx"
 
-# View generated output
-ssh ratbert "lxc exec cloud -- ls -la /var/www/html/"
+# View generated output (LIVE site files — same filesystem on both containers)
+ssh ratbert "lxc exec weewx -- ls -la /var/www/weewx/"
+ssh ratbert "lxc exec cloud -- ls -la /var/www/weewx/"   # same dir via lxd shared disk
 
-# Check live data
-ssh ratbert "lxc exec weewx -- curl http://localhost:8000/api/current-conditions"
+# Check weewx version
+ssh ratbert "lxc exec weewx -- weewxd --version"
 ```
 
 ### Database access
