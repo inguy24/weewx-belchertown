@@ -1,0 +1,33 @@
+# Credentials & secrets
+.env
+reference/CREDENTIALS.md
+*.key
+*.pem
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build & dependencies
+node_modules/
+dist/
+build/
+*.egg-info/
+__pycache__/
+.Python
+
+# Temp & cache
+tmp/
+*.tmp
+*.cache
+.pytest_cache/
+
+# Weewx dev artifacts
+weewx-output/
+Belchertown-dev/
+*.backup.*
