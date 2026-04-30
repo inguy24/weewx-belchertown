@@ -794,12 +794,14 @@ class getData(SearchList):
             "database_type"
         ]
         driver = self.generator.config_dict["DatabaseTypes"][database_type]["driver"]
+
+        #Fix type errors caused by improper escapes for sqlite and mysql
         if driver == "weedb.sqlite":
             year_rainiest_month_sql = (
                 'SELECT strftime("%%m", datetime(dateTime, "unixepoch", "localtime")) as month, SUM( sum ) as total FROM archive_day_rain WHERE strftime("%%Y", datetime(dateTime, "unixepoch", "localtime")) = "%s" GROUP BY month ORDER BY total DESC LIMIT 1;'
                 % time.strftime("%Y", time.localtime(time.time()))
             )
-            at_rainiest_month_sql = 'SELECT strftime("%m", datetime(dateTime, "unixepoch", "localtime")) as month, strftime("%Y", datetime(dateTime, "unixepoch", "localtime")) as year, SUM( sum ) as total FROM archive_day_rain GROUP BY month, year ORDER BY total DESC LIMIT 1;'
+            at_rainiest_month_sql = 'SELECT strftime("%%m", datetime(dateTime, "unixepoch", "localtime")) as month, strftime("%%Y", datetime(dateTime, "unixepoch", "localtime")) as year, SUM( sum ) as total FROM archive_day_rain GROUP BY month, year ORDER BY total DESC LIMIT 1;'
             year_rain_data_sql = (
                 'SELECT dateTime, sum FROM archive_day_rain WHERE strftime("%%Y", datetime(dateTime, "unixepoch", "localtime")) = "%s" AND count > 0;'
                 % time.strftime("%Y", time.localtime(time.time()))
@@ -807,7 +809,7 @@ class getData(SearchList):
             # The all stats from http://www.weewx.com/docs/customizing.htm
             # doesn't seem to calculate "Total Rainfall for" all time stat
             # correctly.
-            at_rain_highest_year_sql = 'SELECT strftime("%Y", datetime(dateTime, "unixepoch", "localtime")) as year, SUM( sum ) as total FROM archive_day_rain GROUP BY year ORDER BY total DESC LIMIT 1;'
+            at_rain_highest_year_sql = 'SELECT strftime("%%Y", datetime(dateTime, "unixepoch", "localtime")) as year, SUM( sum ) as total FROM archive_day_rain GROUP BY year ORDER BY total DESC LIMIT 1;'
         elif driver == "weedb.mysql":
             year_rainiest_month_sql = 'SELECT FROM_UNIXTIME( dateTime, "%%m" ) AS month, ROUND( SUM( sum ), 2 ) AS total FROM archive_day_rain WHERE year( FROM_UNIXTIME( dateTime ) ) = "{0}" GROUP BY month ORDER BY total DESC LIMIT 1;'.format(
                 time.strftime("%Y", time.localtime(time.time()))
@@ -2228,6 +2230,83 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 default_chart_config_path, file_error=True
             )
 
+        date_range_groups = {}
+        
+        for chart_group in self.chart_dict.sections:
+            try:
+                # Get the accumulated options for this chart group
+                group_options = accumulateLeaves(self.chart_dict[chart_group])
+                
+                # Check if date ranges are enabled for this group
+                enable_date_ranges = group_options.get('enable_date_ranges', 'false')
+                if isinstance(enable_date_ranges, bool):
+                    enable_date_ranges = str(enable_date_ranges).lower()
+                else:
+                    enable_date_ranges = str(enable_date_ranges).lower()
+                
+                if enable_date_ranges in ('true', '1', 'yes'):
+                    loginf("Date range functionality enabled for chart group: %s" % chart_group)
+                    
+                    # Parse rolling ranges (7d, 30d, etc.)
+                    rolling_ranges_raw = group_options.get('rolling_ranges', [])
+                    rolling_ranges = []
+                    
+                    # Handle both string and list inputs from configobj
+                    if isinstance(rolling_ranges_raw, list):
+                        # Already a list from configobj
+                        rolling_ranges = [r.strip() for r in rolling_ranges_raw if r and r.strip()]
+                    elif isinstance(rolling_ranges_raw, str):
+                        # String that needs splitting
+                        if rolling_ranges_raw:
+                            rolling_ranges = [r.strip() for r in rolling_ranges_raw.split(',') if r.strip()]
+                    
+                    # Parse available years (2024, 2023, etc.)
+                    available_years_raw = group_options.get('available_years', [])
+                    available_years = []
+                    
+                    # Handle both string and list inputs from configobj
+                    if isinstance(available_years_raw, list):
+                        # Already a list from configobj
+                        available_years = [str(y).strip() for y in available_years_raw if y and str(y).strip()]
+                    elif isinstance(available_years_raw, str):
+                        # String that needs splitting
+                        if available_years_raw:
+                            available_years = [y.strip() for y in available_years_raw.split(',') if y.strip()]
+                    
+                    # Check if monthly breakdown is enabled
+                    enable_monthly = group_options.get('enable_monthly_breakdown', 'false')
+                    if isinstance(enable_monthly, bool):
+                        enable_monthly_breakdown = enable_monthly
+                    else:
+                        enable_monthly_breakdown = str(enable_monthly).lower() in ('true', '1', 'yes')
+                    
+                    # Store the configuration for this chart group
+                    date_range_groups[chart_group] = {
+                        'rolling_ranges': rolling_ranges,
+                        'available_years': available_years,
+                        'enable_monthly_breakdown': enable_monthly_breakdown
+                    }
+                    
+                    # Debug logging
+                    if rolling_ranges:
+                        logdbg("  Rolling ranges: %s" % ', '.join(rolling_ranges))
+                    if available_years:
+                        logdbg("  Available years: %s" % ', '.join(available_years))
+                    if enable_monthly_breakdown:
+                        logdbg("  Monthly breakdown: enabled")
+                    
+            except Exception as e:
+                # Log error but continue processing - don't break existing functionality
+                logerr("Error processing date range configuration for chart group '%s': %s" % (chart_group, e))
+                import traceback
+                logdbg("Full traceback: %s" % traceback.format_exc())
+                continue
+
+        if date_range_groups:
+            loginf("Found %d chart group(s) with date range functionality enabled" % len(date_range_groups))
+        else:
+            logdbg("No chart groups have date range functionality enabled")
+
         self.converter = weewx.units.Converter.fromSkinDict(self.skin_dict)
         self.formatter = weewx.units.Formatter.fromSkinDict(self.skin_dict)
 
@@ -2461,6 +2540,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     year_specific = line_options.get(
                         "year_specific", 2019
                     )  # Force a year so we don't error out
+                    
                     start_at_midnight = to_bool(
                         line_options.get("start_at_midnight", False)
                     )  # Should our timespan start at midnight?
@@ -2847,7 +2927,10 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                         wind_rose_color,
                         special_target_unit,
                         obs_round,
-                        line_options  # ADD THIS PARAMETER
+                        line_options,
+                        chart_group,
+                        plotname,
+                        year_specific
                     )
 
                     # Build the final series data JSON
@@ -2896,11 +2979,894 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             with open(json_filename, mode="w") as jf:
                 jf.write(json.dumps(output[chart_group], indent=4))
 
+            if chart_group in date_range_groups:
+                loginf("Generating date range variations for chart group: %s" % chart_group)
+                try:
+                    self.generate_date_range_variations(
+                        chart_group, 
+                        output[chart_group], 
+                        date_range_groups[chart_group],
+                        html_dest_dir,
+                        archive  # NEW: pass database manager for bounds checking
+                    )
+                except Exception as e:
+                    # Log error but continue - don't break base chart generation
+                    logerr("Error generating date range variations for '%s': %s" % (chart_group, e))
+                    import traceback
+                    logdbg("Full traceback: %s" % traceback.format_exc())
+
             # Save the graphs.conf to a json file for future debugging
             chart_json_filename = html_dest_dir + "/graphs.json"
             with open(chart_json_filename, mode="w") as cjf:
                 cjf.write(json.dumps(self.chart_dict, indent=4))
 
+    def generate_date_range_variations(self, chart_group, base_output, date_range_config, html_dest_dir, archive):
+        """
+        Generate additional JSON files for rolling, yearly, and monthly date ranges.
+        Enhanced with database bounds filtering and optimized generation logic.
+        
+        Args:
+            chart_group: The name of the chart group (e.g., "test_ranges")
+            base_output: The base chart data structure
+            date_range_config: Dict containing rolling_ranges, available_years, enable_monthly_breakdown
+            html_dest_dir: Directory where JSON files should be written
+            archive: Database manager for bounds checking
+        """
+        
+        generated_files = []
+        
+        try:
+            # Get database bounds and filter configuration
+            start_ts, stop_ts, valid_years, valid_months = self.get_database_bounds_info(archive)
+            
+            if not valid_years:
+                logdbg("No valid years found in database, skipping date range generation for %s" % chart_group)
+                return
+            
+            filtered_years, filtered_months = self.filter_date_config_to_database(
+                date_range_config, valid_years, valid_months
+            )
+            
+            # Generate rolling range files (7d, 30d, etc.) - ALWAYS generated
+            rolling_ranges = date_range_config.get('rolling_ranges', [])
+            if isinstance(rolling_ranges, str):
+                rolling_ranges = [r.strip() for r in rolling_ranges.split(',') if r.strip()]
+            
+            for period in rolling_ranges:
+                if period:  # Skip empty periods
+                    try:
+                        rolling_filename = os.path.join(html_dest_dir, "%s_%s.json" % (chart_group, period))
+                        
+                        # CONSOLIDATED: Replace generate_rolling_range_data() call with inline implementation
+                        import copy
+                        rolling_output = copy.deepcopy(base_output)
+                        
+                        # Get chart group level configuration  
+                        group_options = accumulateLeaves(self.chart_dict[chart_group])
+                        rolling_ranges_config = date_range_config.get('rolling_ranges', [])
+                        
+                        period_seconds = self.parse_period_to_seconds(period)
+                        
+                        if period_seconds:
+                            for plotname in rolling_output:
+                                if plotname not in ['belchertown_version', 'generated_timestamp', 'colors', 'chartgroup_title', 'tooltip_date_format', 'credits', 'credits_url', 'credits_position']:
+                                    try:
+                                        # Get plot-specific configuration with proper hierarchy
+                                        plot_config = self.chart_dict[chart_group][plotname]
+                                        plot_options = accumulateLeaves(plot_config)
+                                        
+                                        # Plot level time_length takes precedence over group level  
+                                        original_time_length = plot_options.get('time_length', 
+                                                            group_options.get('time_length', 86400))
+
+                                        rolling_output[plotname] = self.regenerate_plot_data(
+                                            chart_group,
+                                            plotname,
+                                            period_seconds,
+                                            is_rolling_range=True,
+                                            original_time_length=original_time_length
+                                        )
+
+                                    except Exception as e:
+                                        logdbg("Error regenerating plot data for %s.%s with period %s: %s" % (chart_group, plotname, period, e))
+                        
+                        with open(rolling_filename, mode="w") as rf:
+                            rf.write(json.dumps(rolling_output, indent=4))
+                        
+                        generated_files.append("%s_%s.json" % (chart_group, period))
+                        logdbg("Generated rolling range file: %s_%s.json" % (chart_group, period))
+                        
+                    except Exception as e:
+                        logerr("Error generating rolling range file for %s_%s: %s" % (chart_group, period, e))
+            
+            # Check monthly breakdown setting to determine generation strategy
+            enable_monthly_breakdown = date_range_config.get('enable_monthly_breakdown', False)
+            if isinstance(enable_monthly_breakdown, str):
+                enable_monthly_breakdown = enable_monthly_breakdown.lower() in ('true', '1', 'yes')
+            
+            if enable_monthly_breakdown:
+                # MONTHLY BREAKDOWN ENABLED: Generate only monthly files, skip yearly files
+                loginf("Monthly breakdown enabled for '%s' - generating monthly files only" % chart_group)
+                
+                for (year, month) in filtered_months:
+                    month_str = "%02d" % month  # Zero-pad month (01, 02, etc.)
+                    try:
+                        monthly_filename = os.path.join(html_dest_dir, "%s_%s-%s.json" % (chart_group, year, month_str))
+                        
+                        # CONSOLIDATED: Replace generate_monthly_range_data() call with inline implementation
+                        import copy
+                        monthly_output = copy.deepcopy(base_output)
+                        
+                        # Update the chart data to use month_specific timespan
+                        for plotname in monthly_output:
+                            if plotname not in ['belchertown_version', 'generated_timestamp', 'colors', 'chartgroup_title', 'tooltip_date_format', 'credits', 'credits_url', 'credits_position']:
+                                try:
+                                    monthly_output[plotname] = self.regenerate_plot_data(chart_group, plotname, 'month_specific', year_specific=year, month_specific=month_str)
+                                except Exception as e:
+                                    logdbg("Error regenerating plot data for %s.%s with year-month %s-%s: %s" % (chart_group, plotname, year, month_str, e))
+                        
+                        with open(monthly_filename, mode="w") as mf:
+                            mf.write(json.dumps(monthly_output, indent=4))
+                        
+                        generated_files.append("%s_%s-%s.json" % (chart_group, year, month_str))
+                        logdbg("Generated monthly range file: %s_%s-%s.json" % (chart_group, year, month_str))
+                        
+                    except Exception as e:
+                        logerr("Error generating monthly range file for %s_%s-%s: %s" % (chart_group, year, month_str, e))
+                
+                logdbg("Monthly breakdown mode - skipped yearly file generation for '%s'" % chart_group)
+                
+            else:
+                # YEARLY BREAKDOWN: Generate only yearly files, skip monthly files
+                loginf("Yearly breakdown enabled for '%s' - generating yearly files only" % chart_group)
+                
+                for year in filtered_years:
+                    try:
+                        yearly_filename = os.path.join(html_dest_dir, "%s_%s.json" % (chart_group, year))
+                        
+                        # CONSOLIDATED: Replace generate_yearly_range_data() call with inline implementation
+                        import copy
+                        yearly_output = copy.deepcopy(base_output)
+                        
+                        # Update the chart data to use year_specific timespan
+                        for plotname in yearly_output:
+                            if plotname not in ['belchertown_version', 'generated_timestamp', 'colors', 'chartgroup_title', 'tooltip_date_format', 'credits', 'credits_url', 'credits_position']:
+                                try:
+                                    yearly_output[plotname] = self.regenerate_plot_data(chart_group, plotname, 'year_specific', year_specific=year)
+                                except Exception as e:
+                                    logdbg("Error regenerating plot data for %s.%s with year %s: %s" % (chart_group, plotname, year, e))
+                        
+                        with open(yearly_filename, mode="w") as yf:
+                            yf.write(json.dumps(yearly_output, indent=4))
+                        
+                        generated_files.append("%s_%s.json" % (chart_group, year))
+                        logdbg("Generated yearly range file: %s_%s.json" % (chart_group, year))
+                        
+                    except Exception as e:
+                        logerr("Error generating yearly range file for %s_%s: %s" % (chart_group, year, e))
+                
+                logdbg("Yearly breakdown mode - skipped monthly file generation for '%s'" % chart_group)
+            
+            if generated_files:
+                loginf("Successfully generated %d date range files for chart group '%s'" % (len(generated_files), chart_group))
+                if enable_monthly_breakdown:
+                    loginf("  - %d monthly files (filtered to actual data)" % len([f for f in generated_files if '-' in f and f.endswith('.json')]))
+                else:
+                    loginf("  - %d yearly files (filtered to actual data)" % len([f for f in generated_files if '-' not in f and f.endswith('.json') and not any(p in f for p in rolling_ranges)]))
+                loginf("  - %d rolling range files" % len([f for f in generated_files if any(p in f for p in rolling_ranges)]))
+            else:
+                logdbg("No date range files generated for chart group '%s'" % chart_group)
+                
+        except Exception as e:
+            logerr("Error in generate_date_range_variations for chart group '%s': %s" % (chart_group, e))
+            import traceback
+            logdbg("Full traceback: %s" % traceback.format_exc())
+
+    def parse_period_to_seconds(self, period):
+        """
+        Convert period strings (7d, 30d, 1h) to seconds
+        
+        Args:
+            period: Period string (e.g., '7d', '30d', '1h')
+            
+        Returns:
+            Number of seconds, or None if parsing fails
+        """
+        
+        try:
+            if period.endswith('d'):
+                # Days
+                days = int(period[:-1])
+                return days * 86400  # 86400 seconds per day
+            elif period.endswith('h'):
+                # Hours  
+                hours = int(period[:-1])
+                return hours * 3600  # 3600 seconds per hour
+            elif period.endswith('w'):
+                # Weeks
+                weeks = int(period[:-1])
+                return weeks * 604800  # 604800 seconds per week
+            else:
+                logerr("Unknown period format: %s" % period)
+                return None
+        except ValueError as e:
+            logerr("Error parsing period '%s': %s" % (period, e))
+            return None
+
+    def regenerate_plot_data(self, chart_group, plotname, time_length, year_specific=None, month_specific=None, is_rolling_range=False, original_time_length=None):
+        """
+        Regenerate plot data with different time parameters
+        
+        This method replicates the chart generation logic from the main run() method
+        but with modified time_length parameters.
+        
+        Args:
+            chart_group: Chart group name
+            plotname: Plot name within the chart group
+            time_length: Time length (seconds or special strings like 'year_specific')
+            year_specific: Year for year_specific time_length
+            month_specific: Month for month_specific time_length
+            
+        Returns:
+            Regenerated plot data structure
+        """
+        
+        try:
+            # Get the chart configuration for this specific plot
+            plot_config = self.chart_dict[chart_group][plotname]
+            plot_options = accumulateLeaves(plot_config)
+            
+            # Setup label dict for text and titles
+            try:
+                d = self.skin_dict["Labels"]["Generic"]
+            except KeyError:
+                d = {}
+            label_dict = weeutil.weeutil.KeyDict(d)
+            
+            # Setup database binding
+            binding = plot_options.get(
+                "data_binding",
+                self.config_dict["StdReport"].get("data_binding", "wx_binding"),
+            )
+            archive = self.db_binder.get_manager(binding)
+            
+            # Create the plot data structure
+            plot_data = {
+                "series": OrderedDict(),
+                "options": {}
+            }
+            
+            #Basic plot options
+            plot_data["options"]["renderTo"] = plotname
+            plot_data["options"]["chart_group"] = chart_group
+            plot_data["options"]["title"] = plot_options.get("title", "")
+            plot_data["options"]["subtitle"] = plot_options.get("subtitle", "")
+            plot_data["options"]["type"] = plot_options.get("type", "line")
+            
+            # Handle gapsize, connectNulls, etc.
+            base_gapsize = int(plot_options.get("gapsize", 300))
+            # Apply rolling range gapsize scaling if applicable
+
+            if is_rolling_range and original_time_length is not None and base_gapsize:
+                # Convert time_length to seconds for calculation
+                if isinstance(time_length, int):
+                    rolling_time_seconds = time_length
+                else:
+                    rolling_time_seconds = int(time_length)
+                    
+                if isinstance(original_time_length, int):
+                    original_time_seconds = original_time_length
+                else:
+                    original_time_seconds = int(original_time_length)
+                
+                # Calculate proportional ratio (minimum 1.0, no reduction)
+                if original_time_seconds > 0:
+                    ratio = max(1.0, rolling_time_seconds / original_time_seconds)
+                    scaled_gapsize = int(base_gapsize * ratio)
+                    plot_data["options"]["gapsize"] = int(scaled_gapsize) * 1000
+                else:
+                    plot_data["options"]["gapsize"] = int(base_gapsize) * 1000
+
+            else:
+                # Use original gapsize for non-rolling ranges
+                if base_gapsize:
+                    plot_data["options"]["gapsize"] = int(base_gapsize) * 1000
+
+            plot_data["options"]["connectNulls"] = plot_options.get("connectNulls", "false")
+            
+            # Handle xAxis options
+            xAxis_groupby = plot_options.get("xAxis_groupby", None)
+            xAxis_categories = plot_options.get("xAxis_categories", "")
+            if isinstance(xAxis_categories, list) is False:
+                xAxis_categories = xAxis_categories.split()
+            plot_data["options"]["xAxis_categories"] = xAxis_categories
+            
+            # Handle other options
+            plot_data["options"]["plot_tooltip_date_format"] = plot_options.get("tooltip_date_format", None)
+            plot_data["options"]["css_width"] = plot_options.get("width", "")
+            plot_data["options"]["css_height"] = plot_options.get("height", "")
+            
+            legend = plot_options.get("legend", None)
+            if legend is None:
+                plot_data["options"]["legend"] = "true"
+            else:
+                plot_data["options"]["legend"] = legend
+                
+            exporting = plot_options.get("exporting", None)
+            if exporting is not None and to_bool(exporting):
+                plot_data["options"]["exporting"] = "true"
+            else:
+                plot_data["options"]["exporting"] = "false"
+            
+            # Generate timespan for the modified time_length
+            start_ts = archive.firstGoodStamp()
+            stop_ts = archive.lastGoodStamp()
+            timespan = weeutil.weeutil.TimeSpan(start_ts, stop_ts)
+            
+            plotgen_ts = self.gen_ts
+            if not plotgen_ts:
+                plotgen_ts = stop_ts
+                if not plotgen_ts:
+                    plotgen_ts = time.time()
+            
+# COMPLETE TIMESPAN CALCULATION LOGIC 
+# This needs to REPLACE the existing incomplete timespan section in regenerate_plot_data()
+
+# First, extract the required variables from plot_options (ADD THIS BEFORE timespan calculation):
+            time_ago = int(plot_options.get("time_ago", 1))
+            day_specific = plot_options.get("day_specific", 1)
+            start_at_midnight = to_bool(plot_options.get("start_at_midnight", False))
+            start_at_whole_hour = to_bool(plot_options.get("start_at_whole_hour", False))
+            start_at_beginning_of_month = to_bool(plot_options.get("start_at_beginning_of_month", False))
+
+            # Calculate the timespan based on the time_length parameter
+            if time_length == "today":
+                minstamp, maxstamp = archiveDaySpan(timespan.stop)
+            elif time_length == "week":
+                week_start = to_int(
+                    self.config_dict["Station"].get("week_start", 6)
+                )
+                minstamp, maxstamp = archiveWeekSpan(timespan.stop, week_start)
+            elif time_length == "month":
+                minstamp, maxstamp = archiveMonthSpan(timespan.stop)
+            elif time_length == "year":
+                minstamp, maxstamp = archiveYearSpan(timespan.stop)
+            elif time_length == "days_ago":
+                minstamp, maxstamp = archiveDaySpan(
+                    timespan.stop, days_ago=time_ago
+                )
+            elif time_length == "weeks_ago":
+                week_start = to_int(
+                    self.config_dict["Station"].get("week_start", 6)
+                )
+                minstamp, maxstamp = archiveWeekSpan(
+                    timespan.stop, week_start, weeks_ago=time_ago
+                )
+            elif time_length == "months_ago":
+                minstamp, maxstamp = archiveMonthSpan(
+                    timespan.stop, months_ago=time_ago
+                )
+            elif time_length == "years_ago":
+                minstamp, maxstamp = archiveYearSpan(
+                    timespan.stop, years_ago=time_ago
+                )
+            elif time_length == "day_specific":
+                # Set an arbitrary hour within the specific day to get
+                # that full day timespan and not the day before.
+                # e.g. 1pm
+                day_dt = datetime.datetime.strptime(
+                    str(year_specific)
+                    + "-"
+                    + str(month_specific)
+                    + "-"
+                    + str(day_specific)
+                    + " 13",
+                    "%Y-%m-%d %H",
+                )
+                daystamp = int(time.mktime(day_dt.timetuple()))
+                minstamp, maxstamp = archiveDaySpan(daystamp)
+            elif time_length == "month_specific":
+                # Set an arbitrary day within the specific month to get
+                # that full month timespan and not the day before.
+                # e.g. 5th day
+                month_dt = datetime.datetime.strptime(
+                    str(year_specific) + "-" + str(month_specific) + "-5",
+                    "%Y-%m-%d",
+                )
+                monthstamp = int(time.mktime(month_dt.timetuple()))
+                minstamp, maxstamp = archiveMonthSpan(monthstamp)
+            elif time_length == "year_specific":
+                # Force full calendar year (Jan 1 to Jan 1 of next year)
+                start_dt = datetime.datetime(int(year_specific), 1, 1, 0, 0, 0)
+                end_dt = datetime.datetime(int(year_specific) + 1, 1, 1, 0, 0, 0)
+                minstamp = int(time.mktime(start_dt.timetuple()))
+                maxstamp = int(time.mktime(end_dt.timetuple()))
+
+            elif time_length == "year_to_now":
+                minstamp, maxstamp = self.timespan_year_to_now(timespan.stop)
+            elif time_length == "hour_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, hour_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, hour_delta=time_ago
+                    )
+            elif time_length == "day_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, day_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, day_delta=time_ago
+                    )
+            elif time_length == "week_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, week_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, week_delta=time_ago
+                    )
+            elif time_length == "month_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, month_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, month_delta=time_ago
+                    )
+            elif time_length == "year_ago_to_now":
+                if start_at_midnight:
+                    span_start, span_stop = archiveSpanSpan(
+                        timespan.stop, year_delta=time_ago
+                    )
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(span_start), span_stop
+                    )
+                else:
+                    minstamp, maxstamp = archiveSpanSpan(
+                        timespan.stop, year_delta=time_ago
+                    )
+            elif time_length == "timestamp_ago_to_now":
+                if start_at_midnight:
+                    minstamp, maxstamp = TimeSpan(
+                        startOfDay(time_ago), timespan.stop
+                    )
+                else:
+                    minstamp, maxstamp = TimeSpan(time_ago, timespan.stop)
+            elif time_length == "timespan_specific":
+                minstamp = plot_options.get("timespan_start", None)
+                maxstamp = plot_options.get("timespan_stop", None)
+                if minstamp is None or maxstamp is None:
+                    raise Warning(
+                        "Error trying to create timespan_specific graph. "
+                        "You are missing either timespan_start or timespan_stop options."
+                    )
+            elif time_length == "all":
+                minstamp = start_ts
+                maxstamp = stop_ts
+            else:
+                # Rolling timespans using seconds
+                
+                # Convert to int() for minstamp math and for
+                # point_timestamp conditional later
+                time_length = int(time_length)
+                
+                # Take the generation time and subtract the time_length
+                # to get our start time
+                if start_at_midnight:
+                    span_start = plotgen_ts - time_length
+                    minstamp = startOfDay(span_start)
+                else:
+                    minstamp = plotgen_ts - time_length
+                maxstamp = plotgen_ts
+
+            if start_at_whole_hour:
+                minstamp -= minstamp % 3600
+            
+            if start_at_beginning_of_month:
+                start_ts_temp, stop_ts_temp = archiveMonthSpan(minstamp)
+                minstamp = start_ts_temp
+            
+            # =============================================================================
+            # FIX: Initialize yAxis_label for chart options (was missing in original code)
+            # =============================================================================
+            chart_yAxis_label = ""
+            
+            # Generate series data for each observation in this plot
+            for line_name in plot_config.sections:
+                try:
+                    plot_data["series"][line_name] = {}
+                    plot_data["series"][line_name]["obsType"] = line_name
+                    
+                    line_options = accumulateLeaves(plot_config[line_name])
+                    
+                    # Find the observation type
+                    observation_type = line_options.get("observation_type", line_name)
+                    weatherRange_obs_lookup = line_options.get("range_type", None)
+                    
+                    # Get custom name
+                    name = line_options.get("name", None)
+                    if not name:
+                        if weatherRange_obs_lookup is not None:
+                            name = label_dict[weatherRange_obs_lookup]
+                        else:
+                            name = label_dict[observation_type]
+                    # ================================================================
+                    # ROLLING RANGE AGGREGATE INTERVAL SCALING
+                    # This must happen BEFORE aggregate_type processing
+                    # ================================================================
+
+                    # Get base aggregate_interval if it exists
+                    try:
+                        base_aggregate_interval = weeutil.weeutil.nominal_spans(
+                            line_options.get("aggregate_interval")
+                        )
+                    except KeyError:
+                        # No aggregate_interval defined - that's fine
+                        pass
+
+                    # Apply rolling range adjustment if applicable
+                    if is_rolling_range and original_time_length is not None and base_aggregate_interval is not None:
+                        # Convert time_length to seconds for calculation
+                        if isinstance(time_length, int):
+                            rolling_time_seconds = time_length
+                        else:
+                            rolling_time_seconds = int(time_length)
+                            
+                        if isinstance(original_time_length, int):
+                            original_time_seconds = original_time_length
+                        else:
+                            original_time_seconds = int(original_time_length)
+                        
+                        # Calculate proportional ratio (minimum 1.0, no reduction)
+                        if original_time_seconds > 0:
+                            ratio = max(1.0, rolling_time_seconds / original_time_seconds)
+                            adjusted_aggregate_interval = int(base_aggregate_interval * ratio)
+                            
+                            # Replace the line_options aggregate_interval with our adjusted value
+                            line_options["aggregate_interval"] = adjusted_aggregate_interval
+                            rolling_adjustment_applied = True
+
+                    # Look for aggregation type
+                    aggregate_type = line_options.get("aggregate_type")
+
+                    # For rolling ranges, default to 'avg' if no aggregate_type is defined
+                    if aggregate_type in (None, "", "None", "none"):
+                        if is_rolling_range:
+                            aggregate_type = "avg"  # Default for rolling range data reduction
+                            try:
+                                aggregate_interval = weeutil.weeutil.nominal_spans(line_options.get("aggregate_interval"))
+                            except KeyError:
+                                logdbg("Aggregate interval required for rolling range scaling, skipping line type %s" % observation_type)
+                                continue
+                        else:
+                            aggregate_type = aggregate_interval = None  # Standard no-aggregation path
+                    else:
+                        try:
+                            # Get the (possibly adjusted) aggregate_interval
+                            aggregate_interval = weeutil.weeutil.nominal_spans(line_options.get("aggregate_interval"))
+                        except KeyError:
+                            logdbg("Aggregate interval required for aggregate type %s, skipping line type %s" % (aggregate_type, observation_type))
+                            continue
+                    
+                    # Check for average type
+                    average_type = line_options.get("average_type")
+                    if average_type in (None, "", "None", "none"):
+                        average_type = None
+                    
+                    # Handle mirrored values, special units, etc.
+                    mirrored_value = line_options.get("mirrored_value", None)
+                    special_target_unit = line_options.get("unit", None)
+                    
+                    # =============================================================================
+                    # FIX: Calculate unit_label for yAxis_label calculation
+                    # =============================================================================
+                    if observation_type == "rainTotal":
+                        obs_label = "rain"
+                    elif (
+                        observation_type == "weatherRange"
+                        and weatherRange_obs_lookup is not None
+                    ):
+                        obs_label = weatherRange_obs_lookup
+                    else:
+                        obs_label = observation_type
+                    
+                    unit_label = line_options.get(
+                        "yAxis_label_unit",
+                        self.formatter.get_label_string(
+                            special_target_unit if special_target_unit else self.converter.getTargetUnit(obs_label, aggregate_type)[0]
+                        ),
+                    )
+                    
+                    # =============================================================================
+                    # FIX: Add missing yAxis_label calculation (replicate from main run() method)
+                    # =============================================================================
+                    yAxisLabel_config = line_options.get("yAxis_label", None)
+                    # Set a default yAxis label if graphs.conf yAxis_label is
+                    # none and there's a unit_label - e.g. Temperature (F)
+                    if yAxisLabel_config is None and unit_label:
+                        yAxis_label = name + " (" + unit_label.strip() + ")"
+                    elif yAxisLabel_config and unit_label:
+                        yAxis_label = (
+                            yAxisLabel_config + " (" + unit_label.strip() + ")"
+                        )
+                    elif yAxisLabel_config:
+                        yAxis_label = yAxisLabel_config
+                    else:
+                        # Unknown observation, set the default label to ""
+                        yAxis_label = ""
+                    
+                    # Store the first yAxis_label for chart options
+                    if not chart_yAxis_label:
+                        chart_yAxis_label = yAxis_label
+                    
+                    plot_data["series"][line_name]["yAxis_label"] = yAxis_label
+                    
+                    # ============================================================================
+                    # FIX: Setup wind_rose_color properly (was missing in original code)
+                    # ============================================================================
+                    wind_rose_color = {}
+                    wind_rose_color[0] = line_options.get("beauford0", "#7cb5ec")
+                    wind_rose_color[1] = line_options.get("beauford1", "#b2df8a")
+                    wind_rose_color[2] = line_options.get("beauford2", "#f7a35c")
+                    wind_rose_color[3] = line_options.get("beauford3", "#8c6bb1")
+                    wind_rose_color[4] = line_options.get("beauford4", "#dd3497")
+                    wind_rose_color[5] = line_options.get("beauford5", "#e4d354")
+                    wind_rose_color[6] = line_options.get("beauford6", "#268bd2")
+                    
+                    # ============================================================================
+                    # FIX: Setup obs_round properly (was missing in original code)
+                    # ============================================================================
+                    obs_round = None
+                    # Check if user specified decimals in numberFormat
+                    try:
+                        plot_line_config = self.chart_dict[chart_group][plotname][line_name]
+                        if (plot_line_config.get("numberFormat", {}).get("decimals") is not None):
+                            obs_round = float(plot_line_config["numberFormat"]["decimals"])
+                    except (KeyError, ValueError, TypeError):
+                        pass
+                    
+                    if obs_round is None:
+                        # Add rounding from weewx.conf/skin.conf so Highcharts can use it
+                        if observation_type == "rainTotal":
+                            rounding_obs_lookup = "rain"
+                        elif observation_type == "weatherRange":
+                            rounding_obs_lookup = line_options.get("range_type", observation_type)
+                        elif observation_type == "haysChart":
+                            rounding_obs_lookup = "windSpeed"
+                        else:
+                            rounding_obs_lookup = observation_type
+                        try:
+                            obs_group = weewx.units.obs_group_dict[rounding_obs_lookup]
+                            obs_unit = self.converter.group_unit_dict[obs_group]
+                            obs_round = self.skin_dict["Units"]["StringFormats"].get(
+                                obs_unit, "0"
+                            )[2]
+                        except:
+                            # Not a valid weewx schema name - maybe this is windRose or something?
+                            obs_round = -1
+                    
+                    # Add rounding to series
+                    plot_data["series"][line_name]["rounding"] = obs_round
+                    
+                    # =============================================================================
+                    # FIX: Preserve YAML hierarchy - copy series-level config directly
+                    # This replicates the logic from the main run() method and preserves the
+                    # natural YAML structure without hardcoded filtering
+                    # =============================================================================
+                    for highcharts_config, highcharts_value in self.chart_dict[chart_group][plotname][line_name].items():
+                        plot_data["series"][line_name][highcharts_config] = highcharts_value
+                    
+                    # Override any highcharts series configs with standardized data
+                    # (This ensures our calculated values take precedence, following main run() method pattern)
+                    plot_data["series"][line_name]["obsType"] = line_name
+                    plot_data["series"][line_name]["name"] = name
+                    plot_data["series"][line_name]["yAxis_label"] = yAxis_label
+                    plot_data["series"][line_name]["rounding"] = obs_round
+                    
+                    # Set the yAxis min and max if present
+                    yAxis_min = line_options.get("yAxis_min", None)
+                    if yAxis_min:
+                        plot_data["series"][line_name]["yAxis_min"] = yAxis_min
+                    yAxis_max = line_options.get("yAxis_max", None)
+                    if yAxis_max:
+                        plot_data["series"][line_name]["yAxis_max"] = yAxis_max
+                    
+                    # Setup polar charts
+                    polar = line_options.get("polar", None)
+                    if polar is not None and to_bool(polar):
+                        plot_data["series"][line_name]["polar"] = "true"
+                    else:
+                        plot_data["series"][line_name]["polar"] = "false"
+                    
+                    # ============================================================================
+                    # FIXED: Call get_observation_data with proper wind_rose_color and obs_round
+                    # ============================================================================
+                    # Get observation data with the modified timespan
+                    series_data = self.get_observation_data(
+                        binding,
+                        archive,
+                        observation_type,
+                        minstamp,
+                        maxstamp,
+                        aggregate_type,
+                        aggregate_interval,
+                        average_type,
+                        time_length,
+                        xAxis_groupby,
+                        xAxis_categories,
+                        mirrored_value,
+                        weatherRange_obs_lookup,
+                        wind_rose_color,
+                        special_target_unit,
+                        obs_round,
+                        line_options,
+                        chart_group,
+                        plotname,
+                        year_specific
+                    )
+                    
+                    # Add the series data
+                    if isinstance(series_data, dict):
+                        if "use_sql_labels" in series_data:
+                            if series_data["use_sql_labels"]:
+                                plot_data["options"]["xAxis_categories"] = series_data["xAxis_groupby_labels"]
+                        elif "weatherRange" in series_data:
+                            plot_data["series"][line_name]["range_unit"] = series_data["range_unit"]
+                            plot_data["series"][line_name]["range_unit_label"] = series_data["range_unit_label"]
+                        
+                        plot_data["series"][line_name]["data"] = list(series_data["obsdata"])
+                    else:
+                        plot_data["series"][line_name]["data"] = list(series_data)
+                    
+                    # Convert numeric options to float
+                    plot_data["series"][line_name] = self.highcharts_series_options_to_float(plot_data["series"][line_name])
+                    
+                except Exception as e:
+                    logerr("Error generating series data for %s.%s.%s: %s" % (chart_group, plotname, line_name, e))
+                    continue
+            
+            # =============================================================================
+            # FIX: Add missing chart options (replicate from main run() method)
+            # =============================================================================
+            # Set the chart-level yAxis_label
+            plot_data["options"]["yAxis_label"] = chart_yAxis_label
+            
+            # Custom CSS class
+            css_class = plot_options.get("css_class", None)
+            plot_data["options"]["css_class"] = css_class
+            
+            logdbg("Successfully regenerated plot data for %s.%s" % (chart_group, plotname))
+            return plot_data
+            
+        except Exception as e:
+            logerr("Error in regenerate_plot_data for %s.%s: %s" % (chart_group, plotname, e))
+            # Return a basic empty structure on error
+            return {
+                "series": {},
+                "options": {
+                    "renderTo": plotname,
+                    "chart_group": chart_group,
+                    "title": "Error generating chart",
+                    "subtitle": "",
+                    "type": "line"
+                }
+            }
+
+    def get_database_bounds_info(self, archive):
+        """Get actual database range and derive valid years/months
+        
+        Returns:
+            start_ts: First timestamp with data
+            stop_ts: Last timestamp with data  
+            valid_years: List of years with any data [2022, 2023, 2024, 2025]
+            valid_months: List of (year, month) tuples with data [(2022, 8), (2022, 9), ...]
+        """
+        import datetime
+        
+        try:
+            # Get actual database bounds
+            start_ts = archive.firstGoodStamp()
+            stop_ts = archive.lastGoodStamp()
+            
+            if start_ts is None or stop_ts is None:
+                logdbg("Database bounds not available, using empty ranges")
+                return start_ts, stop_ts, [], []
+            
+            # Convert to datetime objects for easier manipulation
+            start_dt = datetime.datetime.fromtimestamp(start_ts)
+            stop_dt = datetime.datetime.fromtimestamp(stop_ts)
+            
+            # Derive valid years (all years that have any data)
+            valid_years = list(range(start_dt.year, stop_dt.year + 1))
+            
+            # Derive valid months (all year/month combinations with data)
+            valid_months = []
+            current_dt = datetime.datetime(start_dt.year, start_dt.month, 1)
+            end_dt = datetime.datetime(stop_dt.year, stop_dt.month, 1)
+            
+            while current_dt <= end_dt:
+                valid_months.append((current_dt.year, current_dt.month))
+                # Move to next month
+                if current_dt.month == 12:
+                    current_dt = current_dt.replace(year=current_dt.year + 1, month=1)
+                else:
+                    current_dt = current_dt.replace(month=current_dt.month + 1)
+            
+            logdbg("Database bounds: %s to %s" % (start_dt.strftime("%Y-%m"), stop_dt.strftime("%Y-%m")))
+            logdbg("Valid years: %s" % valid_years)
+            logdbg("Valid months: %d month combinations" % len(valid_months))
+            
+            return start_ts, stop_ts, valid_years, valid_months
+            
+        except Exception as e:
+            logerr("Error getting database bounds info: %s" % e)
+            return None, None, [], []
+
+    def filter_date_config_to_database(self, date_range_config, valid_years, valid_months):
+        """Filter user config against actual database bounds
+        
+        Args:
+            date_range_config: Chart group configuration from graphs.conf
+            valid_years: Years with actual data
+            valid_months: (year, month) combinations with actual data
+            
+        Returns:
+            filtered_years: available_years filtered to data bounds
+            filtered_months: valid month combinations for generation
+        """
+        
+        # Get user-configured years
+        config_years = date_range_config.get('available_years', [])
+        if isinstance(config_years, str):
+            # Handle comma-separated string format from configobj
+            config_years = [y.strip() for y in config_years.split(',') if y.strip()]
+        
+        # Convert to integers for comparison
+        try:
+            config_years = [int(year) for year in config_years if year]
+        except (ValueError, TypeError):
+            logdbg("Invalid year format in available_years, using empty list")
+            config_years = []
+        
+        # Filter years to only those with actual data
+        filtered_years = [year for year in config_years if year in valid_years]
+        
+        # Filter months to only valid combinations that user wants
+        filtered_months = []
+        for year in filtered_years:
+            for month in range(1, 13):
+                if (year, month) in valid_months:
+                    filtered_months.append((year, month))
+        
+        # Log filtering results
+        if config_years != filtered_years:
+            loginf("Filtered available_years from %s to %s based on database bounds" % (config_years, filtered_years))
+        
+        skipped_months = (len(filtered_years) * 12) - len(filtered_months)
+        if skipped_months > 0:
+            logdbg("Skipped %d monthly files outside database bounds" % skipped_months)
+        
+        return filtered_years, filtered_months
+               
     def get_observation_data(
         self,
         binding,
@@ -2919,10 +3885,29 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         wind_rose_color,
         special_target_unit,
         obs_round,
-        line_options=None  # ADD THIS LINE
+        line_options=None,
+        chart_group=None,
+        plotname=None,
+        year_being_processed=None
     ):
         
+        logdbg("=== TESTING: repr(observation)=%s, type=%s ===" % (repr(observation), type(observation)))
 
+        if observation == "rainTotal":
+            obs_lookup = "rain"
+            if aggregate_interval and aggregate_type is None:
+                aggregate_type = "sum"
+            logdbg("=== CONVERTED: rainTotal -> rain, aggregate_type=%s ===" % aggregate_type)
+        elif observation == "rainRate":  
+            obs_lookup = "rainRate"
+            if aggregate_interval and aggregate_type is None:
+                aggregate_type = "max"
+            logdbg("=== CONVERTED: rainRate -> rainRate, aggregate_type=%s ===" % aggregate_type)
+        else:
+            obs_lookup = observation
+            logdbg("=== NO CONVERSION: observation=%s, obs_lookup=%s ===" % (observation, obs_lookup))
+
+        loginf("=== GET OBSERVATION METHOD CALLED: observation='%s', xAxis_groupby='%s' ===" % (observation, xAxis_groupby))
         # Check if this is a custom SQL series
         loginf("=== Checking for custom SQL: line_options=%s ===" % str(line_options))  # ADD THIS
         if line_options and line_options.get('use_custom_sql', 'false').lower() == 'true':
@@ -3353,7 +4338,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
 
             min_obs_vt = self.converter.convert(obs_vt)
 
@@ -3373,8 +4358,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
-
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            
             max_obs_vt = self.converter.convert(obs_vt)
 
             # Get avg values
@@ -3393,8 +4378,8 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
-
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            
             avg_obs_vt = self.converter.convert(obs_vt)
 
             obs_unit = avg_obs_vt[1]
@@ -3450,7 +4435,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)            
             
             min_obs_vt = self.converter.convert(obs_vt)
 
@@ -3470,7 +4455,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                     "Error was: %s." % (binding, obs_lookup, e)
                 )
 
-            self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+            self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)            
             
             max_obs_vt = self.converter.convert(obs_vt)
 
@@ -3489,20 +4474,6 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             }
 
             return data
-
-        # Special Belchertown Skin rain counter
-        if observation == "rainTotal":
-            obs_lookup = "rain"
-            # Force sum on this observation
-            if aggregate_interval:
-                aggregate_type = "sum"
-        elif observation == "rainRate":
-            obs_lookup = "rainRate"
-            # Force max on this observation
-            if aggregate_interval:
-                aggregate_type = "max"
-        else:
-            obs_lookup = observation
             
         #   Special aggregation_subtype measures to enable average rainfall, max and min temperatures to be calculated
         
@@ -3510,310 +4481,429 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
             obs_lookup = "rain"
             obs_label = "Rainfall"
 
+        # NEW xAxis_groupby SECTION:
         if xAxis_groupby or len(xAxis_categories) >= 1:
-            # Setup the converter - for some reason self.converter doesn't work
-            # for the group_unit_dict in this section Get the target unit
-            # nickname (something like 'US' or 'METRIC'):
-            target_unit_nickname = self.config_dict["StdConvert"]["target_unit"]
-            # Get the target unit: weewx.US, weewx.METRIC, weewx.METRICWX
-            target_unit = weewx.units.unit_constants[target_unit_nickname.upper()]
-            # Bind to the appropriate standard converter units
-            converter = weewx.units.StdUnitConverters[target_unit]
+                    # TEMPORARY DEBUG - add this line
+                    logdbg("=== ENTERING xAxis_groupby section for observation='%s' ===" % observation) 
 
-            # Find what kind of database we're working with and specify the
-            # correctly tailored SQL Query for each type of database
-            data_binding = self.config_dict["StdArchive"]["data_binding"]
-            database = self.config_dict["DataBindings"][data_binding]["database"]
-            database_type = self.config_dict["Databases"][database]["database_type"]
-            driver = self.config_dict["DatabaseTypes"][database_type]["driver"]
-            xAxis_labels = []
-            obsvalues = []
+                    # Setup the converter - for some reason self.converter doesn't work
+                    # for the group_unit_dict in this section Get the target unit
+                    # nickname (something like 'US' or 'METRIC'):
+                    target_unit_nickname = self.config_dict["StdConvert"]["target_unit"]
+                    # Get the target unit: weewx.US, weewx.METRIC, weewx.METRICWX
+                    target_unit = weewx.units.unit_constants[target_unit_nickname.upper()]
+                    # Bind to the appropriate standard converter units
+                    converter = weewx.units.StdUnitConverters[target_unit]
 
-            # Define the xAxis group by for the sql query. Default to month
-            if xAxis_groupby == "hour":
-                strformat = "%H"
-            elif xAxis_groupby == "day":
-                strformat = "%d"
-            elif xAxis_groupby == "month":
-                strformat = "%m"
-            elif xAxis_groupby == "year":
-                strformat = "%Y"
-            elif xAxis_groupby == "":
-                strformat = "%m"
-            else:
-                strformat = "%m"
+                    # Find what kind of database we're working with and specify the
+                    # correctly tailored SQL Query for each type of database
+                    data_binding = self.config_dict["StdArchive"]["data_binding"]
+                    database = self.config_dict["DataBindings"][data_binding]["database"]
+                    database_type = self.config_dict["Databases"][database]["database_type"]
+                    driver = self.config_dict["DatabaseTypes"][database_type]["driver"]                    
+                    xAxis_labels = []
+                    obsvalues = []
 
-            # Default catch all in case the aggregate_type isn't defined, default to sum
-            if aggregate_type is None:
-                aggregate_type = "sum"
 
-            if isinstance(time_length, int):
-                order_sql = ' ORDER BY dateTime ASC'
-            else:
-                order_sql = ''
+                    # Define the xAxis group by for the sql query. Default to month. Fixed for mysqldb compatibility issues.
+                    logdbg("=== About to check observation conversions: observation='%s' ===" % observation)
+                    if xAxis_groupby == "hour":
+                        mysql_function = "LPAD(HOUR(FROM_UNIXTIME(dateTime)), 2, '0')"
+                        sqlite_format = "%H"
+                    elif xAxis_groupby == "day":
+                        mysql_function = "LPAD(DAY(FROM_UNIXTIME(dateTime)), 2, '0')"
+                        sqlite_format = "%d"
+                    elif xAxis_groupby == "month":
+                        mysql_function = "LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, '0')"
+                        sqlite_format = "%m"
+                    elif xAxis_groupby == "year":
+                        mysql_function = "YEAR(FROM_UNIXTIME(dateTime))"
+                        sqlite_format = "%Y"
+                    elif xAxis_groupby == "":
+                        mysql_function = "LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, '0')"
+                        sqlite_format = "%m"
+                    else:
+                        mysql_function = "LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, '0')"
+                        sqlite_format = "%m"
 
-            # Special case for time_length = all, force to use complete days only
-            if time_length == "all":
-                start_ts = startOfDay(archive.firstGoodStamp()) + 86400
-                end_ts = startOfDay(archive.lastGoodStamp())
+                    # Default catch all in case the aggregate_type isn't defined, default to sum
+                    if aggregate_type is None:
+                        aggregate_type = "sum"
 
-            # Set up subquery groupby clause
-            if xAxis_groupby == "year": subqry_groupby = '"%Y"'
-            elif xAxis_groupby == "month": subqry_groupby = '"%Y%m"'
-            elif xAxis_groupby == "day": subqry_groupby = '"%Y%m%d"'
-            elif xAxis_groupby == "hour": subqry_groupby = '"%Y%m%d%H"'
-            else: subqry_groupby = ''
+                    if isinstance(time_length, int):
+                        order_sql = ' ORDER BY dateTime ASC'
+                    else:
+                        order_sql = ''
+
+                    # Special case for time_length = all, force to use complete days only
+                    if time_length == "all":
+                        start_ts = startOfDay(archive.firstGoodStamp()) + 86400
+                        end_ts = startOfDay(archive.lastGoodStamp())
+
+                    # Set up subquery groupby clause. Fixed for mysqldb compatibility issues. 
+                    if xAxis_groupby == "year": 
+                        mysql_subqry_groupby = 'YEAR(FROM_UNIXTIME(dateTime))'
+                        sqlite_subqry_groupby = '%Y'
+                    elif xAxis_groupby == "month": 
+                        mysql_subqry_groupby = 'YEAR(FROM_UNIXTIME(dateTime)), LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, \'0\')'
+                        sqlite_subqry_groupby = '%Y%m'
+                    elif xAxis_groupby == "day": 
+                        mysql_subqry_groupby = 'YEAR(FROM_UNIXTIME(dateTime)), LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, \'0\'), LPAD(DAY(FROM_UNIXTIME(dateTime)), 2, \'0\')'
+                        sqlite_subqry_groupby = '%Y%m%d'
+                    elif xAxis_groupby == "hour": 
+                        mysql_subqry_groupby = 'YEAR(FROM_UNIXTIME(dateTime)), LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, \'0\'), LPAD(DAY(FROM_UNIXTIME(dateTime)), 2, \'0\'), LPAD(HOUR(FROM_UNIXTIME(dateTime)), 2, \'0\')'
+                        sqlite_subqry_groupby = '%Y%m%d%H'
+                    else: 
+                        mysql_subqry_groupby = 'YEAR(FROM_UNIXTIME(dateTime)), LPAD(MONTH(FROM_UNIXTIME(dateTime)), 2, \'0\')'
+                        sqlite_subqry_groupby = '%Y%m'
+                                
+                    if driver == "weedb.sqlite":
+                        # Use daily summaries where possible - MUST BE FOR WHOLE DAYS determined by start and stop times otherwise use archive
+                        if xAxis_groupby != "hour" and isStartOfDay(start_ts) and isStartOfDay(end_ts) and end_ts - start_ts > 0 :  # 1 or more exact days
+                            # Avg is a special case
+                            if aggregate_type == "avg":
+                                # Avg(sum) requires a subquery with the correct group by clause
+                                if average_type is not None and average_type == "sum":
+                                    sql_lookup = 'SELECT dt1 AS {0}, ' \
+                                                'AVG(obs1) AS obs ' \
+                                                'FROM (SELECT strftime("{1}", datetime(dateTime, "unixepoch", "localtime")) AS dt1, sum(sum) AS obs1 ' \
+                                                        'FROM archive_day_{2} WHERE dateTime >= {3} AND dateTime < {4} '\
+                                                        'GROUP BY strftime({5}, datetime(dateTime, "unixepoch", "localtime"))) ' \
+                                                'GROUP BY {0}{6};'.format(
+                                        xAxis_groupby,
+                                        sqlite_format,
+                                        obs_lookup,
+                                        start_ts,
+                                        end_ts,
+                                        sqlite_subqry_groupby,
+                                        order_sql
+                                    )
+                                # avg cases with an average_type
+                                elif average_type is not None:
+                                    sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) AS {1}, ' \
+                                                '{2}({3}) AS obs ' \
+                                                'FROM archive_day_{4}  WHERE dateTime >= {5} AND dateTime < {6} ' \
+                                                'GROUP BY {1}{7};'.format(
+                                        sqlite_format,
+                                        xAxis_groupby,
+                                        aggregate_type,
+                                        average_type,
+                                        obs_lookup,
+                                        start_ts,
+                                        end_ts,
+                                        order_sql
+                                    )
+                                # remaining avg cases without an average_type use weighted average
+                                else:
+                                    sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) AS {1}, ' \
+                                                'SUM(wsum)/SUM(sumtime) AS obs ' \
+                                                'FROM archive_day_{2}  WHERE dateTime >= {3} AND dateTime < {4} ' \
+                                                'GROUP BY {1}{5};'.format(
+                                        sqlite_format,
+                                        xAxis_groupby,
+                                        obs_lookup,
+                                        start_ts,
+                                        end_ts,
+                                        order_sql
+                                    )
+                            # other aggregate_type cases use direct interrogation of daily summary
+                            else:
+                                sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) AS {1}, ' \
+                                            '{2}({2}) AS obs ' \
+                                            'FROM archive_day_{3}  ' \
+                                            'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
+                                    sqlite_format,
+                                    xAxis_groupby,
+                                    aggregate_type,
+                                    obs_lookup,
+                                    start_ts,
+                                    end_ts,
+                                    order_sql
+                                )
+                        else:
+                            # archive access with no average_type
+                            if average_type is None:
+                                sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) as {1}, ' \
+                                            'IFNULL({2}({3}),0) AS obs, dateTime FROM archive ' \
+                                            'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
+                                    sqlite_format,
+                                    xAxis_groupby,
+                                    aggregate_type,
+                                    obs_lookup,
+                                    start_ts,
+                                    end_ts,
+                                    order_sql
+                                )
+
+                            # average_type requiring a subquery
+                            else:
+                                sql_lookup = 'SELECT dt1 AS {0}, ' \
+                                            '{1}(obs1) AS obs ' \
+                                            'FROM (SELECT strftime("{2}", datetime(dateTime, "unixepoch", "localtime")) AS dt1, '\
+                                                    'IFNULL({3}({4}),0) AS obs1 ' \
+                                                    'FROM archive WHERE dateTime >= {5} AND dateTime < {6} '\
+                                                    'GROUP BY strftime({7}, datetime(dateTime, "unixepoch", "localtime"))) ' \
+                                            'GROUP BY {0}{8};'.format(
+                                    xAxis_groupby,
+                                    aggregate_type,
+                                    sqlite_format,
+                                    average_type,
+                                    obs_lookup,
+                                    start_ts,
+                                    end_ts,
+                                    sqlite_subqry_groupby,
+                                    order_sql
+                                )
+
+                    #Fix mysqldb compatibility issues.
+                    elif driver == "weedb.mysql":
+                        # Use daily summaries where possible - MUST BE FOR WHOLE DAYS determined by start and stop times otherwise use archive
+                        if xAxis_groupby != "hour" and isStartOfDay(start_ts) and isStartOfDay(end_ts) and end_ts - start_ts > 0 :  # 1 or more exact days
+                            # Avg is a special case
+                            if aggregate_type == "avg":
+                                # Avg(sum) requires a subquery with the correct group by clause
+                                if average_type is not None and average_type == "sum":
+                                    escaped_aggregate_type = self.escape_sql_identifier(aggregate_type, driver)
+                                    sql_lookup = 'SELECT dt1 AS {0}, ' \
+                                                '{1}(obs1) AS obs ' \
+                                                'FROM (SELECT {2} AS dt1, sum(sum) AS obs1 ' \
+                                                        'FROM archive_day_{3} WHERE dateTime >= {4} AND dateTime < {5} '\
+                                                        'GROUP BY {6}) AS subquery ' \
+                                                'GROUP BY {0}{7};'.format(
+                                        xAxis_groupby,
+                                        escaped_aggregate_type,
+                                        mysql_function,
+                                        obs_lookup,
+                                        start_ts,
+                                        end_ts,
+                                        mysql_subqry_groupby,
+                                        order_sql
+                                    )
+                                # avg cases with an average_type
+                                elif average_type is not None:
+                                    escaped_aggregate_type = self.escape_sql_identifier(aggregate_type, driver)
+                                    escaped_average_type = self.escape_sql_identifier(average_type, driver)
+                                    sql_lookup = 'SELECT {0} AS {1}, ' \
+                                                '{2}({3}) AS obs ' \
+                                                'FROM archive_day_{4}  WHERE dateTime >= {5} AND dateTime < {6} ' \
+                                                'GROUP BY {1}{7};'.format(
+                                        mysql_function,
+                                        xAxis_groupby,
+                                        escaped_aggregate_type,
+                                        escaped_average_type,
+                                        obs_lookup,
+                                        start_ts,
+                                        end_ts,
+                                        order_sql
+                                    )
+                                # remaining avg cases without an average_type use weighted average
+                                else:
+                                    sql_lookup = 'SELECT {0} AS {1}, ' \
+                                                'SUM(wsum)/SUM(sumtime) AS obs ' \
+                                                'FROM archive_day_{2}  ' \
+                                                'WHERE dateTime >= {3} AND dateTime < {4} GROUP BY {1}{5};'.format(
+                                        mysql_function,
+                                        xAxis_groupby,
+                                        obs_lookup,
+                                        start_ts,
+                                        end_ts,
+                                        order_sql
+                                    )
+                            # other aggregate_type cases use direct interrogation of daily summary
+                            else:
+                                # Map aggregate_type to correct column/calculation for daily summary tables
+                                if aggregate_type == "avg":
+                                    obs_calculation = "SUM(wsum)/SUM(sumtime)"  # Weighted average
+                                elif aggregate_type == "max":
+                                    obs_calculation = "MAX(`max`)"  # Escaped column name
+                                elif aggregate_type == "min":
+                                    obs_calculation = "MIN(`min`)"  # Escaped column name  
+                                elif aggregate_type == "sum":
+                                    obs_calculation = "SUM(`sum`)"  # Escaped column name
+                                else:
+                                    # Fallback for unknown aggregate types
+                                    escaped_aggregate_type = self.escape_sql_identifier(aggregate_type, driver)
+                                    obs_calculation = escaped_aggregate_type
+                                
+                                sql_lookup = 'SELECT {0} AS {1}, ' \
+                                            '{2} AS obs ' \
+                                            'FROM archive_day_{3}  ' \
+                                            'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
+                                    mysql_function,
+                                    xAxis_groupby,
+                                    obs_calculation,
+                                    obs_lookup,
+                                    start_ts,
+                                    end_ts,
+                                    order_sql
+                                )
+                        else:
+                            # archive access with no average_type
+                            if average_type is None:
+                                escaped_aggregate_type = self.escape_sql_identifier(aggregate_type, driver)
+                                sql_lookup = 'SELECT {0} as {1}, ' \
+                                            'IFNULL({2}({3}),0) AS obs, dateTime FROM archive ' \
+                                            'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
+                                    mysql_function,
+                                    xAxis_groupby,
+                                    escaped_aggregate_type,
+                                    obs_lookup,
+                                    start_ts,
+                                    end_ts,
+                                    order_sql
+                                )
+
+                            # average_type requiring a subquery
+                            else:
+                                escaped_aggregate_type = self.escape_sql_identifier(aggregate_type, driver)
+                                escaped_average_type = self.escape_sql_identifier(average_type, driver)
+                                sql_lookup = 'SELECT dt1 AS {0}, ' \
+                                            '{1}(obs1) AS obs ' \
+                                            'FROM (SELECT {2} AS dt1, '\
+                                                    'IFNULL({3}({4}),0) AS obs1 ' \
+                                                    'FROM archive WHERE dateTime >= {5} AND dateTime < {6} '\
+                                                    'GROUP BY {7}) AS subquery ' \
+                                            'GROUP BY {0}{8};'.format(
+                                    xAxis_groupby,
+                                    escaped_aggregate_type,
+                                    mysql_function,
+                                    escaped_average_type,
+                                    obs_lookup,
+                                    start_ts,
+                                    end_ts,
+                                    mysql_subqry_groupby,
+                                    order_sql
+                                )
+
+                    # Setup values for the converter
+                    try:
+                        obs_group = weewx.units.obs_group_dict[obs_lookup]
+                        obs_unit_from_target_unit = converter.group_unit_dict[obs_group]
+                    except:
+                        # This observation doesn't exist within weewx schema so nothing
+                        # to convert, so set None type
+                        obs_group = None
+                        obs_unit_from_target_unit = None
+
+                    # introduce test to catch any sql errors; a try / except sequence 
+                    try:
+                        query = archive.genSql(sql_lookup)
+                        logdbg("=== RAW SQL RESULTS: Executing SQL for obs_lookup=%s: %s" % (obs_lookup, sql_lookup))
+                    except Exception as e:
+                        logerr("xAxis_groupby: SQL error for obs_lookup=%s: %s" % (obs_lookup, str(e)))
+                        logerr("xAxis_groupby: Problematic SQL: %s" % sql_lookup)
+                        # Return empty data on SQL error
+                        if len(xAxis_categories) == 0:
+                            data = {
+                                "use_sql_labels": True,
+                                "xAxis_groupby_labels": [],
+                                "obsdata": [],
+                            }
+                        else:
+                            data = {
+                                "use_sql_labels": False,
+                                "xAxis_groupby_labels": "",
+                                "obsdata": [],
+                            }
+                        return data
+                    
+                    logdbg("=== RAW SQL RESULTS for %s ===" % obs_lookup)
+                    # Process query results
+
+                    result_count = 0
+                    for row in query:
+                        logdbg("=== RAW SQL RESULTS Row %d: month=%s, obs=%s" % (result_count, row[0], row[1]))
+                        xAxis_labels.append(row[0])
+                        row_tuple = (row[1], obs_unit_from_target_unit, obs_group)
+                        if special_target_unit:
+                            row_converted = weewx.units.convert(row_tuple, special_target_unit)
+                        else:
+                            row_converted = self.converter.convert(row_tuple)
+                        obsvalues.append(row_converted[0])
+
+                    # If the values are to be mirrored, we need to make them negative
+                    if mirrored_value:
+                        for i in range(len(obsvalues)):
+                            if obsvalues[i] is not None:
+                                obsvalues[i] = -obsvalues[i]
+
+                    logdbg("xAxis_groupby: Processed %d data points for obs_lookup=%s" % (len(obsvalues), obs_lookup))
+
+                        # Check if this chart has force_full_year enabled
+                        # Get force_full_year from chart_group or plotname options
+
+                    logdbg("PADDING DEBUG: Original xAxis_labels for %s.%s: %s" % (chart_group, plotname, xAxis_labels))
+                    logdbg("PADDING DEBUG: Original obsvalues: %s" % obsvalues)
+
+                    if chart_group and plotname:
+                        try:
+                            plot_options = accumulateLeaves(self.chart_dict[chart_group][plotname])
+                            force_full_year = plot_options.get('force_full_year', False)
+                            if isinstance(force_full_year, str):
+                                force_full_year = force_full_year.lower() in ('true', '1', 'yes')
                             
-            if driver == "weedb.sqlite":
-                # Use daily summaries where possible - MUST BE FOR WHOLE DAYS determined by start and stop times otherwise use archive
-                if xAxis_groupby != "hour" and isStartOfDay(start_ts) and isStartOfDay(end_ts) and end_ts - start_ts > 0 :  # 1 or more exact days
-                    # Avg is a special case
-                    if aggregate_type == "avg":
-                        # Avg(sum) requires a subquery with the correct group by clause
-                        if average_type is not None and average_type == "sum":
-                            sql_lookup = 'SELECT dt1 AS {0}, ' \
-                                         'AVG(obs1) AS obs ' \
-                                         'FROM (SELECT strftime("{1}", datetime(dateTime, "unixepoch", "localtime")) AS dt1, sum(sum) AS obs1 ' \
-                                                'FROM archive_day_{2} WHERE dateTime >= {3} AND dateTime < {4} '\
-                                                'GROUP BY strftime({5}, datetime(dateTime, "unixepoch", "localtime"))) ' \
-                                         'GROUP BY {0}{6};'.format(
-                                xAxis_groupby,
-                                strformat,
-                                obs_lookup,
-                                start_ts,
-                                end_ts,
-                                subqry_groupby,
-                                order_sql
-                            )
-                        # avg cases with an average_type
-                        elif average_type is not None:
-                            sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) AS {1}, ' \
-                                         '{2}({3}) AS obs ' \
-                                         'FROM archive_day_{4}  WHERE dateTime >= {5} AND dateTime < {6} ' \
-                                         'GROUP BY {1}{7};'.format(
-                                strformat,
-                                xAxis_groupby,
-                                aggregate_type,
-                                average_type,
-                                obs_lookup,
-                                start_ts,
-                                end_ts,
-                                order_sql
-                            )
-                        # remaining avg cases without an average_type use weighted average
-                        else:
-                            sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) AS {1}, ' \
-                                         'SUM(wsum)/SUM(sumtime) AS obs ' \
-                                         'FROM archive_day_{2}  WHERE dateTime >= {3} AND dateTime < {4} ' \
-                                         'GROUP BY {1}{5};'.format(
-                                strformat,
-                                xAxis_groupby,
-                                obs_lookup,
-                                start_ts,
-                                end_ts,
-                                order_sql
-                            )
-                    # other aggregate_type cases use direct interrogation of daily summary
+                            if force_full_year and xAxis_groupby == "month":
+                                # Pad missing months with null values for full year display
+                                logdbg("Applying force_full_year null padding for %s.%s" % (chart_group, plotname))
+                                
+                                # Create full 12-month structure
+                                full_year_labels = ['01', '02', '03', '04', '05', '06', 
+                                                    '07', '08', '09', '10', '11', '12']
+                                full_year_values = []
+                                
+                                # Map existing data to full year structure
+                                for month_label in full_year_labels:
+                                    if month_label in xAxis_labels:
+                                        # Find the index and use the corresponding value
+                                        index = xAxis_labels.index(month_label)
+                                        full_year_values.append(obsvalues[index])
+                                    else:
+                                        # Missing month - add null value
+                                        full_year_values.append(None)
+                                
+                                # Replace with padded data
+                                xAxis_labels = full_year_labels
+                                obsvalues = full_year_values
+                                
+                                logdbg("force_full_year: Padded to %d months with null values" % len(obsvalues))
+                        except Exception as e:
+                            logdbg("Error applying force_full_year padding: %s" % e)
+
+                    # Fix for phantom December in current year with available_years
+                    if year_being_processed is not None:
+                        try:
+                            import datetime
+                            now = datetime.datetime.now()
+                            current_year = now.year
+                            current_month = now.month
+                            logdbg("PHANTOM FIX: Current Year: %s Current Month: %s Process Year: %s Labels: %s 12?: %s" % (current_year, current_month, year_being_processed, xAxis_labels, xAxis_labels[-1]))
+                            
+                            if (int(year_being_processed) == current_year and  # Only when using aggregates
+                                current_month != 12 and
+                                len(xAxis_labels) > 0 and xAxis_labels[-1] == '12'):
+                                
+                                logdbg("PHANTOM FIX: Dropping phantom December for current year aggregated monthly data")
+                                logdbg("PHANTOM FIX: Before - months: %s" % xAxis_labels)
+                                xAxis_labels = xAxis_labels[:-1]
+                                obsvalues = obsvalues[:-1]
+                                logdbg("PHANTOM FIX: After - months: %s" % xAxis_labels)
+                        except Exception as e:
+                            logdbg("PHANTOM FIX: Error in phantom December fix: %s" % e)
+
+                    if len(xAxis_categories) == 0:
+                        data = {
+                            "use_sql_labels": True,
+                            "xAxis_groupby_labels": xAxis_labels,
+                            "obsdata": obsvalues,
+                        }
                     else:
-                        sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) AS {1}, ' \
-                                     '{2}({2}) AS obs ' \
-                                     'FROM archive_day_{3}  ' \
-                                     'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
-                            strformat,
-                            xAxis_groupby,
-                            aggregate_type,
-                            obs_lookup,
-                            start_ts,
-                            end_ts,
-                            order_sql
-                        )
-                else:
-                    # archive access with no average_type
-                    if average_type is None:
-                        sql_lookup = 'SELECT strftime("{0}", datetime(dateTime, "unixepoch", "localtime")) as {1}, ' \
-                                     'IFNULL({2}({3}),0) AS obs, dateTime FROM archive ' \
-                                     'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
-                            strformat,
-                            xAxis_groupby,
-                            aggregate_type,
-                            obs_lookup,
-                            start_ts,
-                            end_ts,
-                            order_sql
-                        )
-
-                    # average_type requiring a subquery
-                    else:
-                        sql_lookup = 'SELECT dt1 AS {0}, ' \
-                                     '{1}(obs1) AS obs ' \
-                                     'FROM (SELECT strftime("{2}", datetime(dateTime, "unixepoch", "localtime")) AS dt1, '\
-                                            'IFNULL({3}({4}),0) AS obs1 ' \
-                                            'FROM archive WHERE dateTime >= {5} AND dateTime < {6} '\
-                                            'GROUP BY strftime({7}, datetime(dateTime, "unixepoch", "localtime"))) ' \
-                                     'GROUP BY {0}{8};'.format(
-                            xAxis_groupby,
-                            aggregate_type,
-                            strformat,
-                            average_type,
-                            obs_lookup,
-                            start_ts,
-                            end_ts,
-                            subqry_groupby,
-                            order_sql
-                        )
-
-            elif driver == "weedb.mysql":
-                # Use daily summaries where possible - MUST BE FOR WHOLE DAYS determined by start and stop times otherwise use archive
-                if xAxis_groupby != "hour" and isStartOfDay(start_ts) and isStartOfDay(end_ts) and end_ts - start_ts > 0 :  # 1 or more exact days
-                    # Avg is a special case
-                    if aggregate_type == "avg":
-                        # Avg(sum) requires a subquery with the correct group by clause
-                        if average_type is not None and average_type == "sum":
-                            sql_lookup = 'SELECT dt1 AS {0}, ' \
-                                         'AVG(obs1) AS obs ' \
-                                         'FROM (SELECT FROM_UNIXTIME( dateTime, "%{1}" ) AS dt1, sum(sum) AS obs1 ' \
-                                                'FROM archive_day_{2} WHERE dateTime >= {3} AND dateTime < {4} '\
-                                                'GROUP BY strftime({5}, datetime(dateTime, "unixepoch", "localtime"))) ' \
-                                         'GROUP BY {0}{6};'.format(
-                                xAxis_groupby,
-                                strformat,
-                                obs_lookup,
-                                start_ts,
-                                end_ts,
-                                subqry_groupby,
-                                order_sql
-                            )
-                        # avg cases with an average_type
-                        elif average_type is not None:
-                            sql_lookup = 'SELECT FROM_UNIXTIME( dateTime, "%{0}" ) AS {1}, ' \
-                                         '{2}({3}) AS obs ' \
-                                         'FROM archive_day_{4}  WHERE dateTime >= {5} AND dateTime < {6} ' \
-                                         'GROUP BY {1}{7};'.format(
-                                strformat,
-                                xAxis_groupby,
-                                aggregate_type,
-                                average_type,
-                                obs_lookup,
-                                start_ts,
-                                end_ts,
-                                order_sql
-                            )
-                        # remaining avg cases without an average_type use weighted average
-                        else:
-                            sql_lookup = 'SELECT FROM_UNIXTIME( dateTime, "%{0}" ) AS {1}, ' \
-                                         'SUM(wsum)/SUM(sumtime) AS obs ' \
-                                         'FROM archive_day_{2}  WHERE dateTime >= {3} AND dateTime < {4} ' \
-                                         'GROUP BY {1}{5};'.format(
-                                strformat,
-                                xAxis_groupby,
-                                obs_lookup,
-                                start_ts,
-                                end_ts,
-                                order_sql
-                            )
-                    # other aggregate_type cases use direct interrogation of daily summary
-                    else:
-                        sql_lookup = 'SELECT FROM_UNIXTIME( dateTime, "%{0}" ) AS {1}, ' \
-                                     '{2}({2}) AS obs ' \
-                                     'FROM archive_day_{3}  ' \
-                                     'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
-                            strformat,
-                            xAxis_groupby,
-                            aggregate_type,
-                            obs_lookup,
-                            start_ts,
-                            end_ts,
-                            order_sql
-                        )
-                else:
-                    # archive access with no average_type
-                    if average_type is None:
-                        sql_lookup = 'SELECT FROM_UNIXTIME( dateTime, "%{0}" ) as {1}, ' \
-                                     'IFNULL({2}({3}),0) AS obs, dateTime FROM archive ' \
-                                     'WHERE dateTime >= {4} AND dateTime < {5} GROUP BY {1}{6};'.format(
-                            strformat,
-                            xAxis_groupby,
-                            aggregate_type,
-                            obs_lookup,
-                            start_ts,
-                            end_ts,
-                            order_sql
-                        )
-
-                    # average_type requiring a subquery
-                    else:
-                        sql_lookup = 'SELECT dt1 AS {0}, ' \
-                                     '{1}(obs1) AS obs ' \
-                                     'FROM (SELECT FROM_UNIXTIME( dateTime, "%{2}" ) AS dt1, '\
-                                            'IFNULL({3}({4}),0) AS obs1 ' \
-                                            'FROM archive WHERE dateTime >= {5} AND dateTime < {6} '\
-                                            'GROUP BY strftime({7}, datetime(dateTime, "unixepoch", "localtime"))) ' \
-                                     'GROUP BY {0}{8};'.format(
-                            xAxis_groupby,
-                            aggregate_type,
-                            strformat,
-                            average_type,
-                            obs_lookup,
-                            start_ts,
-                            end_ts,
-                            subqry_groupby,
-                            order_sql
-                        )
-
-            # Setup values for the converter
-            try:
-                obs_group = weewx.units.obs_group_dict[obs_lookup]
-                obs_unit_from_target_unit = converter.group_unit_dict[obs_group]
-            except:
-                # This observation doesn't exist within weewx schema so nothing
-                # to convert, so set None type
-                obs_group = None
-                obs_unit_from_target_unit = None
-
-            # introduce test to catch any sql errors; a try / except sequence 
-            
-            try:
-                query = archive.genSql(sql_lookup)
-            except:
-                raise Warning(
-                    "SQL error in"
-                    "sql_lookup"
-                    "The error is: %s"
-                        % (error)                    
-                )
-                
-            for row in query:
-                xAxis_labels.append(row[0])
-                row_tuple = (row[1], obs_unit_from_target_unit, obs_group)
-                if special_target_unit:
-                    row_converted = weewx.units.convert(row_tuple, special_target_unit)
-                else:
-                    row_converted = self.converter.convert(row_tuple)
-                obsvalues.append(row_converted[0])
-
-            # If the values are to be mirrored, we need to make them negative
-            if mirrored_value:
-                for i in obsvalues:
-                    if i is not None:
-                        i = -i
-
-            # Return a dict which has the value for if we need to add labels
-            # from sql or not.
-            if len(xAxis_categories) == 0:
-                data = {
-                    "use_sql_labels": True,
-                    "xAxis_groupby_labels": xAxis_labels,
-                    "obsdata": obsvalues,
-                }
-            else:
-                data = {
-                    "use_sql_labels": False,
-                    "xAxis_groupby_labels": "",
-                    "obsdata": obsvalues,
-                }
-            return data
-
-        # Begin standard observation lookups
+                        data = {
+                            "use_sql_labels": False,
+                            "xAxis_groupby_labels": "",
+                            "obsdata": obsvalues,
+                        }
+                    return data
+        # Begin standard observations Lookup
         try:
             (time_start_vt, time_stop_vt, obs_vt) = weewx.xtypes.get_series(
                 obs_lookup,
@@ -3828,7 +4918,7 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
                 % (binding, obs_lookup, e)
             )
 
-        self.insert_null_value_timestamps_to_end_ts(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)
+        self.insert_null_value_timestamps(time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, aggregate_interval)        
         
         if special_target_unit:
             logdbg("unit_group=%s source_unit=%s special_target_unit=%s" % (obs_vt[2],obs_vt[1],special_target_unit))
@@ -3908,28 +4998,62 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
 
         return data
 
-    def insert_null_value_timestamps_to_end_ts(self, time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, interval):
+    def insert_null_value_timestamps(self, time_start_vt, time_stop_vt, obs_vt, start_ts, end_ts, interval):
         """
-        In weewx 4.5.1 xtypes.py was modified to not return any data points which didn't exist in the archive database.
-        This function adds the 'future' data points from the last timestamp in the list up until end_ts with None entries.
-        This means that graphs still have the option of showing a full day or month or year on the x axis depending on the time_length specfied.       
+        Add null data points at beginning and end of timespan to ensure full coverage.
+        - Beginning: from start_ts to first actual data point (e.g., 2022 Jan-August nulls)
+        - End: from last actual data point to end_ts (e.g., 2025 current date-December nulls)
+        This ensures graphs show full calendar year axis with proper null padding.
         """
-        count = 0
-
-        if interval is not None:
+        
+        if interval is None:
+            return
+        
+        # Convert ValueTuples to mutable lists
+        time_start_list = list(time_start_vt[0])
+        time_stop_list = list(time_stop_vt[0]) 
+        obs_list = list(obs_vt[0])
+        
+        beginning_count = 0
+        end_count = 0
+        
+        # Handle beginning padding (for cases like 2022 data starting in August)
+        if len(time_start_list) > 0:
+            first_timestamp = time_start_list[0]
+            if first_timestamp > start_ts:
+                # Add null points from start_ts to first_timestamp
+                beginning_timestamps = []
+                ts = start_ts
+                while ts < first_timestamp:
+                    beginning_timestamps.append(ts)
+                    ts += interval
+                    beginning_count += 1
+                
+                # Prepend to existing lists
+                time_start_list = beginning_timestamps + time_start_list
+                time_stop_list = beginning_timestamps + time_stop_list
+                obs_list = [None] * beginning_count + obs_list
+        
+        # Handle end padding (original logic for future dates)
+        if len(time_start_list) > 0:
             try:
-                ts = time_start_vt[0][-1] + interval
+                ts = time_start_list[-1] + interval
             except:
                 ts = start_ts
+        else:
+            ts = start_ts
 
-            while ts < end_ts:
-                time_start_vt[0].append(ts)
-                time_stop_vt[0].append(ts)
-                ts = ts + interval
-                count = count + 1
+        while ts < end_ts:
+            time_start_list.append(ts)
+            time_stop_list.append(ts)
+            obs_list.append(None)
+            ts += interval
+            end_count += 1
 
-        for i in range(count):
-           obs_vt[0].append(None)
+        # Update the original ValueTuple objects by replacing their contents
+        time_start_vt[0][:] = time_start_list
+        time_stop_vt[0][:] = time_stop_list
+        obs_vt[0][:] = obs_list
 
     def round_none(self, value, places):
         """Round value to 'places' places but also permit a value of None"""
@@ -4043,3 +5167,14 @@ class HighchartsJsonGenerator(weewx.reportengine.ReportGenerator):
         except:
             # This item isn't a dict, so return it back
             return d
+
+    # Escape sequences to correct mysqldb issue
+    def escape_sql_identifier(self, identifier, driver):
+        """Escape SQL identifiers for MySQL/MariaDB compatibility"""
+        if driver == "weedb.mysql":
+            # Only escape confirmed reserved words, NOT aggregate functions
+            mysql_reserved = {'order', 'group', 'interval', 'rank', 'key', 'match'}
+            
+            if identifier and identifier.lower() in mysql_reserved:
+                return "`{}`".format(identifier)
+        return identifier

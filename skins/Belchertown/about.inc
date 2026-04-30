@@ -10,7 +10,7 @@
         <div class="col-sm-4">
             <div id="webcam" class="tab-content"></div>
             <img src="/webcam/weather_cam.jpg" alt=""/>
-			<img src="/weather_station.png" alt="" style="padding-top: 20px;"/>
+			<img src="/images/weather_station.jpg" alt="" style="padding-top: 20px;"/>
             <table style="font-size:80%; margin:0 auto; text-align:center; /*margin-left:-50px;*/">
                 <tbody>
                     <tr>
@@ -67,7 +67,7 @@ is valid. In addition, external data is collected to provide additional informat
            <p>Sending weather data to the above sites helps with weather research and in creating more hyper-local predictions. As part of the <a href="http://wxqa.com/">NOAA/Citizen Weather Observer Program</a>, GW2292 is one of over 7,000 stations sending observation to NOAA, that are used by NWS and over 800 different organizations for research. </p>
         </div>
         <div class="col-md-4"> <!-- New graphic/image -->
-           <img src="/noaa_logo.png" alt="NOAA/CWOP Logo" class="img-fluid" />
+           <img src="/images/noaa_logo.png" alt="NOAA/CWOP Logo" class="img-fluid" />
         </div>
      </div>
      <p>Credits:</p>
