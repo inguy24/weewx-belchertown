@@ -1,13 +1,13 @@
 # AQI-CENTRALIZATION-PLAN — Route AQI through weewx as the single hub
 
-**Status:** 🔶 In progress | Drafted: 2026-04-29 | Last updated: 2026-04-29 | Owner: shane
+**Status:** ✅ Complete | Drafted: 2026-04-29 | Last updated: 2026-04-29 | Owner: shane
 
 **Progress summary (2026-04-29):**
 - ✅ Pre-flight complete
 - ✅ Phase 1 complete — IQAir key swapped, extension confirmed healthy, archive writing AQI data
 - ✅ Phase 2 complete — `aqi_location` column added; extension v1.1.0 deployed to server; `weewx-airvisual` branch `feature/aqi-location` committed
 - ✅ Phase 3 complete — all 4 `belchertown.py` edits done; `graphs.conf` AQI group added; ready to deploy
-- ⬜ Phase 4 not started
+- ✅ Phase 4 complete — end-to-end verified 2026-04-29; AQI=21.0 (good), location=Huntington Beach confirmed in rendered HTML
 
 ---
 
