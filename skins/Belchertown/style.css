@@ -1099,6 +1099,386 @@ p.entry-meta {
 /* # POB Custom Styles
 ---------------------------------------------------------------------------------------------------- */
 
+/* Date Range Dropdown Styling for Belchertown */
+
+/* Container styling */
+.date-range-dropdowns-container {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.dark .date-range-dropdowns-container {
+    border-color: #464545;
+    background-color: #303030;
+}
+
+/* Dropdown styling */
+.date-range-dropdown-group {
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.date-range-dropdown-group:last-child {
+    margin-right: 0;
+}
+
+.date-range-dropdown-group .dropdown-toggle {
+    min-width: 120px;
+    text-align: left;
+    font-size: 14px;
+    padding: 6px 12px;
+}
+
+.date-range-dropdown-group .dropdown-toggle .caret {
+    float: right;
+    margin-top: 6px;
+}
+
+/* Loading indicator */
+.date-range-dropdowns-container .date-range-loading {
+    display: inline-block;
+    margin-left: 15px;
+    color: #666;
+    font-style: italic;
+    font-size: 14px;
+}
+
+.dark .date-range-dropdowns-container .date-range-loading {
+    color: #ccc;
+}
+
+/* Monthly selector styling */
+.monthly-selector-container {
+    padding: 8px 16px;
+}
+
+.monthly-selector-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.monthly-selector-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.monthly-selector-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.dark .monthly-selector-label {
+    color: #ccc;
+}
+
+.monthly-year-select,
+.monthly-month-select {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: #fff;
+    color: #333;
+    font-size: 12px;
+    min-width: 80px;
+}
+
+.dark .monthly-year-select,
+.dark .monthly-month-select {
+    border-color: #555;
+    background-color: #444;
+    color: #fff;
+}
+
+.monthly-fixed-year {
+    font-weight: 500;
+    padding: 4px 8px;
+    color: #333;
+}
+
+.dark .monthly-fixed-year {
+    color: #fff;
+}
+
+.monthly-go-button {
+    padding: 4px 12px;
+    font-size: 12px;
+    margin-top: 18px; /* Align with selectors */
+}
+
+.date-range-dropdown-group .dropdown-menu {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    min-width: 180px;
+    z-index: 1050;
+}
+
+.dark .date-range-dropdown-group .dropdown-menu {
+    background-color: #303030;
+    border-color: #464545;
+}
+
+.date-range-dropdown-group .dropdown-menu > li > a {
+    color: #333;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.dark .date-range-dropdown-group .dropdown-menu > li > a {
+    color: #ebebeb;
+}
+
+.date-range-dropdown-group .dropdown-menu > li > a:hover,
+.date-range-dropdown-group .dropdown-menu > li > a:focus {
+    background-color: #f5f5f5;
+    color: #262626;
+}
+
+.dark .date-range-dropdown-group .dropdown-menu > li > a:hover,
+.dark .date-range-dropdown-group .dropdown-menu > li > a:focus {
+    background-color: #375a7f;
+    color: #fff;
+}
+
+/* ADD: Divider styling for new dropdowns */
+.date-range-dropdown-group .dropdown-menu .divider {
+    background-color: #e5e5e5;
+    margin: 4px 0;
+}
+
+.dark .date-range-dropdown-group .dropdown-menu .divider {
+    background-color: #464545;
+}
+
+/* ADD: Hide old single dropdown system */
+.date-range-dropdown-container {
+    display: none !important;
+}
+
+/* Make months dropdown even more prominent since it's now the primary yearly selector */
+.dropdown-menu-months {
+    min-width: 220px !important;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.dropdown-menu-months .dropdown-header {
+    font-weight: bold;
+    color: #337ab7;
+    font-size: 14px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    margin: 0;
+}
+
+.dark .dropdown-menu-months .dropdown-header {
+    color: #5bc0de;
+    background-color: #3a3a3a;
+    border-bottom-color: #555;
+}
+
+/* Style month options to be more prominent */
+.dropdown-menu-months .month-option {
+    padding-left: 24px !important;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.dropdown-menu-months .month-option:hover {
+    background-color: #e3f2fd !important;
+    color: #1976d2 !important;
+}
+
+.dark .dropdown-menu-months .month-option:hover {
+    background-color: #1565c0 !important;
+    color: #fff !important;
+}
+
+/* Visual indicator for "All Data" options to make them stand out */
+.date-range-option[data-display-name="All Data"] {
+    font-weight: bold;
+    color: #28a745 !important;
+}
+
+.dark .date-range-option[data-display-name="All Data"] {
+    color: #4caf50 !important;
+}
+
+.date-range-option[data-display-name="All Data"]:hover {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+}
+
+.dark .date-range-option[data-display-name="All Data"]:hover {
+    background-color: #2e7d32 !important;
+    color: #fff !important;
+}
+
+/* Alert styling for edge case where no data is available */
+.date-range-dropdowns-container .alert {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 3px;
+}
+
+/* Better spacing for single dropdown scenarios */
+.date-range-dropdowns-container:has(.date-range-dropdown-group:only-child) {
+    justify-content: flex-start;
+}
+
+/* Loading indicator adjustments for different dropdown combinations */
+.date-range-dropdowns-container .date-range-loading {
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.date-range-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.date-range-buttons-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Responsive styling */
+@media (max-width: 768px) {
+    .date-range-dropdowns-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .date-range-dropdown-group {
+        margin-right: 0;
+        margin-bottom: 5px;
+    }
+    
+    .date-range-dropdown-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .date-range-dropdown-group .dropdown-toggle {
+        width: 100%;
+        max-width: none;
+        text-align: center;
+    }
+    
+    .monthly-selector-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .monthly-selector-group {
+        align-items: stretch;
+        margin-bottom: 8px;
+    }
+    
+    .monthly-year-select,
+    .monthly-month-select {
+        width: 100%;
+    }
+    
+    .monthly-go-button {
+        margin-top: 8px;
+        width: 100%;
+    }
+
+    .date-range-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .date-range-buttons-group {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+
+/* Integration with existing chart spacing */
+.date-range-dropdowns-container + div[id*="chart"] {
+    margin-top: 10px !important;
+}
+
+/* Bootstrap dropdown menu overrides */
+.date-range-dropdown-menu {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Ensure dropdowns work with existing theme */
+.date-range-dropdown .btn-default {
+    background-color: #fff;
+    border-color: #ccc;
+    color: #333;
+}
+
+.dark .date-range-dropdown .btn-default {
+    background-color: #464545;
+    border-color: #464545;
+    color: #fff;
+}
+
+.date-range-dropdown .btn-default:hover,
+.date-range-dropdown .btn-default:focus {
+    background-color: #e6e6e6;
+    border-color: #adadad;
+}
+
+.dark .date-range-dropdown .btn-default:hover,
+.dark .date-range-dropdown .btn-default:focus {
+    background-color: #2c2c2c;
+    border-color: #272727;
+}
+
+.date-range-dropdown .dropdown-menu {
+    background-color: #fff;
+    border: 1px solid #ccc;
+}
+
+.dark .date-range-dropdown .dropdown-menu {
+    background-color: #303030;
+    border-color: #464545;
+}
+
+.date-range-dropdown .dropdown-menu > li > a {
+    color: #333;
+}
+
+.dark .date-range-dropdown .dropdown-menu > li > a {
+    color: #ebebeb;
+}
+
+.date-range-dropdown .dropdown-menu > li > a:hover,
+.date-range-dropdown .dropdown-menu > li > a:focus {
+    background-color: #f5f5f5;
+    color: #262626;
+}
+
+.dark .date-range-dropdown .dropdown-menu > li > a:hover,
+.dark .date-range-dropdown .dropdown-menu > li > a:focus {
+    background-color: #375a7f;
+    color: #fff;
+}
+
 /* Responsive Menu
 --------------------------------------------- */
 .responsive-menu-icon {
