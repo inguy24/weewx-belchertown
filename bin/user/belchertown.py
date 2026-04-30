@@ -1204,10 +1204,6 @@ class getData(SearchList):
                 "https://api.aerisapi.com/forecasts/%s,%s?&format=json&filter=1hr&limit=16&client_id=%s&client_secret=%s"
                 % (latitude, longitude, forecast_api_id, forecast_api_secret)
             )
-            aqi_url = (
-                "https://api.aerisapi.com/airquality/closest?p=%s,%s&format=json&radius=50mi&limit=1&client_id=%s&client_secret=%s"
-                % (latitude, longitude, forecast_api_id, forecast_api_secret)
-            )
             if self.generator.skin_dict["Extras"]["forecast_alert_limit"]:
                 forecast_alert_limit = self.generator.skin_dict["Extras"][
                     "forecast_alert_limit"
@@ -1289,11 +1285,6 @@ class getData(SearchList):
                         req = Request(forecast_1hr_url, None, headers)
                         response = urlopen(req)
                         forecast_1hr_page = response.read()
-                        response.close()
-                        # AQI
-                        req = Request(aqi_url, None, headers)
-                        response = urlopen(req)
-                        aqi_page = response.read()
                         response.close()
                         if (
                             self.generator.skin_dict["Extras"]["forecast_alert_enabled"]
