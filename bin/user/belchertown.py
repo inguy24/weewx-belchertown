@@ -1312,7 +1312,6 @@ class getData(SearchList):
                                         "forecast_3hr": [json.loads(forecast_3hr_page)],
                                         "forecast_1hr": [json.loads(forecast_1hr_page)],
                                         "alerts": [json.loads(alerts_page)],
-                                        "aqi": [json.loads(aqi_page)],
                                     }
                                 )
                             except:
@@ -1340,7 +1339,6 @@ class getData(SearchList):
                                         "alerts": [
                                             json.loads(alerts_page.decode("utf-8"))
                                         ],
-                                        "aqi": [json.loads(aqi_page.decode("utf-8"))],
                                     }
                                 )
                         else:
@@ -1354,7 +1352,6 @@ class getData(SearchList):
                                         ],
                                         "forecast_3hr": [json.loads(forecast_3hr_page)],
                                         "forecast_1hr": [json.loads(forecast_1hr_page)],
-                                        "aqi": [json.loads(aqi_page)],
                                     }
                                 )
                             except:
@@ -1379,7 +1376,6 @@ class getData(SearchList):
                                                 forecast_1hr_page.decode("utf-8")
                                             )
                                         ],
-                                        "aqi": [json.loads(aqi_page.decode("utf-8"))],
                                     }
                                 )
                 except Exception as error:
@@ -1418,31 +1414,29 @@ class getData(SearchList):
                 cloud_cover = ""
 
             try:
-                if (
-                    len(data["aqi"][0]["response"]) > 0
-                ):
-                    aqi = data["aqi"][0]["response"][0]["periods"][0]["aqi"]
-                    aqi_category = data["aqi"][0]["response"][0]["periods"][0]["category"]
-                    aqi_time = data["aqi"][0]["response"][0]["periods"][0]["timestamp"]
-                    aqi_location = data["aqi"][0]["response"][0]["place"]["name"].title()
-                elif (
-                    data["aqi"][0]["error"]["code"] == "warn_no_data"
-                ):
-                    aqi = "No Data"
+                manager = db_lookup()
+                last = manager.getSql(
+                    "SELECT dateTime, aqi, aqi_level, aqi_location "
+                    "FROM archive WHERE aqi IS NOT NULL "
+                    "ORDER BY dateTime DESC LIMIT 1"
+                )
+                if last:
+                    aqi = last[1]
+                    aqi_category = (last[2] or "").lower()
+                    aqi_time = last[0]
+                    aqi_location = last[3] or ""
+                else:
+                    aqi = ""
                     aqi_category = ""
                     aqi_time = 0
                     aqi_location = ""
             except Exception as error:
-                logerr(
-                    "Error getting AQI from Aeris weather. The error was: %s" % (error)
-                )
+                logerr("Belchertown: error reading AQI from archive: %s" % error)
                 aqi = ""
                 aqi_category = ""
                 aqi_time = 0
                 aqi_location = ""
-                pass
 
-            # https://www.aerisweather.com/support/docs/api/reference/endpoints/airquality/
             if aqi_category == "good":
                 aqi_category = label_dict["aqi_good"]
             elif aqi_category == "moderate":

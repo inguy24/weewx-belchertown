@@ -6,7 +6,7 @@
 - ✅ Pre-flight complete
 - ✅ Phase 1 complete — IQAir key swapped, extension confirmed healthy, archive writing AQI data
 - ✅ Phase 2 complete — `aqi_location` column added; extension v1.1.0 deployed to server; `weewx-airvisual` branch `feature/aqi-location` committed
-- 🔶 Phase 3 in progress — `weather-belchertown` branch `feature/aqi-from-archive` exists; 2 of 4 `belchertown.py` edits done (see status below)
+- ✅ Phase 3 complete — all 4 `belchertown.py` edits done; `graphs.conf` AQI group added; ready to deploy
 - ⬜ Phase 4 not started
 
 ---
