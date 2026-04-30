@@ -1,6 +1,13 @@
 # AQI-CENTRALIZATION-PLAN — Route AQI through weewx as the single hub
 
-**Status:** ⬜ Not started | Drafted: 2026-04-29 | Owner: shane
+**Status:** 🔶 In progress | Drafted: 2026-04-29 | Last updated: 2026-04-29 | Owner: shane
+
+**Progress summary (2026-04-29):**
+- ✅ Pre-flight complete
+- ✅ Phase 1 complete — IQAir key swapped, extension confirmed healthy, archive writing AQI data
+- ✅ Phase 2 complete — `aqi_location` column added; extension v1.1.0 deployed to server; `weewx-airvisual` branch `feature/aqi-location` committed
+- 🔶 Phase 3 in progress — `weather-belchertown` branch `feature/aqi-from-archive` exists; 2 of 4 `belchertown.py` edits done (see status below)
+- ⬜ Phase 4 not started
 
 ---
 
@@ -89,7 +96,7 @@ In VS Code: **File → Add Folder to Workspace** → select `c:\CODE\weewx-airvi
 
 ---
 
-## Pre-flight checks (do these BEFORE starting Phase 1)
+## Pre-flight checks — ✅ COMPLETE (2026-04-29)
 
 1. **Verify the working IQAir key is documented** in `reference/CREDENTIALS.md`. The old key `fa45aacf-…` is dead.
 2. **Verify the MQTT typo fix from 2026-04-29 is still in place.** `grep "server_url" /etc/weewx/weewx.conf` on the weewx container should show `mqtt://` (not `mgtt://`). If reverted, fix first.
@@ -99,7 +106,7 @@ In VS Code: **File → Add Folder to Workspace** → select `c:\CODE\weewx-airvi
 
 ---
 
-## Phase 1 — Verify the extension is healthy after key swap
+## Phase 1 — ✅ COMPLETE (2026-04-29) — Verify the extension is healthy after key swap
 
 Goal: confirm `AirVisualService` actually fetches and persists data when given a working API key. **No code changes in this phase.**
 
@@ -117,7 +124,7 @@ Goal: confirm `AirVisualService` actually fetches and persists data when given a
 
 ---
 
-## Phase 2 — Enhance the AirVisual extension to also write `aqi_location`
+## Phase 2 — ✅ COMPLETE (2026-04-29) — Enhance the AirVisual extension to also write `aqi_location`
 
 The website displays a city name under the AQI ("Huntington Beach"). The extension parses the city from the API response (line 413 of `airvisual.py`) but currently only logs it for debug. Add it as a 4th persisted field.
 
@@ -212,18 +219,53 @@ The `aqi_location` column in DB stays — it's harmless if not written to.
 
 ---
 
-## Phase 3 — Modify the Belchertown skin to read AQI from the database
+## Phase 3 — 🔶 IN PROGRESS — Modify the Belchertown skin to read AQI from the database
 
 Goal: stop calling Aeris for AQI; read the latest archive row instead. Templates don't change — we keep the same global names (`$aqi`, `$aqi_category`, `$aqi_location`, `$aqi_time`).
 
-Work on a new branch off `capture-server-drift-2026-04-29` in the `weather-belchertown` repo:
+Branch `feature/aqi-from-archive` created off `capture-server-drift-2026-04-29`. **Do not switch away from master when resuming — work in the branch but keep master checked out in the IDE.**
 
-```bash
-git checkout capture-server-drift-2026-04-29
-git checkout -b feature/aqi-from-archive
+### Remaining work in `bin/user/belchertown.py`
+
+**Edits 1–2 DONE** (committed as WIP on `feature/aqi-from-archive` 2026-04-29):
+- ✅ Removed `aqi_url` construction block (~line 1207)
+- ✅ Removed the AQI HTTP fetch (`req = Request(aqi_url...)`) block (~line 1293)
+
+**Edits 3–4 still to do:**
+
+**Edit 3 — Remove `"aqi"` from 4 `json.dumps` blocks** (the forecast.json write blocks around lines 1314–1393). Each of the 4 `json.dumps` calls has a `"aqi": [json.loads(aqi_page)],` or `"aqi": [json.loads(aqi_page.decode("utf-8"))],` entry that must be removed. There are exactly 4 occurrences across the alerts-enabled and alerts-disabled branches (try + except each).
+
+**Edit 4 — Replace the Aeris parse block** (lines ~1429–1452) with archive DB read. Replace the entire `try: if len(data["aqi"]...` block with:
+
+```python
+try:
+    manager = db_lookup()
+    last = manager.getSql(
+        "SELECT dateTime, aqi, aqi_level, aqi_location "
+        "FROM archive WHERE aqi IS NOT NULL "
+        "ORDER BY dateTime DESC LIMIT 1"
+    )
+    if last:
+        aqi = last[1]
+        aqi_category = (last[2] or "").lower()
+        aqi_time = last[0]
+        aqi_location = last[3] or ""
+    else:
+        aqi = ""
+        aqi_category = ""
+        aqi_time = 0
+        aqi_location = ""
+except Exception as error:
+    logerr(f"Belchertown: error reading AQI from archive: {error}")
+    aqi = ""
+    aqi_category = ""
+    aqi_time = 0
+    aqi_location = ""
 ```
 
-### Files to modify in `weather-belchertown` repo
+The label-mapping block immediately after (the `if aqi_category == "good":` chain) stays unchanged.
+
+### Files to modify in `weather-belchertown` repo — original plan
 
 **1. `bin/user/belchertown.py`** — three localized changes:
 
@@ -330,7 +372,7 @@ Total rollback time: <30 seconds.
 
 ---
 
-## Phase 4 — End-to-end verification
+## Phase 4 — ⬜ NOT STARTED — End-to-end verification
 
 | Check | Expected result |
 |---|---|
