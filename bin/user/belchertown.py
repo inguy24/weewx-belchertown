@@ -100,6 +100,7 @@ aqi = ""
 aqi_category = ""
 aqi_time = 0
 aqi_location = ""
+aqi_pollutant = ""
 
 
 class getData(SearchList):
@@ -243,6 +244,7 @@ class getData(SearchList):
         global aqi_category
         global aqi_time
         global aqi_location
+        global aqi_pollutant
 
         # Look for the debug flag which can be used to show more logging
         weewx.debug = int(self.generator.config_dict.get("debug", 0))
@@ -1416,7 +1418,7 @@ class getData(SearchList):
             try:
                 manager = db_lookup()
                 last = manager.getSql(
-                    "SELECT dateTime, aqi, aqi_level, aqi_location "
+                    "SELECT dateTime, aqi, aqi_level, aqi_location, main_pollutant "
                     "FROM archive WHERE aqi IS NOT NULL "
                     "ORDER BY dateTime DESC LIMIT 1"
                 )
@@ -1425,17 +1427,20 @@ class getData(SearchList):
                     aqi_category = (last[2] or "").lower()
                     aqi_time = last[0]
                     aqi_location = last[3] or ""
+                    aqi_pollutant = last[4] or ""
                 else:
                     aqi = ""
                     aqi_category = ""
                     aqi_time = 0
                     aqi_location = ""
+                    aqi_pollutant = ""
             except Exception as error:
                 logerr("Belchertown: error reading AQI from archive: %s" % error)
                 aqi = ""
                 aqi_category = ""
                 aqi_time = 0
                 aqi_location = ""
+                aqi_pollutant = ""
 
             if aqi_category == "good":
                 aqi_category = label_dict["aqi_good"]
@@ -2083,6 +2088,7 @@ class getData(SearchList):
             "aqi": aqi,
             "aqi_category": aqi_category,
             "aqi_location": aqi_location,
+            "aqi_pollutant": aqi_pollutant,
             "beaufort0": label_dict["beaufort0"],
             "beaufort1": label_dict["beaufort1"],
             "beaufort2": label_dict["beaufort2"],
