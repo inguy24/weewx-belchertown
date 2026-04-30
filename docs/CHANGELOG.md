@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### 2026-04-29 — AQI centralization (complete)
+
+- **Removed Aeris airquality dependency** from `belchertown.py`: dropped `aqi_url` construction, HTTP fetch, and `"aqi"` key from all 4 `forecast.json` write blocks.
+- **AQI now reads from archive DB** via `getSql()` query — single source of truth, no duplicate API calls.
+- **Added `aqi_pollutant` template variable** — exposes `main_pollutant` from archive; displayed in AQI block instead of location (location is always Huntington Beach).
+- **Added `[airquality]` chart group** to `graphs.conf` — 24h and 7-day AQI history charts.
+- Deployed and verified: site shows AQI=21.0 (good), PM2.5 from AirVisual. Aeris airquality endpoint no longer called (~24 fewer calls/day).
+- See archived plan: [docs/archive/AQI-CENTRALIZATION-PLAN.md](archive/AQI-CENTRALIZATION-PLAN.md)
+
 ### 2026-04-29 — Phase 1 assessment
 
 - Merged origin/master (Belchertown skin code) into local working tree via `--allow-unrelated-histories`. Renamed local README.md → README-eval.md to avoid collision.

@@ -30,6 +30,7 @@ The site is "synced" via an LXD shared disk, NOT rsync/cron/Ftp/Rsync skins:
 - **Database:** MariaDB 10.11 (shared with Kodi)
 - **Database host:** Same weewx container (localhost or 192.168.2.121 from remote)
 - **Data tables:** `archive` (historical data), `current_observation` (live conditions)
+- **Custom archive columns (added by extensions):** `aqi` (REAL), `main_pollutant` (TEXT), `aqi_level` (TEXT), `aqi_location` (TEXT) — written by `AirVisualService` every archive interval; `ow_*` columns written by `OpenWeatherService` (unused by skin)
 - **Weewx version:** 5.3.1 (verified 2026-04-29)
 - **WeeWX docs to consult:** [docs/reference/weewx-5.3/](../docs/reference/weewx-5.3/) (markdown source from GitHub tag v5.3.1) — note that the v4.10 HTML guides in [docs/reference/](../docs/reference/) are for the **previous major version** and many sections do not apply
 

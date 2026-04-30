@@ -9,7 +9,6 @@
 ## Planning
 
 - **[WEATHER-EVALUATION-PLAN.md](planning/WEATHER-EVALUATION-PLAN.md)** — Project scope, evaluation criteria, task tracking
-- **[AQI-CENTRALIZATION-PLAN.md](planning/AQI-CENTRALIZATION-PLAN.md)** — Route AQI through weewx as the single hub (extension writes to archive; skin and HA read from there). Drafted 2026-04-29, not started.
 
 ## Procedures
 
@@ -29,6 +28,8 @@
 ## Archive
 
 Completed planning docs moved here after project phases finish.
+
+- **[AQI-CENTRALIZATION-PLAN.md](archive/AQI-CENTRALIZATION-PLAN.md)** — Route AQI through weewx as the single hub. ✅ Complete 2026-04-29.
 
 ---
 
