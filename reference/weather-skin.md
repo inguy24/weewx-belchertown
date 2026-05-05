@@ -96,12 +96,11 @@ In `/etc/weewx/weewx.conf` (or skin.conf):
 ## MQTT real-time data chain
 
 - **Broker:** EMQX on cloud container (Erlang `beam.smp`). Ports: `1883` MQTT/TCP, `8083` MQTT/WS, `18083` admin dashboard.
-- **Publisher (weewx → broker):** `matthewwall/weewx-mqtt` extension at `/etc/weewx/bin/user/mqtt.py`. Configured under `[StdRESTful][[MQTT]]` in `/etc/weewx/weewx.conf`.
-  - **🚨 KNOWN BUG (2026-04-29):** the `server_url` line uses scheme `mgtt://` instead of `mqtt://` — typo. The extension cannot parse it, so weewx is publishing nothing to the broker. This is the root cause of regular users not seeing live data.
+- **Publisher (weewx → broker):** `matthewwall/weewx-mqtt` extension at `/etc/weewx/bin/user/mqtt.py`. Configured under `[StdRESTful][[MQTT]]` in `/etc/weewx/weewx.conf`. Verified publishing every ~5s (2026-04-29).
 - **Subscriber (browser):** Belchertown skin connects via WSS to `wss://weather.shaneburkhardt.com:443/mqtt`, topic `weewx/loop`, user `weewx-web`. Configured in `weewx.conf` `[StdReport][[Belchertown]][[[Extras]]]`.
 - **TLS + WS-upgrade proxy:** Apache vhost `weather-ssl.conf` rewrites `^/mqtt(.*)` to `ws://localhost:8083/mqtt$1` when `Upgrade: websocket` is present.
 
-The proxy chain is wired correctly. The only break is the publisher typo.
+End-to-end live data delivery to browser visitors verified working (2026-04-29).
 
 ## Accessing the weather site for testing
 

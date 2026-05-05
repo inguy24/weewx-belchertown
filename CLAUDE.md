@@ -18,6 +18,8 @@ At the start of a task, identify which domain(s) apply and read the matching fil
 | Ratbert VM, LXD containers, freepbx, adguard | [rules/ratbert-lxd.md](../Windows%20Server/rules/ratbert-lxd.md) + [reference/ratbert-lxd.md](../Windows%20Server/reference/ratbert-lxd.md) |
 | Home Assistant, automations | [rules/homeassistant.md](../Windows%20Server/rules/homeassistant.md) + [reference/homeassistant.md](../Windows%20Server/reference/homeassistant.md) |
 | GitHub operations (branches, PRs, releases) | [rules/github.md](rules/github.md) |
+| Clear Skies project (planning, ADRs, contracts, research) | [rules/clearskies-process.md](rules/clearskies-process.md) — facts live in ADRs at [docs/decisions/](docs/decisions/) and contracts at [docs/contracts/](docs/contracts/) |
+| Writing or modifying code in any language (Python, PHP, JS/TS, shell, Cheetah, SQL) | [rules/coding.md](rules/coding.md) |
 
 ## Always-applicable rules
 
@@ -36,6 +38,21 @@ These apply regardless of domain.
 - **Don't parrot the user's framing as fact.** Treat requests as hypotheses to verify, not premises to act on.
 - **Narrate the diagnostic plan before commands.** When investigating a problem, name the hypothesis and what each command tests *before* firing tool calls.
 - **For root-cause questions, never propose creating/editing records until the *why* is established.**
+
+### Self-audit before delivering
+
+For non-trivial outputs (architecture recommendations, multi-step plans, ADR drafts, code beyond a one-line fix), don't ship the first draft. The pattern is **generate → audit → revise → deliver**, and surface the audit in your reply.
+
+- **Generate** the initial recommendation.
+- **Audit it yourself** against concrete categories: security risks, maintenance burden, dependency lock-in, edge cases, what forces rework later, what looks ugly to a future reader. Apply pressure to your own choices.
+- **Revise** based on the audit — strengthen weak points, remove unnecessary complexity, document tradeoffs explicitly, propose mitigations for the risks that remain.
+- **Deliver** the refined output **with the audit findings surfaced**. Show what you considered, what you ruled out, and what's still uncertain.
+
+You have explicit permission to think critically about your own work and refine it. Goal: correct and durable, not fast and sloppy. Surfacing the audit lets the user push back on points you may have under-weighted.
+
+**Scope:** non-trivial outputs only. For simple sync / match-state / one-line-fix tasks, the "Simple means simple" rule still wins — don't perform an audit just to look thorough.
+
+**Anti-pattern:** announce a perfect-sounding plan, then scramble when the user surfaces an obvious risk. Better to surface the risk yourself first, with the proposed mitigation.
 
 ### Memory system — DO NOT USE
 
@@ -85,12 +102,10 @@ Never hardcode credentials — always load from reference files or .env.
 
 ## Project scope
 
-**Evaluation phase objectives:**
-- [ ] Survey current Belchertown skin capabilities & limitations
-- [ ] Evaluate alternative weewx skins (Seasons, Beautiful Dashboard, etc.)
-- [ ] Determine if updates to Belchertown meet needs or if migration is necessary
-- [ ] Document recommendations and implementation path
+**Active project: Clear Skies** — building a from-scratch modern weather UI to replace the Belchertown skin. Five-component breakdown (api / realtime / dashboard / stack / design-tokens [deferred]) under the `weewx-clearskies-*` repo prefix. GPL v3.
 
-**If modification is chosen:** implement selected skin & features in a feature branch, test on staging, merge to production.
+- **Plan:** [docs/planning/CLEAR-SKIES-PLAN.md](docs/planning/CLEAR-SKIES-PLAN.md) — phase tracker, current state, task tables.
+- **Decisions:** [docs/decisions/INDEX.md](docs/decisions/INDEX.md) — 40 ADRs, all Accepted as of 2026-05-05.
+- **Process:** [rules/clearskies-process.md](rules/clearskies-process.md) — when ADRs are written, format, lifecycle, plan-vs-ADR discipline.
 
-**If migration is chosen:** evaluate new skin, prepare migration plan, coordinate with weewx data continuity.
+**Production Belchertown skin:** still running on the `cloud` container, untouched. Cutover happens at Phase 5 per the plan; until then, Belchertown stays as-is.

@@ -57,6 +57,18 @@ When evaluating replacement skins, document findings against these criteria:
 
 Save evaluation results in `docs/planning/WEATHER-EVALUATION-PLAN.md` with a recommendation summary.
 
+## Design-quality bar — weewx ecosystem skins are out
+
+The user has explicitly rejected the entire weewx-skin showcase / wiki list as a source of candidates. Every option there reads as "amateurish, Geocities-era" — lacking modern design sense.
+
+**Why:** the user is design-sensitive and the project goal is a redesign, not a lateral move from one dated skin to another. Replacing Belchertown with NeoWX-Material / WDC / Weather34 / me.teo / Saratoga / responsive-skin / etc. does not solve the "site is too busy / looks early-2000s" problem because the candidates suffer from the same problem.
+
+**How to apply:**
+- Do **not** suggest evaluating, cloning, or benchmarking any weewx-community skin as a *replacement* for Belchertown unless the user reopens that door.
+- The realistic paths forward are: (a) redesign Belchertown's CSS/templates against modern design references (Dribbble/Pinterest inspirations the user provided), or (b) build a custom skin / static layer on top of weewx data. Frame Phase 2 around design references and feasibility, not skin shopping.
+- If a weewx skin must come up, mention it as a *data-extraction reference* (how it reads the archive DB, what tags it uses) — not as a UI candidate.
+- Verify URLs before listing them. Half the ecosystem links are stale (see prior 404 sweep 2026-04-29).
+
 ## No hardcoded paths or credentials in skin templates
 
 If you modify the Belchertown skin to pull data from an external API (e.g., alerts, radar tiles):

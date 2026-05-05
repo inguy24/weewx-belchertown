@@ -106,7 +106,32 @@ This fix is low-risk and addresses one of the user's two main complaints. Recomm
 
 ## Phase 2: Alternative Skin Evaluation
 
-Survey candidate skins and benchmark them against evaluation criteria.
+Survey candidate skins and benchmark them against evaluation criteria. In addition, harvest visual-design ideas from non-weewx weather sites/dashboards to inform either (a) what to look for in a candidate skin, or (b) what custom CSS/layout work to do on Belchertown if we stay.
+
+### Design Inspiration (style references — not skins to install)
+
+These are design/style references only. We are evaluating the **visual language** (typography, color, info hierarchy, spacing, iconography, density), **not** the underlying tech. Findings feed into the weighting of the evaluation criteria below and into any Path A (update Belchertown) styling work.
+
+| Reference | URL | Style Notes Captured | Status |
+|-----------|-----|----------------------|--------|
+| Dribbble — Weather Forecasting Website (shot 20030403) | https://dribbble.com/shots/20030403-Weather-Forecasting-Website | — | ⬜ Not Started |
+| Dribbble — Weather dashboard (shot 14096604) | https://dribbble.com/shots/14096604-Weather-dashboard | — | ⬜ Not Started |
+| Dribbble — Weather Website Design (shot 26311559) | https://dribbble.com/shots/26311559-Weather-Website-Design | — | ⬜ Not Started |
+| Pinterest — UISupply / Mindinventory Weather Forecast Dashboard | https://www.pinterest.com/pin/uisupply-on-instagram-weather-forecast-dashboard-by-mindinventory-use-hashtag-uisupply-or-tag-uisupply-for-sharing-your-work-design-dribbble--563018697934321/ | — | ⬜ Not Started |
+
+**For each reference, capture:**
+1. Overall design impression in 1–2 sentences (mood, era, target audience)
+2. Color palette (primary, accent, background, text — hex if extractable)
+3. Typography (display vs. body; sans/serif; weight contrast)
+4. Information hierarchy (what's the dominant element? what's secondary?)
+5. Layout pattern (single-column hero, multi-card grid, sidebar, split-pane, etc.)
+6. Iconography style (line, filled, illustrated, photographic, animated)
+7. Density (sparse/airy vs. dashboard-dense) — directly relevant to user's "too busy" complaint
+8. Specific elements worth borrowing (e.g., a particular gauge treatment, a forecast strip, a minimal "now" card)
+9. Specific elements to avoid (e.g., dark-mode-only palette, no mobile breakpoint shown, animation-heavy)
+10. Feasibility note: is this achievable as a Belchertown CSS/template skin tweak, or would it require a new skin?
+
+Save per-reference findings in `docs/reference/DESIGN-INSPIRATION-<short-name>.md` with at least one screenshot saved locally (Dribbble/Pinterest images can disappear without notice).
 
 ### Evaluation Criteria
 
@@ -150,12 +175,21 @@ Each skin will be assessed on:
 
 ### Candidate Skins
 
-| Skin | Repo | Phase 2 Task | Status | Notes |
-|------|------|-------------|--------|-------|
-| **Seasons** | https://github.com/weewx/weewx-seasons | [ ] Evaluate Seasons | ⬜ Not Started | Official weewx project, simpler than Belchertown |
-| **Beautiful Dashboard** | https://github.com/weewx-user/weewx-beautiful-dashboard | [ ] Evaluate Beautiful Dashboard | ⬜ Not Started | Modern, responsive, responsive, actively maintained |
-| **Responsive** | https://github.com/weewx/weewx-responsive | [ ] Evaluate Responsive | ⬜ Not Started | Lightweight, older |
-| **Saratoga** | https://github.com/ktownsend-personal/Saratoga-Weather | [ ] Evaluate Saratoga | ⬜ Not Started | Feature-rich, complex, PHP-based |
+URLs verified 2026-04-29. All four URLs in the prior version of this plan were 404s (`weewx/weewx-seasons`, `weewx-user/weewx-beautiful-dashboard`, `weewx/weewx-responsive`, `ktownsend-personal/Saratoga-Weather`); the table below lists the actual maintained projects.
+
+| Skin | Source | Last push | ★ | Status | Notes |
+|------|--------|-----------|---|--------|-------|
+| **Seasons** (current default) | Built into WeeWX 5.3 core; lives at `/etc/weewx/skins/Seasons/` | n/a (ships with weewx) | n/a | ⬜ Not Started | Official simple skin, already on the box. No clone step — copy `Seasons/` to `Seasons-dev/` to evaluate. |
+| **Belchertown** (current production) | https://github.com/poblabs/weewx-belchertown (upstream, unmaintained) / fork at https://github.com/inguy24/weewx-belchertown | upstream stale | — | ⬜ Baseline | This is what we run today. Use as the reference scoring point. |
+| **Belchertown-new** (community fork chain) | https://github.com/uajqq/weewx-belchertown-new (and several sibling forks) | varies | varies | ⬜ Not Started | Self-described "fork of the original, no longer actively maintained." Worth checking whether any of the forks have re-energized maintenance vs. just renaming. |
+| **Weather Data Center (WDC)** | https://github.com/Daveiano/weewx-wdc | 2026-01-25 | 56 | ⬜ Not Started | Carbon Design System; configurable stat tiles + diagram tiles; day/week/month/year/all-time pages. Most actively maintained candidate. |
+| **NeoWX Material** | https://github.com/neoground/neowx-material | 2024-07-23 | 62 | ⬜ Not Started | Material Design, 19 themes, auto light/dark, designed for FullHD/2K. |
+| **Me.teo** | https://github.com/bourquep/weewx-me.teo | 2025-12-03 | 11 | ⬜ Not Started | Modern responsive single-page; small project but recent commits. |
+| **weewx-responsive-skin** | https://github.com/dcapslock/weewx-responsive-skin | 2026-03-08 | 24 | ⬜ Not Started | Bootstrap framework — pragmatic, no exotic deps. Recently active. |
+| **Weather34 for weewx** | https://github.com/steepleian/weewx-Weather34 | 2025-05-18 | 50 | ⬜ Not Started | Weather34 design ported to weewx. Visually rich. |
+| **Saratoga (extension)** | https://github.com/ktrue/weewx-saratoga (clone of deleted `gjr80/weewx-saratoga`) | 2025-06-21 | — | ⬜ Not Started | **Different model:** a weewx *extension* that produces data files for the separate Saratoga PHP templates. Requires PHP on the web server. Score against criteria but flag the architectural shift. |
+
+**De-scoped from prior plan:** "Beautiful Dashboard" — no project exists under that name. Removed.
 
 **For each skin:**
 1. Clone to local test path
@@ -163,6 +197,7 @@ Each skin will be assessed on:
 3. Score against evaluation criteria
 4. Screenshot key pages
 5. Document findings in `docs/reference/SKIN-EVALUATION-<name>.md`
+6. Cross-reference against the Design Inspiration findings — does this skin's out-of-box look align with any of the captured styles, or how far would CSS/layout customization need to go to get there?
 
 ## Phase 3: Decision & Recommendation
 
