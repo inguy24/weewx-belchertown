@@ -55,6 +55,30 @@ You have explicit permission to think critically about your own work and refine 
 
 **Anti-pattern:** announce a perfect-sounding plan, then scramble when the user surfaces an obvious risk. Better to surface the risk yourself first, with the proposed mitigation.
 
+### Capture lessons in the right place
+
+After a non-trivial task closes, triage the lessons that surfaced and write each one into the file that will actually shape future behavior — not just the file that records what happened. The decision log is a read-only record of past work; rules are read-when-doing-future-work. A lesson captured only in a per-task narrative doesn't shape behavior the next time around.
+
+**Triage criteria:**
+
+| Lesson shape | Lands in |
+| --- | --- |
+| "What happened on this date, who decided what, what the outcome was" | The relevant planning doc's decision log (`docs/planning/<plan>.md` for Clear Skies; equivalent for other projects) |
+| "What to do or avoid next time, project-wide" | The relevant `rules/<domain>.md` |
+| "What to do or avoid next time, specific to one sub-agent role" | `.claude/agents/<agent>.md` |
+| "What to do or avoid next time, cross-project" | This file (CLAUDE.md) |
+| "Fact about a system (URL, IP, path, access method)" | The relevant `reference/<domain>.md` |
+
+**Why (2026-05-06):** Phase 2 task 2's closeout captured ~30 lines of multi-agent-execution lessons in the plan's decision log — but nothing in `rules/clearskies-process.md` or the agent definitions where those lessons would govern the next task round. The user surfaced the gap: *"how are you keeping track of these lessons and where are they being documented?"* The decision log is the easy place; the rule files are the durable place. Without this rule, the default is decision-log-only, and rule-shaped lessons silently rot in per-task narratives nobody reads when starting the next task.
+
+**How to apply:**
+
+- Trigger: at task close (or when the user asks "where is this captured?" — that's the late-detection signal).
+- Each lesson gets routed once, not duplicated. A rule that lives in `rules/<domain>.md` doesn't also need a copy in CLAUDE.md.
+- If a lesson seems too small to be its own rule, fold it into an existing rule as a sentence or bullet, OR add it to the relevant agent's system prompt as a one-line constraint. Don't manufacture a 15-line rule for a one-line lesson.
+- Surface the triage to the user before committing the rule edits — they may want to redirect a routing call, or judge that a "lesson" is actually a decision-log fact and not rule-shaped at all.
+- Anti-pattern: writing a long decision-log entry that captures the lesson in narrative form, then closing the task without lifting the rule-shaped portions into the rules files. The decision log earns its keep as a "what happened" record; the rule files earn theirs by shaping what happens next.
+
 ### Memory system — DO NOT USE
 
 Auto-memory (the `memory/` directory) is **disabled by policy**. Do not write new memory entries. 

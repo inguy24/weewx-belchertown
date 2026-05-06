@@ -186,6 +186,48 @@ When self-auditing an ADR, only surface concerns that point at something that co
 - If a decision is genuinely fine, say so. Don't manufacture three concerns to look thorough. Empty-padding the audit is worse than skipping it — it wastes the user's time and erodes trust in the audit step itself.
 - Length is not a quality signal. A one-bullet audit that names one real concern beats a five-bullet audit of platitudes.
 
+## Real schemas in unit tests where the schema shape matters
+
+Unit tests for code that depends on the **shape** of an external schema (column count, null constraints, foreign keys, index presence) must use a schema that matches what the code will see in production. Synthetic stand-in schemas hide error-class bugs.
+
+**Why (2026-05-06):** Phase 2 task 2's startup write-probe shipped with a unit test that built a one-column synthetic `archive` table. The test asserted the probe correctly classified writable users by checking for `OperationalError` permission-denied. The real production weewx archive has multi-column NOT NULL constraints (`usUnits`, `interval`, others). A writable user attempting `INSERT INTO archive (dateTime) VALUES (...)` against the real schema gets `IntegrityError` (NOT NULL violation), not `OperationalError` (permission denied). The probe's broad `DatabaseError` catch swallowed `IntegrityError` as "denied" — silently passing a writable user, defeating the entire defense-in-depth intent of [ADR-012](../docs/decisions/ADR-012-database-access-pattern.md). The unit test couldn't reproduce the bug it was testing for; only the integration test against the production schema (loaded via the dev/test stack at `repos/weewx-clearskies-stack/dev/`) surfaced the defect. The lead's initial fix-suggestion (catch `IntegrityError` as writable) missed a third case — MariaDB error 1364 ("no default value for column") also fires from a writable user — which the dev caught only because they re-ran against the real schema after the first fix attempt.
+
+**How to apply:**
+
+- For DB-layer code, schema-introspection code, query-construction code, or any other code where the schema shape determines which exception class fires at runtime: use the dev/test stack's seeded production schema for unit tests too, OR be explicit in the test that it uses a stand-in and the real verification lives in `test_*_integration.py`.
+- Don't read this as "no synthetic schemas, ever." Synthetic schemas are fine for testing pure logic that has no schema dependency. The rule is: don't synthesize a one-column schema and then test for behavior that only emerges with multi-column schemas — that's a test that proves nothing.
+- The test-author's "real backends, not dialect-divergent stand-ins" rule (in `.claude/agents/clearskies-test-author.md`) extends to schema *shape*, not just the database engine.
+
+## Audit modes are complementary, not redundant
+
+Two distinct audit modes — runtime tests against real backends, and source-only review against ADRs and rules — catch different bug classes. Both gates fire for non-trivial work; neither alone is sufficient.
+
+**Why:**
+
+- **Phase 2 task 1 (2026-05-06):** pytest in `weather-dev` caught three runtime bugs the auditor missed entirely (regex group-reference template referencing a group the SQL pattern didn't have; missing path-existence check in `load_settings` when an explicit `config_path` was passed; Authorization-header regex stopping at the first whitespace so `"Bearer xxx"` only redacted `"Bearer"`). Each one looks fine in isolation as source code; each fails at runtime.
+- **Phase 2 task 2 (2026-05-06):** integration tests against the production-schema dev/test stack caught two runtime defects the unit-test suite missed (writable user passes the probe via `IntegrityError` per the rule above; SQLite URL form `sqlite:////path?mode=ro&uri=true` works for `engine.connect()` but fails for `MetaData.reflect()`). The auditor's separate review caught five source-side findings the runtime tests had no visibility into (registered-but-undecorated pytest marker selecting zero tests; critical-log message pointing at an `INSTALL.md` that doesn't exist; `pool_size`/`max_overflow` knobs absent from the example config; reflection-non-fatal-startup paired with `/health/ready=200` letting orchestrators route traffic into a service with an empty registry; bare-IP heuristic misclassifying `host:port` typos as malformed IPv6).
+
+Neither audit mode would have found what the other found. Compressing the flow loses one audit class.
+
+**How to apply:**
+
+- The lead routes non-trivial work in this order: dev produces code → tests run on `weather-dev` → auditor reviews diff → lead synthesizes. Don't compress: don't skip runtime tests because "the auditor will catch it"; don't skip the auditor because "pytest is green."
+- The dev runs pytest on `weather-dev` BEFORE submitting for audit — the auditor is not the first runtime check.
+- For trivial work (one-line fixes, simple sync), this rule still loses to "Simple means simple" in [CLAUDE.md](../CLAUDE.md). A typo fix doesn't need a multi-mode audit.
+
+## Lead synthesizes auditor findings; doesn't forward
+
+When the auditor returns N findings, the lead triages each one before sending the dev a remediation brief. Forwarding raw findings without a lead-call-per-finding loses the synthesis step that catches ambiguous remediations.
+
+**Why (2026-05-06):** Phase 2 task 2 round 3 had five auditor findings. F4 (reflection-non-fatal-startup vs `/health/ready=200` disagreement) admitted two reasonable remediations: (a) extend the readiness probe with retry machinery to flip when reflection eventually succeeds, or (b) make reflection failure fatal at startup, matching the write-probe pattern. The auditor surfaced the failure mode but didn't pick a remediation. The lead picked (b) because it matched [ADR-012](../docs/decisions/ADR-012-database-access-pattern.md)'s spirit ("refuse to start in known-bad states") and removed the deferred-rework risk of (a)'s retry machinery (when does it run? on every probe call? periodically? this needs another decision). The dev's brief carried the call ("Fix (lead's call — option A: fatal-exit on reflection failure)") with one sentence of reasoning, plus an explicit "if you disagree with a lead call, STOP and message back" — so the dev could push back rather than silently re-interpret. Forwarding the auditor finding raw, without the synthesis, would have either landed the dev on the more complex remediation by default, or required them to re-derive the lead's reasoning from scratch.
+
+**How to apply:**
+
+- Before sending the dev a remediation brief, the lead reads each auditor finding and decides per finding: accept (with what specific remediation), push back (with what reasoning), or defer (with what condition).
+- Each accepted finding in the brief has the lead's recommended remediation plus one sentence of reasoning. The dev can push back; they cannot silently re-interpret.
+- For each pushed-back or deferred finding, the lead surfaces the reasoning to the user before the brief goes out — those are real decisions, not routing.
+- Anti-pattern: treating the auditor's findings list as a self-executing TODO and forwarding it to the dev unedited.
+
 ## Plain English when explaining decisions to the user
 
 When walking the user through an architectural decision, write so they can read it without translation. Spell out what jargon means in the same sentence; don't string technical-sounding language together as a substitute for actually communicating.
