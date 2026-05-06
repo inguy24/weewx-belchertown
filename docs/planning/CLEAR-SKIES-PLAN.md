@@ -113,7 +113,7 @@ The security baseline is the union of decisions in:
 - [ADR-037](../decisions/ADR-037-inbound-traffic-architecture.md) — one-door reverse proxy; inner services bind to loopback (or trusted-LAN cross-host).
 - [`rules/coding.md`](../../rules/coding.md) §1 — parameterized queries, input validation at trust boundaries, dangerous-function bans, IPv4/IPv6 dual-stack, dependency pinning.
 
-The Phase 1 deliverable [`docs/contracts/security-baseline.md`](../contracts/) (not yet written) consolidates these into a per-component checklist with the cross-cutting controls not pinned to any single ADR (security headers, request size limits, systemd hardening flags, Docker hardening, `pip-audit` / `npm audit` CI, `SECURITY.md` per repo). When that document lands, this section becomes a one-line pointer to it.
+**The per-component checklist is [`docs/contracts/security-baseline.md`](../contracts/security-baseline.md)** — the source of truth for security controls Phase 2+ work checks against. The list above is the reading list of source ADRs; the baseline doc consolidates them and adds cross-cutting controls (security headers, request size limits, rate limiting, systemd/Docker hardening flags, `pip-audit` / `npm audit` / `gitleaks` CI gates, `SECURITY.md` per repo).
 
 ### Documentation acceptance criteria (a phase isn't "done" without these)
 
@@ -198,7 +198,7 @@ The data layer. Boring, secure, fast.
 |------|--------|-------------|-------|
 | FastAPI scaffold | ⬜ | `api-dev` | With auth middleware, CORS config, security headers, rate limiting from day 1 |
 | Read-only DB user enforcement at startup | ⬜ | `api-dev` | Service refuses to start if user has write privileges |
-| Endpoints: `/api/v1/current`, `/archive`, `/aqi`, `/units`, `/station`, `/health` | ⬜ | `api-dev` + `test-author` parallel | Match the OpenAPI contract from Phase 1 |
+| Endpoints per [`docs/contracts/openapi-v1.yaml`](../contracts/openapi-v1.yaml) (23 paths) | ⬜ | `api-dev` + `test-author` parallel | Implement the OpenAPI contract from Phase 1; canonical shapes per [`docs/contracts/canonical-data-model.md`](../contracts/canonical-data-model.md). The standalone `/units` endpoint is NOT on the list — units block embeds in every response per [ADR-019](../decisions/ADR-019-units-handling.md). |
 | SQLite + MariaDB support behind one config knob | ⬜ | `api-dev` + `test-author` | Default to whichever the local weewx uses; CI runs both backends per [ADR-012](../decisions/ADR-012-database-access-pattern.md) |
 | Auto-generated OpenAPI spec at `/api/v1/docs` | ⬜ | `api-dev` | FastAPI does this for free |
 | Test suite with realistic mock data | ⬜ | `test-author` (parallel with `api-dev`) | Unit + integration; integration runs against the docker-compose dev/test stack |
@@ -214,7 +214,7 @@ The visible artifact. Where design discipline gets exercised. Multi-agent execut
 
 | Task | Status | Teammate(s) | Notes |
 |------|--------|-------------|-------|
-| Scaffold from chosen starter template | ⬜ | `dashboard-dev` | Likely a Tremor/shadcn dashboard template; clone, strip to skeleton, replace with our design |
+| Scaffold from chosen starter template | ⬜ | `dashboard-dev` | Vite + React 19 + shadcn/ui dashboard template per [ADR-002](../decisions/ADR-002-tech-stack.md); clone, strip to skeleton, replace with our design. Apply the two scaffold-time footguns from [SPIKE-FINDINGS.md](../reference/SPIKE-FINDINGS.md) (`react-is` override + `ignoreDeprecations` for tsconfig). |
 | Wire to **mock data first** | ⬜ | `dashboard-dev` | UI develops independently of weewx; fast feedback loop |
 | Implement priority pages (Now, Forecast, Charts) | ⬜ | `dashboard-dev` (one task per page; lead may run 2–3 page-builder teammates in parallel rounds) | Pages are mostly independent per [ADR-024](../decisions/ADR-024-page-taxonomy.md) — strong fit for parallel teammates |
 | Implement remaining built-in pages (Almanac, Earthquakes, Records, Reports, About, Legal) | ⬜ | `dashboard-dev` (parallel rounds) | 9 built-in pages total per [ADR-024](../decisions/ADR-024-page-taxonomy.md); operator-hideable |
