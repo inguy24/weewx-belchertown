@@ -1,0 +1,20 @@
+{
+  "folders": [
+    { "path": ".", "name": "📋 meta — ops, rules, docs" },
+    { "path": "repos/weewx-clearskies-api", "name": "🔌 api" },
+    { "path": "repos/weewx-clearskies-realtime", "name": "📡 realtime" },
+    { "path": "repos/weewx-clearskies-dashboard", "name": "🖥 dashboard" },
+    { "path": "repos/weewx-clearskies-stack", "name": "📦 stack" },
+    { "path": "repos/weewx-clearskies-design-tokens", "name": "🎨 design-tokens" }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.ruff_cache": true,
+      "**/.mypy_cache": true
+    }
+  }
+}

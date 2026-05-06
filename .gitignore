@@ -33,3 +33,7 @@ tmp/
 weewx-output/
 Belchertown-dev/
 *.backup.*
+
+# Child repos (independent git repos per ADR-036) — meta tracks the directory marker only
+repos/*
+!repos/.gitkeep
