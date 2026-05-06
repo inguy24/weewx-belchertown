@@ -38,6 +38,7 @@ These apply regardless of domain.
 - **Don't parrot the user's framing as fact.** Treat requests as hypotheses to verify, not premises to act on.
 - **Narrate the diagnostic plan before commands.** When investigating a problem, name the hypothesis and what each command tests *before* firing tool calls.
 - **For root-cause questions, never propose creating/editing records until the *why* is established.**
+- **Plain English to the user.** Every technical term, library name, RFC number, file name, or project-internal acronym gets defined the first time it appears in a conversation. Once per conversation is enough; later uses can lean on the earlier definition. New conversation = counter resets. Detailed rule and worked examples in [rules/clearskies-process.md](rules/clearskies-process.md) "Plain English when explaining decisions to the user."
 
 ### Self-audit before delivering
 

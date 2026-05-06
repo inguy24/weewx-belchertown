@@ -6,8 +6,8 @@ This repo started as a Belchertown skin evaluation and pivoted to the Clear Skie
 
 - [CLAUDE.md](../CLAUDE.md) — Operating rules & domain routing
 - [CHANGELOG.md](CHANGELOG.md) — Version history & changes
-- [planning/CLEAR-SKIES-PLAN.md](planning/CLEAR-SKIES-PLAN.md) — Active project plan (Phase 1 in progress)
-- [decisions/INDEX.md](decisions/INDEX.md) — All 39 Architecture Decision Records (Accepted)
+- [planning/CLEAR-SKIES-PLAN.md](planning/CLEAR-SKIES-PLAN.md) — Active project plan (Phase 2 in progress; Phase 1 closed 2026-05-05; Phase 2 task 1 closed 2026-05-06)
+- [decisions/INDEX.md](decisions/INDEX.md) — All 40 Architecture Decision Records (Accepted)
 
 ## Planning
 
@@ -20,11 +20,11 @@ This repo started as a Belchertown skin evaluation and pivoted to the Clear Skie
 
 ## Contracts
 
-- **[contracts/openapi-v1.yaml](contracts/openapi-v1.yaml)** — API contract. OpenAPI 3.1, 23 paths, 53 schemas. Validates clean against `openapi-spec-validator`. Per [ADR-018](decisions/ADR-018-api-versioning-policy.md) (URL-path versioning, RFC 9457 errors), [ADR-010](decisions/ADR-010-canonical-data-model.md) (canonical entities), [ADR-024](decisions/ADR-024-page-taxonomy.md) (endpoint inventory derived from page taxonomy). Phase 1 deliverable, complete 2026-05-05.
+All three Phase 1 contracts committed; co-authoritative with the source ADRs.
 
-Phase 1 deliverables still to write:
-- `docs/contracts/canonical-data-model.md` — Per-field type/unit catalog feeding [ADR-010](decisions/ADR-010-canonical-data-model.md).
-- `docs/contracts/security-baseline.md` — Per-component security checklist consolidating [ADR-008](decisions/ADR-008-auth-model.md), [ADR-012](decisions/ADR-012-database-access-pattern.md), [ADR-027](decisions/ADR-027-config-and-setup-wizard.md), [ADR-029](decisions/ADR-029-logging-format-destinations.md), [ADR-030](decisions/ADR-030-health-check-readiness-probes.md), [ADR-037](decisions/ADR-037-inbound-traffic-architecture.md).
+- **[contracts/openapi-v1.yaml](contracts/openapi-v1.yaml)** — API contract. OpenAPI 3.1, 23 paths, 53 schemas. Validates clean against `openapi-spec-validator`. Per [ADR-018](decisions/ADR-018-api-versioning-policy.md) (URL-path versioning, RFC 9457 errors), [ADR-010](decisions/ADR-010-canonical-data-model.md) (canonical entities), [ADR-024](decisions/ADR-024-page-taxonomy.md) (endpoint inventory derived from page taxonomy). Phase 1 deliverable, complete 2026-05-05.
+- **[contracts/canonical-data-model.md](contracts/canonical-data-model.md)** — Per-field type/unit catalog feeding [ADR-010](decisions/ADR-010-canonical-data-model.md). Three load-bearing parts: full per-entity field enumeration with weewx-source columns and provider-source fields tagged; per-field unit mapping for each weewx `target_unit` system (US / METRIC / METRICWX); provider→canonical mapping tables for the day-1 forecast / AQI / alerts / earthquake / radar providers. Phase 1 deliverable, complete 2026-05-05.
+- **[contracts/security-baseline.md](contracts/security-baseline.md)** — Per-component security checklist consolidating [ADR-008](decisions/ADR-008-auth-model.md), [ADR-012](decisions/ADR-012-database-access-pattern.md), [ADR-027](decisions/ADR-027-config-and-setup-wizard.md), [ADR-029](decisions/ADR-029-logging-format-destinations.md), [ADR-030](decisions/ADR-030-health-check-readiness-probes.md), [ADR-037](decisions/ADR-037-inbound-traffic-architecture.md), and [coding.md §1](../rules/coding.md). Section 3 is the per-row checklist Phase 2+ work checks against. Phase 1 deliverable, complete 2026-05-05; §8 known-gaps revised 2026-05-06 (DCO mechanism resolved, dep-audit workflow gap added).
 
 ## Reference (Clear Skies)
 

@@ -1,7 +1,7 @@
 # Security baseline
 
 **Status:** Draft (Phase 1 deliverable; companion to the source ADRs and [`rules/coding.md`](../../rules/coding.md))
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-06 (§8 revised — DCO mechanism resolved; dep-audit workflow scoping gap added)
 
 This document is the per-component security checklist the Clear Skies project commits to. It consolidates the security-relevant decisions scattered across 7 ADRs and `coding.md` §1, plus cross-cutting controls not pinned to any single ADR (security headers, request limits, systemd/Docker hardening, dependency auditing, per-repo `SECURITY.md`).
 
@@ -201,7 +201,8 @@ These choices are not pinned by any ADR and may be revised during Phase 2+ imple
 - **Per-IP rate-limit storage.** With `CLEARSKIES_CACHE_URL` set, rate-limit state lives in Redis (consistent with [ADR-017](../decisions/ADR-017-provider-response-caching.md)'s multi-worker requirement); without it, in-process storage is single-worker-only. A multi-worker deploy without Redis silently delivers N × the documented rate budget. Phase 2 work must enforce the Redis dependency at startup when worker count > 1.
 - **Markdown rendering** uses `react-markdown` with sanitizing defaults. A future contributor swapping in a non-sanitizing alternative (raw `marked` + `dangerouslySetInnerHTML` outside the allowlisted component) silently removes XSS protection. Phase 3 ESLint config locks `react/no-danger` exceptions to the one component allowlisted in §5.
 - **realtime health port = 8082** is invented in this document, not pinned by [ADR-030](../decisions/ADR-030-health-check-readiness-probes.md) (which only specifies 8081 for api). If another service later wants 8082, this document is the conflict point.
-- **DCO enforcement mechanism** (GitHub's built-in DCO app vs a custom GHA workflow) is left to the Phase 1 GitHub-repo standup task. Either choice satisfies the control; the choice goes here once made.
+- **DCO enforcement mechanism** (resolved 2026-05-05): custom GHA workflow at `.github/workflows/dco.yml` per repo. The workflow rejects PRs whose commits lack a `Signed-off-by:` trailer matching the commit author. GitHub's built-in DCO app was rejected because it requires per-org installation; the custom workflow scales without that overhead.
+- **dep-audit workflow scoping** (resolved in api repo 2026-05-06; latent in other four repos). Phase 1's `dep-audit.yml` ran `pip-audit --strict` with no manifest argument, which audits the entire CI runner Python environment (including the runner's own pip, which carries CVEs unrelated to this project). The bug only surfaces when a manifest exists in the repo. Fixed in the api repo: install uv, run `uv export --format requirements-txt --no-emit-project`, and audit the resulting requirements file. Other four repos (realtime, dashboard, stack, design-tokens) still skip cleanly because they have no manifest yet; each gets the same one-line workflow patch when it lands its first real code commit.
 - **Dashboard CSP is provisional.** The header above is a starting point; radar tile providers per [ADR-015](../decisions/ADR-015-radar-map-tiles-strategy.md) and any chart-library Web Worker scripts may require additions during Phase 3.
 
 ---

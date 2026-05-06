@@ -190,14 +190,18 @@ When self-auditing an ADR, only surface concerns that point at something that co
 
 When walking the user through an architectural decision, write so they can read it without translation. Spell out what jargon means in the same sentence; don't string technical-sounding language together as a substitute for actually communicating.
 
-**Why:** On 2026-05-05, during the OpenAPI inventory review, Claude produced "paragraph upon paragraph of utter techno-babble" using unexplained terms like "entity," "envelope," "RFC 9457," "AsyncAPI." The user verbatim: "using the english language is not your strong suit is it. … None of this means shit to me."
+**Why (2026-05-05):** During the OpenAPI inventory review, Claude produced "paragraph upon paragraph of utter techno-babble" using unexplained terms like "entity," "envelope," "RFC 9457," "AsyncAPI." User verbatim: "using the english language is not your strong suit is it. … None of this means shit to me."
+
+**Why (2026-05-06):** During Phase 2 task 1 audit synthesis, Claude wrote a wall of technical terms — "RFC 9457 problem+json," "FastAPI TestClient," "loopback port 8081," "trusted-bypass path," "hmac.compare_digest" — without defining any of them. User verbatim: "you have been bombarding me with so much jargon, I cannot see straight." The pre-existing "define in the same sentence" rule was being skipped under audit-result density. Strengthened to once-per-conversation.
 
 **How to apply:**
 
-- When raising a question, state plainly what you're asking and why — don't bury it inside an audit-finding bullet list.
-- When using a technical term that isn't already in the user's working vocabulary, define it in the same sentence.
-- If you find yourself writing "I want your judgment on …" followed by six numbered tradeoff bullets, you're doing it wrong. State the recommendation; ask if they agree.
-- Audit findings still belong in the response — but written so the user can read them, not as a wall of jargon.
+- **Define every technical term the first time it appears in a conversation.** This includes library names (FastAPI, ruff, pytest), RFC numbers (RFC 9457), file conventions (`pyproject.toml`, `secrets.env`), networking concepts (loopback, reverse proxy, dual-stack), and project-internal acronyms. Once per conversation is enough; subsequent uses can lean on the earlier definition. New conversation = counter resets.
+- **Definitions are short — one phrase, not a paragraph.** "FastAPI (the Python web framework we picked for the api)" not three sentences of context. The point is to let the user read on without context-switching, not to teach.
+- **Code identifiers are not jargon.** Function names, file paths, env var names, config keys — they're labels for the actual things being changed. The user reads them as labels. The rule is about explanatory prose, not naming.
+- **If a reply uses 5+ unfamiliar terms, step back and rewrite.** Inline definitions are a patch; they don't license stacking more jargon on top. When the count climbs, the message is too dense — break it up, drop terms that don't carry weight, restate from the user's vocabulary.
+- **State the recommendation; ask if they agree.** Don't bury a question inside an audit-finding bullet list or a six-numbered-tradeoff sequence. If you find yourself writing "I want your judgment on …" followed by tradeoffs, you're doing it wrong.
+- **Audit findings still belong in the response** — but written so the user can read them, not as a wall of jargon.
 
 ## Scope the API to the dashboard, not hypothetical third parties
 
