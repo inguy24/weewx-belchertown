@@ -21,9 +21,9 @@ Out of scope: OpenAPI wire format (separate Phase 1 deliverable); changes to wee
 ### Naming convention
 | Option | Verdict |
 |---|---|
-| A. weewx-aligned camelCase JSON keys + snake_case Python fields, Pydantic `alias_generator` bridges them | **Selected.** Honors ["stick with weewx terminology"](../../rules/clearskies-process.md); SPA gets idiomatic JS; Python stays PEP 8. |
-| B. snake_case everywhere | Rejected — breaks weewx alignment. |
-| C. camelCase everywhere including Python | Rejected — breaks PEP 8. |
+| A. weewx-aligned camelCase JSON keys + snake_case Python fields, Pydantic `alias_generator` bridges them | Rejected — two-name overhead causes more confusion than the PEP 8 nicety is worth. The bridge is pure overhead with no consumer that benefits from the snake_case Python form. |
+| B. snake_case everywhere | Rejected — breaks weewx alignment (weewx itself uses `outTemp`, not `out_temp`). |
+| C. camelCase everywhere, identical in Python and JSON | **Selected.** PEP 8 is a style guide, not a language rule; ruff's `N815` lint is suppressed per-file for the canonical-model module. One name per field; matches weewx in both languages; eliminates the alias bridge. |
 | D. Industry-aligned names (`temperature`, `pressure`) | Rejected — loses weewx alignment. |
 
 ### Units
@@ -79,7 +79,7 @@ Out of scope: OpenAPI wire format (separate Phase 1 deliverable); changes to wee
 
 Eight sub-decisions resolve to:
 
-1. **Naming:** weewx-aligned camelCase JSON keys; snake_case Python fields; Pydantic `alias_generator=to_camel`. Forecast types reuse observation field names where the concept matches; forecast-only concepts (precipProbability, etc.) get camelCase names invented to fit.
+1. **Naming:** weewx-aligned camelCase, identical in Python and JSON (`outTemp`, `windSpeed`, etc.). No alias mechanism. Per-file ruff `N815` suppression for `models/canonical.py` (PEP 8 is a style guide, not a hard rule). Forecast types reuse observation field names where the concept matches; forecast-only concepts (precipProbability, etc.) get camelCase names invented to fit.
 2. **Units:** read `weewx.conf [StdConvert] target_unit` at startup (US / METRIC / METRICWX); apply to every value the API returns. Archive rows whose `usUnits` differs from target are converted at read time. Provider normalizers convert their wire units to target at ingest. **Every response embeds a `units` metadata block** naming the unit per unit-bearing field.
 3. **Time:** UTC ISO-8601 with `Z` suffix; Pydantic `datetime` with `tzinfo=UTC`. weewx epoch timestamps converted at ingest. Local-time rendering happens at the display edge per [ADR-020](ADR-020-time-zone-handling.md).
 4. **Nullability:** every observation/forecast field `Optional[T]`; missing = `None`/`null`; key always present (`exclude_none=False`).
@@ -139,7 +139,6 @@ Nine core entities + two convenience containers. Pydantic v2 `BaseModel` subclas
 - **Prose is captured at three layers** — meteorologist-written content makes it through to the SPA.
 
 ### Trade-offs accepted
-- **Two names per field (snake_case Python, camelCase JSON).** Pydantic `alias_generator` automates the bridge; canonical-data-model spec lists every Python↔JSON pairing.
 - **All-fields-optional means TypeScript types are `T | null` for nearly every field.** Real and unavoidable — weather data is genuinely missing sometimes.
 - **`extras` values lose unit metadata** until [ADR-035](ADR-035-user-driven-column-mapping.md) promotes them. SPA renders them in a generic "Other observations" panel labeled by column name.
 - **Forecast field names diverge from provider names.** Mapping tables per provider in `docs/contracts/canonical-data-model.md`.
@@ -158,19 +157,18 @@ Nine core entities + two convenience containers. Pydantic v2 `BaseModel` subclas
 
 ```python
 from pydantic import BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+
+# ruff: noqa: N815  (canonical fields use weewx camelCase: outTemp, windSpeed, etc.)
 
 class CanonicalModel(BaseModel):
     model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
         extra="forbid",                     # core fields only; extras go in `extras`
         ser_json_inf_nan="strings",
     )
 ```
 
 ### Serialization rules
-- `model_dump_json(by_alias=True, exclude_none=False)` — emits camelCase keys, keeps null values.
+- `model_dump_json(exclude_none=False)` — keeps null values; field names are already camelCase, no alias step needed.
 - Datetime → `isoformat()` with `Z` suffix (override Pydantic's `+00:00`).
 - Float fields ordinary IEEE-754; NaN/Inf serialize to JSON strings.
 
