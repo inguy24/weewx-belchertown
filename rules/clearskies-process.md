@@ -330,6 +330,15 @@ with timing evidence.
 - Spawn a background teammate → schedule a `ScheduleWakeup` 240s out → on each
   wake, check `git log` on the relevant repo and `SendMessage` the agent if no
   completion notification has arrived. Reschedule until close.
+- **Project rule trumps tool docstring.** `ScheduleWakeup`'s own docstring
+  describes its use as `/loop` dynamic mode. This project rule cites it for
+  polling outside `/loop`. The project rule wins. Pass `<<autonomous-loop-dynamic>>`
+  as the `prompt` argument; the runtime resolves it to a no-op tick that just
+  hands control back. **Why (2026-05-07):** during 3b round 1's first spawn the
+  lead deferred to the tool's docstring restriction instead of the project
+  rule, skipped scheduling a wakeup, and waited passively until the user
+  prompted. The polling rule exists for a reason — apply it, even when a
+  tool's docs read narrower than the project's intent.
 - Don't put "submit IMMEDIATELY, do not idle" instructions in briefs — they don't
   work. The polling loop isn't active during the idle state, so no prompt
   language can trigger earlier submission.
@@ -382,3 +391,16 @@ Clear Skies positions clearskies-api as a full Belchertown replacement that surf
 - The `extras` bag is for OPERATOR-EXTENSION columns (per ADR-035 mapping flow), not stock-but-unpromoted ones. Stock columns the operator's archive doesn't include surface as `null` on the canonical entity, NOT in `extras`. JSON keys are always present.
 - Anchoring constants like `_FIRST_CLASS_FIELDS` to a single source of truth (e.g., `STOCK_COLUMN_MAP` from the column registry) prevents drift between contract and impl. Hand-maintained "first-class subsets" of a larger source set rot.
 - This rule applies at v0.1. Post-1.0 additions (e.g., a future weewx version adds new stock columns) follow the same principle: get them into the contract on the next minor bump, not into `extras` indefinitely.
+
+## Brief questions audit themselves before draft
+
+When drafting a round brief, audit each "open question" against the relevant ADRs and contracts BEFORE surfacing it to the user. Drop questions the ADR or contract already settles. Don't propose ADR deviations as questions — that's a covert ADR amendment dressed as a routing call.
+
+**Why (2026-05-07):** the 3b round 1 alerts brief surfaced ten "lead's proposed calls" for user sign-off. Audit on user pushback found that seven of the ten were already locked: Q2 (api.conf section shape) was prescribed by ADR-027's example file at line 162-173; Q3 (capability registry mechanism) was settled by ADR-038 §3 + the existing `wire_*` patterns from 3a-1/3a-2; Q5 (rate-limiter primitive) is named in ADR-038 §3's shared-infrastructure bullet; Q10 (no live-network tests in CI) is locked by ADR-038 §Testing pattern. Q4 was worse — it proposed deferring the Redis cache backend to a later round, which directly contradicts ADR-017 §Decision + §Consequences ("Phase 2 work: cache abstraction interface + **two backend implementations (memory, redis)**"). That's not an open question; it's a covert ADR amendment that should have triggered the "ADR conflicts → STOP" rule at brief-draft time. User direction: *"why are some of these questions even questions when the ADR already answers them?"* The padding pattern is the same anti-pattern as in audit findings — manufacturing concerns to look thorough — applied at brief-draft time instead of audit time.
+
+**How to apply:**
+
+- For each "open question" you draft, name the ADR or contract that would settle it. If found, drop the question or convert it to a one-sentence "per ADR-NNN, X" lead-call without sign-off (no ceremony).
+- If an "open question" proposes doing less than an ADR mandates, that's a deviation, not a question. Surface it with the explicit framing: "I'm proposing to deviate from ADR-NNN, which says X. Options: (1) honour the ADR, (2) edit the ADR (status flips back to Proposed, you re-approve)." Per the existing "ADRs are authoritative. STOP at first conflict" rule.
+- Genuine open questions are facts not pinned by ADR or contract — implementation-detail-with-real-tradeoffs. Three or four real ones beat ten with seven fakes. The "Audit means real findings, not contrarianism" rule applies at brief-draft time, not just audit time.
+- Lead-calls (trivial implementation details where the answer is obvious — e.g., `?point=` vs two-step `?zone=`) go inline as "lead-resolved" notes, not numbered questions. Don't seek sign-off on calls the user shouldn't have to think about.
