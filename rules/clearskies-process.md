@@ -293,3 +293,11 @@ Clear Skies dev and test work — `docker compose`, `pytest`, `npm`, `vite`, `pl
 - Browser-side testing reaches the container via its LAN-routable IP (`192.168.2.113` on br-vlan2). DILBERT browser hits `http://192.168.2.113:<port>` directly; no SSH tunnels needed for normal dev iteration.
 - Acceptable Windows-side activities: editing files, reading/writing this repo, running `git`, planning conversations, ADR drafting, doc work.
 - Anti-pattern: installing the project's runtime deps (`pip install sqlalchemy`, `npm install`, `docker desktop`) on DILBERT to "make it work locally." Don't. The container is the local.
+
+## `.claude/` and workstation orchestration stay private
+
+The `.claude/` directory (agent definitions, settings, MCP config) is gitignored intentionally and is not part of the project's public surface. Do not propose tracking it, moving agent definitions to a tracked location, exposing the multi-agent orchestration setup in public repos, or otherwise treating it as shared project state. How Shane structures the work on his workstation is his business — the public artifact is the code, the ADRs, the contracts, and the docs.
+
+## Round briefs land in the project, not in tmp
+
+Operational briefs for a multi-agent round (per-task scope, reading lists, per-endpoint specs, process gates, what-to-flag-as-STOP triggers) live at `docs/planning/briefs/<phase-task>-brief.md`. Do not put them in `c:\tmp\`, `tmp/`, or other ephemeral locations — briefs are useful when launching the next round (3a-2 reuses 3a-1's pattern; 3b-alerts will reuse 3b's; etc.) and to track which gates the lead set per round. Markdown links in chat should resolve under the project workspace; tmp paths break the link rendering.
