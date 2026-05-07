@@ -301,3 +301,16 @@ The `.claude/` directory (agent definitions, settings, MCP config) is gitignored
 ## Round briefs land in the project, not in tmp
 
 Operational briefs for a multi-agent round (per-task scope, reading lists, per-endpoint specs, process gates, what-to-flag-as-STOP triggers) live at `docs/planning/briefs/<phase-task>-brief.md`. Do not put them in `c:\tmp\`, `tmp/`, or other ephemeral locations — briefs are useful when launching the next round (3a-2 reuses 3a-1's pattern; 3b-alerts will reuse 3b's; etc.) and to track which gates the lead set per round. Markdown links in chat should resolve under the project workspace; tmp paths break the link rendering.
+
+## No "promotion candidates" or "we'll add it later" framing in v0.1 contracts
+
+Clear Skies positions clearskies-api as a full Belchertown replacement that surfaces every weewx capability. v0.1 contracts (OpenAPI, canonical-data-model) must therefore enumerate the full stock weewx surface as first-class — no "promotion candidates" bucket, no "currently routes through `extras` until OpenAPI is bumped" notes, no "we'll add it later" framing. `extras` carries operator-custom columns only. Stock weewx columns are first-class on the canonical entity.
+
+**Why (2026-05-06):** Phase 1's OpenAPI Observation schema listed only 21 fields and bucketed `appTemp`, `cloudbase`, `lightning_*`, `extraTemp*`, `soilTemp*`, etc. into a "promotion candidates routed through `extras`" framing. clearskies-api 3a-1 round 2 surfaced this as a real gap — operators with those columns would see them disappear from the API. User direction: *"We are not going to release anything half-baked. This needs to be a full replacement for Belchertown and not hiding Weewx capabilities."* The contract was expanded to 69 first-class fields covering the full `STOCK_COLUMN_MAP` set.
+
+**How to apply:**
+
+- For any v0.1 contract that maps weewx (or any source-system) entities to canonical entities, the lead drafts the contract against the FULL source-system surface, not a curated subset. If the surface is large, document it exhaustively in the catalog (canonical-data-model.md style); don't shortlist "first-class" vs "promotion candidate."
+- The `extras` bag is for OPERATOR-EXTENSION columns (per ADR-035 mapping flow), not stock-but-unpromoted ones. Stock columns the operator's archive doesn't include surface as `null` on the canonical entity, NOT in `extras`. JSON keys are always present.
+- Anchoring constants like `_FIRST_CLASS_FIELDS` to a single source of truth (e.g., `STOCK_COLUMN_MAP` from the column registry) prevents drift between contract and impl. Hand-maintained "first-class subsets" of a larger source set rot.
+- This rule applies at v0.1. Post-1.0 additions (e.g., a future weewx version adds new stock columns) follow the same principle: get them into the contract on the next minor bump, not into `extras` indefinitely.

@@ -41,6 +41,55 @@ The weewx archive DB and any future Clear Skies databases must use prepared stat
 
 **Anti-pattern:** `f"SELECT * FROM archive WHERE dateTime > {ts}"` — even if `ts` "should be" an integer, validate-and-bind, don't interpolate.
 
+### Backtick-quote SQL-reserved-word identifiers uniformly across all sites
+
+When a column name (or any identifier) is a reserved word in any supported SQL dialect, it must be backtick-quoted at *every* site that references it in an SQL string — not site-by-site. SQLite tends to be permissive about reserved words; MariaDB is not, so a dual-backend test suite is the gate that catches this.
+
+Known cases on this project: weewx's `interval` column collides with MariaDB's `INTERVAL` reserved word. Reserved-word lookups: [MariaDB reserved words](https://mariadb.com/kb/en/reserved-words/).
+
+**How to apply:** when introducing SQL that references a weewx (or any external-system) column name, check the column name against the dialect reserved-word list before composing the query. If reserved, wrap with backticks `` `interval` `` consistently; do not rely on context-based lexer permissiveness.
+
+**Why (2026-05-06):** during clearskies-api 3a-1 round 1, a one-site fix to `60 AS \`interval\`` missed a second site emitting `MAX(interval) AS interval`. SQLite passed; MariaDB raised `ProgrammingError 1064`. The dual-backend integration test caught the dialect drift, but the cost was a remediation round that wouldn't have been necessary with uniform backticking from the first edit.
+
+### Pydantic `extra="forbid"` requires the right FastAPI wiring to actually enforce
+
+Setting `extra="forbid"` on a Pydantic model is a security control (blocks unknown query params at the trust boundary per [`security-baseline.md`](../docs/contracts/security-baseline.md) §3.5). It only fires when the *whole* query string flows into Pydantic — which happens when the route uses `Depends(model_validator_function)` rather than declaring each query parameter individually with FastAPI's `Query()`.
+
+**Anti-pattern (silently broken):**
+
+```python
+@router.get("/archive")
+def get_archive(
+    from_: str | None = Query(None, alias="from"),
+    to: str | None = Query(None),
+    limit: int = Query(1000),
+    # ... etc
+) -> ArchiveResponse:
+    ...
+```
+
+FastAPI extracts only the declared fields from the query string and constructs the model from those — unknown keys never reach the model, so `extra="forbid"` doesn't fire. Operators can append `?nuke_the_db=1` and FastAPI returns 200.
+
+**Right pattern:**
+
+```python
+def _get_archive_params(request: Request) -> ArchiveQueryParams:
+    try:
+        return ArchiveQueryParams.model_validate(dict(request.query_params))
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
+
+@router.get("/archive")
+def get_archive(
+    params: Annotated[ArchiveQueryParams, Depends(_get_archive_params)],
+) -> ArchiveResponse:
+    ...
+```
+
+`model_validate(dict(request.query_params))` passes every HTTP key to Pydantic, so `extra="forbid"` fires for unknowns. `RequestValidationError` propagation keeps FastAPI's exception-handler chain (RFC 9457 problem+json output) intact.
+
+**Why (2026-05-06):** clearskies-api 3a-1 round 1's `/archive` endpoint declared params individually; `extra="forbid"` was set on the model but never ran. test-author's `test_archive_unknown_query_param_returns_400_or_422` caught the gap; the security-baseline §3.5 control was silently bypassed. The fix is uniform across endpoints — wherever a Pydantic model gates a route, the wrapping pattern above must be used.
+
 ### Escape output before rendering
 
 Cheetah templates and any HTML generation must escape values from external sources (forecast text, alert headlines, station name pulled from config) before rendering. Cheetah's `$value` does **not** escape by default — use `$webSafe($value)` or the project's existing escape filter.

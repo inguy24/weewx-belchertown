@@ -59,6 +59,11 @@ See `reference/CREDENTIALS.md` for:
   - `[Engine]` → `[[Services]]` — data publishing, upload intervals
   - `[Belchertown]` — skin-specific settings (colors, radar tiles, alerts integration)
 
+### weewx column-name semantics worth knowing
+
+- **`day*`-prefixed columns are cumulative running totals, not per-interval deltas.** Examples: `daySunshineDur` (cumulative seconds of sunshine since midnight; resets at midnight). The end-of-day value IS the daily total. Daily aggregator for these is `max`, not `sum`. The non-prefixed counterparts (`sunshineDur`, etc.) are per-interval deltas — daily aggregator is `sum`. Surfaced 2026-05-06 during clearskies-api 3a-1: an early `daySunshineDur → sum` aggregator entry would have double-counted the running total. Generalizes: any future `day*`-prefixed weewx column is cumulative.
+- **SQL reserved-word collisions.** weewx column names that are reserved words in any supported SQL dialect must be backtick-quoted at every SQL site, not site-by-site. Known case as of 2026-05-06: **`interval`** is reserved in MariaDB (SQLite is permissive — silent dialect drift). When introducing SQL that names a weewx column, check the column name against MariaDB's reserved word list before composing the query; backtick uniformly. Surfaced during 3a-1 via dual-backend integration tests.
+
 ### Production report output paths (verified 2026-05-06)
 
 - **`HTML_ROOT`** at `[StdReport]` top-level: `/var/www/weewx/weewx`
