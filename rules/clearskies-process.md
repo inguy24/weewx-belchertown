@@ -298,6 +298,74 @@ Clear Skies dev and test work — `docker compose`, `pytest`, `npm`, `vite`, `pl
 
 The `.claude/` directory (agent definitions, settings, MCP config) is gitignored intentionally and is not part of the project's public surface. Do not propose tracking it, moving agent definitions to a tracked location, exposing the multi-agent orchestration setup in public repos, or otherwise treating it as shared project state. How Shane structures the work on his workstation is his business — the public artifact is the code, the ADRs, the contracts, and the docs.
 
+## Poll background teammates at fixed cadence; don't wait for completion notifications
+
+Background sub-agents spawned via the `Agent` tool with `run_in_background: true` in
+agent-teams mode (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) hit a known harness bug:
+the inbox-polling loop only activates between tool-call boundaries, so an agent
+that finishes its work and enters an idle state will sit silent for 30+ minutes
+before submitting its closeout. The completion notification path is also
+unreliable on Windows. See `anthropics/claude-code` issues #24108, #26426, #21048
+(closed without fix, locked), and our own filing #56930.
+
+**The lead's job is to poll, not to wait.** After spawning a background teammate,
+`SendMessage` the agent every ~4 minutes (matches the prompt-cache-warm boundary
+per `ScheduleWakeup`'s docstring) until it submits or shows real activity. The
+ping is delivered on the agent's next tool-call boundary — non-disruptive during
+active work, wake mechanism during idle. Cadence-break in `git log` (a teammate
+that was committing every few minutes goes quiet) is corroborating evidence the
+agent is stuck, but the ping is the only working trigger.
+
+**Why (2026-05-07):** Phase 2 task 3a-2 had three consecutive sub-agents hit this
+bug — api-dev round 1 (~30 min idle gap), test-author (~48 min idle gap), api-dev
+round 2 (overnight gap until pings woke it). Each was treated as a one-off until
+the pattern was named on the third occurrence. Several hours of wasted wall-clock
+time. The auditor (Opus, source-only review with no commits as final action) ran
+4 minutes with no idle gap — the bug strikes when the last action is something
+other than the closeout report. Filed [#56930](https://github.com/anthropics/claude-code/issues/56930)
+with timing evidence.
+
+**How to apply:**
+
+- Spawn a background teammate → schedule a `ScheduleWakeup` 240s out → on each
+  wake, check `git log` on the relevant repo and `SendMessage` the agent if no
+  completion notification has arrived. Reschedule until close.
+- Don't put "submit IMMEDIATELY, do not idle" instructions in briefs — they don't
+  work. The polling loop isn't active during the idle state, so no prompt
+  language can trigger earlier submission.
+- After ~3 cycles (~12 min) of pinging without response, the agent is likely
+  dead-not-idle (per `anthropics/claude-code` #29271). `TaskStop` and reconstruct
+  the closeout from `git log` + commit messages. Diff stats and commit-message
+  bodies are authoritative; agent-self-reported test counts can be verified by
+  re-running pytest on `weather-dev` directly.
+- This rule applies to the agent-teams in-process mode (Windows-required). The
+  TUI/tmux split-pane mode is documented as broken at #24108 and is not in
+  use on this project.
+
+## Verify the default branch name before writing it into a round brief
+
+When a brief carries shell instructions like `git fetch origin master` or
+`git merge --ff-only origin/master`, verify the target repo's actual default
+branch name first. A typo (`master` vs `main`) is silently survivable — the dev
+figures it out and corrects locally — but it costs the parallel test-author idle
+time while they retry the wrong command.
+
+**Why (2026-05-07):** Phase 2 task 3a-1's brief was carried forward to 3a-2 with
+its `master` references intact, but the api repo's actual default branch is
+`main`. api-dev round 1 figured it out and silently used `main`; test-author was
+slower to recover. The cost surfaced as additional idle gap on top of the
+post-completion idle bug. Cheap to verify with `git symbolic-ref refs/remotes/
+origin/HEAD` or `gh repo view <owner>/<repo> --json defaultBranchRef`.
+
+**How to apply:**
+
+- Before writing a parallel-pull-then-pytest gate into a brief, confirm the
+  branch name matches the repo. Cross-repo briefs (e.g. five repos under
+  `inguy24/weewx-clearskies-*`) verify each one.
+- Brief errors propagate forward when one round's brief is reused as a template
+  for the next. Audit the carried-forward parts at brief-draft time, not at
+  brief-review time.
+
 ## Round briefs land in the project, not in tmp
 
 Operational briefs for a multi-agent round (per-task scope, reading lists, per-endpoint specs, process gates, what-to-flag-as-STOP triggers) live at `docs/planning/briefs/<phase-task>-brief.md`. Do not put them in `c:\tmp\`, `tmp/`, or other ephemeral locations — briefs are useful when launching the next round (3a-2 reuses 3a-1's pattern; 3b-alerts will reuse 3b's; etc.) and to track which gates the lead set per round. Markdown links in chat should resolve under the project workspace; tmp paths break the link rendering.

@@ -1204,7 +1204,7 @@ components:
         name: { type: string }
         latitude: { type: number, minimum: -90, maximum: 90 }
         longitude: { type: number, minimum: -180, maximum: 180 }
-        altitude: { type: number, description: "Meters above mean sea level." }
+        altitude: { type: number, description: "Above mean sea level. Value is in the unit named by `units.altitude` per ADR-019; server emits whatever unit weewx is configured to write (no server-side conversion)." }
         timezone:
           type: string
           description: |
