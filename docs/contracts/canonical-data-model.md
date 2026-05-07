@@ -124,11 +124,14 @@ Plus almanac/records/page/chart/capability entities native to the OpenAPI; those
 
 ### 3.1 Observation
 
-Most-recent observation from the weewx archive (latest record within a small look-back window). Field set is the wview/wview_extended canonical-stock columns; columns outside this set route through `extras` per ADR-010 §Decision.6.
+Most-recent observation from the weewx archive (latest record within a small look-back window). The field set is **the FULL stock weewx column set** — every column in `wview` and `wview_extended` is a first-class field on this schema. Operator-custom columns route through `extras` per [ADR-035](../decisions/ADR-035-user-driven-column-mapping.md). `extras` does NOT carry stock weewx columns.
+
+Operators with archive schemas that omit a field (e.g., a wview-only install will not have `appTemp`) see `null` for that field; the JSON key is always present.
 
 | JSON key | Type | Nullable | Unit group | weewx archive column | Notes |
 |---|---|---|---|---|---|
 | `timestamp` | string (date-time UTC) | No | — | `dateTime` (epoch s) | Converted at ingest. |
+| **Core wview observation fields** | | | | | |
 | `outTemp` | number | Yes | group_temperature | `outTemp` | Outdoor temperature. |
 | `outHumidity` | number | Yes | group_percent | `outHumidity` | 0–100. |
 | `windSpeed` | number | Yes | group_speed | `windSpeed` | |
@@ -147,15 +150,60 @@ Most-recent observation from the weewx archive (latest record within a small loo
 | `UV` | number | Yes | group_uv | `UV` | |
 | `inTemp` | number | Yes | group_temperature | `inTemp` | |
 | `inHumidity` | number | Yes | group_percent | `inHumidity` | |
-| `ET` | number | Yes | group_rain | `ET` (wview_extended only) | Evapotranspiration. |
-| `hail` | number | Yes | group_rain | `hail` (wview_extended only) | Per-interval accumulation. |
-| `hailRate` | number | Yes | group_rainrate | `hailRate` (wview_extended only) | |
-| `extras` | object | No | — | (see ADR-035) | Operator-custom columns. Keys are weewx column names verbatim. May be empty. |
+| **wview_extended core fields** | | | | | |
+| `ET` | number | Yes | group_rain | `ET` | Evapotranspiration. |
+| `hail` | number | Yes | group_rain | `hail` | Per-interval accumulation. |
+| `hailRate` | number | Yes | group_rainrate | `hailRate` | |
+| `appTemp` | number | Yes | group_temperature | `appTemp` | Apparent ("feels-like") temperature. |
+| `cloudbase` | number | Yes | group_altitude | `cloudbase` | Calculated from temp/dewpoint/altitude. |
+| `cloudcover` | number | Yes | group_percent | `cloudcover` | 0–100. |
+| `windrun` | number | Yes | group_distance | `windrun` | Wind run = ∑(windSpeed × interval). |
+| `maxSolarRad` | number | Yes | group_radiation | `maxSolarRad` | Theoretical clear-sky solar radiation. |
+| `sunshineDur` | number | Yes | group_deltatime | `sunshineDur` | Duration of sunshine within the interval. |
+| `daySunshineDur` | number | Yes | group_deltatime | `daySunshineDur` | Day-to-date cumulative sunshine. |
+| `rainDur` | number | Yes | group_deltatime | `rainDur` | Duration of rainfall within the interval. |
+| `THSW` | number | Yes | group_temperature | `THSW` | Temperature-Humidity-Sun-Wind (Davis VP series). |
+| `humidex` | number | Yes | group_temperature | `humidex` | Canadian humidex index. |
+| `pop` | number | Yes | group_percent | `pop` | Probability of precipitation (operator/extension-supplied). |
+| `illuminance` | number | Yes | group_illuminance | `illuminance` | Light level in lux. |
+| `noise` | number | Yes | group_db | `noise` | Sound level in dB. |
+| **Lightning fields (wview_extended)** | | | | | |
+| `lightning_strike_count` | number | Yes | group_count | `lightning_strike_count` | Strikes within the interval. |
+| `lightning_distance` | number | Yes | group_distance | `lightning_distance` | Distance to the most recent strike. |
+| `lightning_noise_count` | number | Yes | group_count | `lightning_noise_count` | |
+| `lightning_disturber_count` | number | Yes | group_count | `lightning_disturber_count` | |
+| **Snow fields (wview_extended)** | | | | | |
+| `snow` | number | Yes | group_rain | `snow` | Per-interval accumulation. |
+| `snowDepth` | number | Yes | group_rain | `snowDepth` | Total depth on ground. |
+| `snowRate` | number | Yes | group_rainrate | `snowRate` | |
+| **Wind summary fields** (typically populated only on archives where weewx promotes the wind aggregate from `archive_day_wind`) | | | | | |
+| `vecdir` | number | Yes | group_direction | `vecdir` | Vector-mean wind direction. |
+| `gustdir` | number | Yes | group_direction | `gustdir` | Direction of peak gust. |
+| `vecavg` | number | Yes | group_speed2 | `vecavg` | Vector-mean wind speed. |
+| `rms` | number | Yes | group_speed2 | `rms` | Root-mean-square wind speed. |
+| **Degree-days** | | | | | |
+| `heatdeg` | number | Yes | group_degree_day | `heatdeg` | Heating degree-days. |
+| `cooldeg` | number | Yes | group_degree_day | `cooldeg` | Cooling degree-days. |
+| **Sensor expansion slots (wview_extended)** | | | | | |
+| `extraTemp1`, `extraTemp2`, `extraTemp3` | number | Yes | group_temperature | `extraTemp1..3` | |
+| `extraHumid1`, `extraHumid2` | number | Yes | group_percent | `extraHumid1..2` | |
+| `soilTemp1` … `soilTemp4` | number | Yes | group_temperature | `soilTemp1..4` | |
+| `soilMoist1` … `soilMoist4` | number | Yes | group_moisture | `soilMoist1..4` | |
+| `leafTemp1`, `leafTemp2` | number | Yes | group_temperature | `leafTemp1..2` | |
+| `leafWet1`, `leafWet2` | number | Yes | group_count | `leafWet1..2` | |
+| **Electrical / system telemetry** | | | | | |
+| `consBatteryVoltage` | number | Yes | group_volt | `consBatteryVoltage` | |
+| `heatingVoltage` | number | Yes | group_volt | `heatingVoltage` | |
+| `referenceVoltage` | number | Yes | group_volt | `referenceVoltage` | |
+| `supplyVoltage` | number | Yes | group_volt | `supplyVoltage` | |
+| `rxCheckPercent` | number | Yes | group_percent | `rxCheckPercent` | Sensor reception health 0–100. |
+| **Containers** | | | | | |
+| `extras` | object | No | — | (see ADR-035) | **Operator-custom** columns only. Keys are weewx column names verbatim. May be empty. Stock weewx columns NEVER appear here. |
 | `source` | string | No | — | — | Always `"weewx"` for archive-derived. |
 
 **OpenAPI mapping:** [`#/components/schemas/Observation`](openapi-v1.yaml).
 
-**Promotion candidates (currently routed through `extras`).** wview_extended columns the dashboard may demonstrably need but which are NOT first-class in OpenAPI v1.0.0: `appTemp` (apparent / "feels like" temperature), `cloudbase`, `lightning_strike_count`, `lightning_distance`, `windrun`. These remain in `extras` until OpenAPI is bumped to a non-breaking v1.x minor per [ADR-018](../decisions/ADR-018-api-versioning-policy.md). Any other wview_extended column not listed in the §3.1 first-class table (`extraTemp1`, `extraHumid1`, `soilTemp1`, `soilMoist1`, `leafTemp1`, `leafWet1`, etc.) also routes through `extras`. The startup schema-reflection step ([ADR-012](../decisions/ADR-012-database-access-pattern.md) + [ADR-035](../decisions/ADR-035-user-driven-column-mapping.md)) populates the column registry that distinguishes operator-custom columns from stock-but-unpromoted ones.
+**Provenance.** The first-class field set above mirrors `STOCK_COLUMN_MAP` in `weewx_clearskies_api/db/reflection.py` (the stock-column lookup table loaded at startup by the schema reflector per [ADR-012](../decisions/ADR-012-database-access-pattern.md) + [ADR-035](../decisions/ADR-035-user-driven-column-mapping.md)). When weewx adds a new stock column, both the lookup table and this section get a new entry; `extras` is reserved for operator extensions. Columns the operator's archive schema doesn't include surface as `null` — the JSON key is always present.
 
 ### 3.2 ArchiveRecord
 

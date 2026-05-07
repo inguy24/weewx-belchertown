@@ -881,14 +881,23 @@ components:
     Observation:
       type: object
       description: |
-        Most-recent point reading from the weewx archive. Field set
-        is the weewx-stock canonical observation fields. Operator-
-        custom columns flow through `extras`.
+        Most-recent point reading from the weewx archive. The field
+        set is the FULL weewx-stock canonical observation column set
+        (wview + wview_extended). Every stock weewx archive column
+        is a first-class field on this schema; operator-custom
+        columns route through `extras` per ADR-035.
+
+        Operators with archive schemas that omit a field (e.g., a
+        wview-only install will not have `appTemp`) see `null` for
+        that field; the JSON key is always present.
 
         Full per-field unit mapping per `target_unit` system lives in
-        `docs/contracts/canonical-data-model.md` (Phase 1 deliverable).
+        `docs/contracts/canonical-data-model.md`.
       properties:
+        # Timestamp (always present)
         timestamp: { type: string, format: date-time }
+
+        # Core wview observation fields
         outTemp: { type: number, nullable: true }
         outHumidity: { type: number, nullable: true }
         windSpeed: { type: number, nullable: true }
@@ -907,15 +916,81 @@ components:
         UV: { type: number, nullable: true }
         inTemp: { type: number, nullable: true }
         inHumidity: { type: number, nullable: true }
+
+        # wview_extended core fields
         ET: { type: number, nullable: true }
         hail: { type: number, nullable: true }
         hailRate: { type: number, nullable: true }
+        appTemp: { type: number, nullable: true }
+        cloudbase: { type: number, nullable: true }
+        cloudcover: { type: number, nullable: true }
+        windrun: { type: number, nullable: true }
+        maxSolarRad: { type: number, nullable: true }
+        sunshineDur: { type: number, nullable: true }
+        daySunshineDur: { type: number, nullable: true }
+        rainDur: { type: number, nullable: true }
+        THSW: { type: number, nullable: true }
+        humidex: { type: number, nullable: true }
+        pop: { type: number, nullable: true }
+        illuminance: { type: number, nullable: true }
+        noise: { type: number, nullable: true }
+
+        # Lightning (wview_extended)
+        lightning_strike_count: { type: number, nullable: true }
+        lightning_distance: { type: number, nullable: true }
+        lightning_noise_count: { type: number, nullable: true }
+        lightning_disturber_count: { type: number, nullable: true }
+
+        # Snow (wview_extended)
+        snow: { type: number, nullable: true }
+        snowDepth: { type: number, nullable: true }
+        snowRate: { type: number, nullable: true }
+
+        # Wind summary fields (when present in archive vs archive_day_wind)
+        vecdir: { type: number, nullable: true }
+        gustdir: { type: number, nullable: true }
+        vecavg: { type: number, nullable: true }
+        rms: { type: number, nullable: true }
+
+        # Degree-days
+        heatdeg: { type: number, nullable: true }
+        cooldeg: { type: number, nullable: true }
+
+        # Sensor expansion slots (wview_extended)
+        extraTemp1: { type: number, nullable: true }
+        extraTemp2: { type: number, nullable: true }
+        extraTemp3: { type: number, nullable: true }
+        extraHumid1: { type: number, nullable: true }
+        extraHumid2: { type: number, nullable: true }
+        soilTemp1: { type: number, nullable: true }
+        soilTemp2: { type: number, nullable: true }
+        soilTemp3: { type: number, nullable: true }
+        soilTemp4: { type: number, nullable: true }
+        soilMoist1: { type: number, nullable: true }
+        soilMoist2: { type: number, nullable: true }
+        soilMoist3: { type: number, nullable: true }
+        soilMoist4: { type: number, nullable: true }
+        leafTemp1: { type: number, nullable: true }
+        leafTemp2: { type: number, nullable: true }
+        leafWet1: { type: number, nullable: true }
+        leafWet2: { type: number, nullable: true }
+
+        # Electrical / system telemetry
+        consBatteryVoltage: { type: number, nullable: true }
+        heatingVoltage: { type: number, nullable: true }
+        referenceVoltage: { type: number, nullable: true }
+        supplyVoltage: { type: number, nullable: true }
+        rxCheckPercent: { type: number, nullable: true }
+
+        # Operator-custom columns (per ADR-035)
         extras:
           type: object
           description: |
             Operator-custom weewx columns keyed by the weewx column
-            name verbatim. Per ADR-035 these may be promoted to
-            canonical fields via the configuration UI.
+            name verbatim. Stock weewx columns NEVER appear here —
+            they are first-class fields above. `extras` is the
+            operator-extension surface (ADR-035 mapping flow). May
+            be empty.
           additionalProperties:
             anyOf:
               - { type: number }
