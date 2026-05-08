@@ -298,7 +298,7 @@ Clear Skies dev and test work — `docker compose`, `pytest`, `npm`, `vite`, `pl
 
 The `.claude/` directory (agent definitions, settings, MCP config) is gitignored intentionally and is not part of the project's public surface. Do not propose tracking it, moving agent definitions to a tracked location, exposing the multi-agent orchestration setup in public repos, or otherwise treating it as shared project state. How Shane structures the work on his workstation is his business — the public artifact is the code, the ADRs, the contracts, and the docs.
 
-## Poll background teammates at fixed cadence; don't wait for completion notifications
+## Poll background teammates at every user-prompt boundary
 
 Background sub-agents spawned via the `Agent` tool with `run_in_background: true` in
 agent-teams mode (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) hit a known harness bug:
@@ -308,48 +308,67 @@ before submitting its closeout. The completion notification path is also
 unreliable on Windows. See `anthropics/claude-code` issues #24108, #26426, #21048
 (closed without fix, locked), and our own filing #56930.
 
-**The lead's job is to poll, not to wait.** After spawning a background teammate,
-`SendMessage` the agent every ~4 minutes (matches the prompt-cache-warm boundary
-per `ScheduleWakeup`'s docstring) until it submits or shows real activity. The
-ping is delivered on the agent's next tool-call boundary — non-disruptive during
-active work, wake mechanism during idle. Cadence-break in `git log` (a teammate
-that was committing every few minutes goes quiet) is corroborating evidence the
-agent is stuck, but the ping is the only working trigger.
+**The lead's job is to poll, not to wait.** The lever that wakes a stuck agent
+is `SendMessage` — delivered on the agent's next tool-call boundary,
+non-disruptive during active work, and a wake mechanism during idle. The lead's
+cadence problem is *when* to send those pings.
 
-**Why (2026-05-07):** Phase 2 task 3a-2 had three consecutive sub-agents hit this
-bug — api-dev round 1 (~30 min idle gap), test-author (~48 min idle gap), api-dev
-round 2 (overnight gap until pings woke it). Each was treated as a one-off until
-the pattern was named on the third occurrence. Several hours of wasted wall-clock
-time. The auditor (Opus, source-only review with no commits as final action) ran
-4 minutes with no idle gap — the bug strikes when the last action is something
-other than the closeout report. Filed [#56930](https://github.com/anthropics/claude-code/issues/56930)
-with timing evidence.
+**The cadence trigger is every user-prompt boundary, not a runtime timer.** Every
+time the user sends a message that resumes the lead — even a one-line "how's it
+going" — the lead does, before answering whatever the user actually asked:
+
+1. `git log -20 origin/<branch>` on the relevant repo to see if teammates are
+   committing.
+2. `SendMessage` to any teammate whose last commit is older than ~4 minutes AND
+   who hasn't submitted a closeout. The ping is one paragraph: "lead status
+   check; submit closeout now if pytest is green; flag any blocker."
+3. One sentence to the user about what teammates are doing.
+4. Resume whatever the user asked.
+
+**Why the cadence is NOT timer-paced:** `ScheduleWakeup` with the
+`<<autonomous-loop-dynamic>>` sentinel does NOT reliably wake the lead outside
+an active `/loop` session, despite the tool's docstring claim that the runtime
+resolves the sentinel to a no-op tick. **Verified 2026-05-07** during 3b round
+2: lead scheduled a 240s wake; the wake did not visibly fire; lead sat silent
+until the user prompted ("Why did 18:47 roll by and you did nothing?"). An
+earlier same-day session's attempt to apply this rule was based on the
+sentinel's docstring claim without empirical verification — the "project rule
+trumps tool docstring" framing was 1-empirical-trial wrong. `ScheduleWakeup` is
+acceptable as a *hope* signal — schedule it and hope it fires, but never *rely*
+on it as the cadence keeper. The user's natural cadence of asking "how's it
+going" is the verified trigger.
+
+**Why the original idle-bug filing matters (2026-05-07):** Phase 2 task 3a-2
+had three consecutive sub-agents hit this bug — api-dev round 1 (~30 min idle
+gap), test-author (~48 min idle gap), api-dev round 2 (overnight gap until
+pings woke it). Several hours of wasted wall-clock time. The auditor (Opus,
+source-only review with no commits as final action) ran 4 minutes with no idle
+gap — the bug strikes when the last action is something other than the
+closeout report. Filed
+[#56930](https://github.com/anthropics/claude-code/issues/56930) with timing
+evidence. The polling rule exists to short-circuit the idle gap; the user is
+the only verified cadence trigger we have for it.
 
 **How to apply:**
 
-- Spawn a background teammate → schedule a `ScheduleWakeup` 240s out → on each
-  wake, check `git log` on the relevant repo and `SendMessage` the agent if no
-  completion notification has arrived. Reschedule until close.
-- **Project rule trumps tool docstring.** `ScheduleWakeup`'s own docstring
-  describes its use as `/loop` dynamic mode. This project rule cites it for
-  polling outside `/loop`. The project rule wins. Pass `<<autonomous-loop-dynamic>>`
-  as the `prompt` argument; the runtime resolves it to a no-op tick that just
-  hands control back. **Why (2026-05-07):** during 3b round 1's first spawn the
-  lead deferred to the tool's docstring restriction instead of the project
-  rule, skipped scheduling a wakeup, and waited passively until the user
-  prompted. The polling rule exists for a reason — apply it, even when a
-  tool's docs read narrower than the project's intent.
-- Don't put "submit IMMEDIATELY, do not idle" instructions in briefs — they don't
-  work. The polling loop isn't active during the idle state, so no prompt
-  language can trigger earlier submission.
-- After ~3 cycles (~12 min) of pinging without response, the agent is likely
-  dead-not-idle (per `anthropics/claude-code` #29271). `TaskStop` and reconstruct
-  the closeout from `git log` + commit messages. Diff stats and commit-message
-  bodies are authoritative; agent-self-reported test counts can be verified by
-  re-running pytest on `weather-dev` directly.
-- This rule applies to the agent-teams in-process mode (Windows-required). The
-  TUI/tmux split-pane mode is documented as broken at #24108 and is not in
-  use on this project.
+- Spawn a background teammate → at every user-prompt boundary thereafter,
+  check `git log -20 origin/<branch>` + `SendMessage` the teammate if silent
+  for >~4 minutes since their last commit AND no closeout submitted.
+- After ~3 silent user-prompt cycles without teammate response, the agent is
+  likely dead-not-idle (per `anthropics/claude-code` #29271). `TaskStop` and
+  reconstruct the closeout from `git log` + commit messages. Diff stats and
+  commit-message bodies are authoritative; agent-self-reported test counts
+  can be verified by re-running pytest on `weather-dev` directly.
+- Don't put "submit IMMEDIATELY, do not idle" instructions in briefs — they
+  don't work. The polling loop isn't active during the idle state, so no
+  prompt language can trigger earlier submission.
+- If the user is afk for hours, the lead will genuinely sit silent until the
+  user returns. This is a known limitation, not a workaround we have at the
+  rule layer. Surface the limitation honestly when the user asks why nothing
+  happened — don't blame a tool.
+- This rule applies to the agent-teams in-process mode (Windows-required).
+  The TUI/tmux split-pane mode is documented as broken at #24108 and is not
+  in use on this project.
 
 ## Verify the default branch name before writing it into a round brief
 
@@ -378,6 +397,61 @@ origin/HEAD` or `gh repo view <owner>/<repo> --json defaultBranchRef`.
 ## Round briefs land in the project, not in tmp
 
 Operational briefs for a multi-agent round (per-task scope, reading lists, per-endpoint specs, process gates, what-to-flag-as-STOP triggers) live at `docs/planning/briefs/<phase-task>-brief.md`. Do not put them in `c:\tmp\`, `tmp/`, or other ephemeral locations — briefs are useful when launching the next round (3a-2 reuses 3a-1's pattern; 3b-alerts will reuse 3b's; etc.) and to track which gates the lead set per round. Markdown links in chat should resolve under the project workspace; tmp paths break the link rendering.
+
+## Live scratchpad during multi-agent rounds
+
+During any multi-agent round (lead + dev/test sub-agents in `agent-teams` mode), the lead maintains a **live scratchpad** at `c:\tmp\<phase-task>-scratch.md`. The scratchpad is appended to continuously — after every commit landed, every lead-call decision, every audit finding, every state change — NOT reconstructed retroactively at session-end.
+
+**Why (2026-05-07):** Phase 2 task 3b round 3 hit a session-limit warning mid-round with two background teammates active. The lead's first attempt at handoff was a retrospective `phase-2-task-3b-3-handoff-mid-round.md` written from `git log` + kill-state strings — a snapshot reconstructed from external signals. User pushback was immediate: *"Why are we losing information? Why are you not dumping to a scratchpad to pick up later?"* The retrospective approach loses everything held only in head — running audit considerations, negotiation history, lookup-table reasoning, alternatives rejected, the fact that "fixture-scope drift" was an open audit thread before TaskStop. The corrected pattern (a live `c:\tmp\3b-3-scratch.md` updated continuously across the session) survived the next-session resume cleanly: every commit's concerns, every lead-call, every verification item, every queued lessons-triage candidate was readable in one place.
+
+**How to apply:**
+
+- At the start of any multi-agent round, create `c:\tmp\<phase-task>-scratch.md`. Tmp location is intentional — fast/ephemeral, doesn't pollute `docs/planning/briefs/`.
+- Append to it continuously — commit-landed events, lead-call decisions, audit findings, negotiation thread state, queued lessons. Don't batch updates.
+- Round-close: triage the scratchpad's queued lessons per CLAUDE.md "Capture lessons in the right place" routing rules. Scratchpad itself stays in `c:\tmp\` as a reference artifact; not committed.
+- The scratchpad is the lead's running notes. The brief at `docs/planning/briefs/` stays authoritative for round scope and gates; the scratchpad records *what happened during execution* as it happens.
+- Operationalizes the existing "Don't hold things across turns" rule for multi-agent rounds: that rule says "write things that span turns to a file" — the scratchpad is the file for round-execution state.
+- This rule applies regardless of whether a session ends mid-round. The pattern's value isn't only mid-round-handoff; it's also the audit trail for the round-close commit and lessons triage.
+
+## Lead-direct remediation when the surface is small
+
+When auditor findings or test-author bugs are mechanical and small (≲50 lines across ≲3 files, no judgment calls beyond what the lead can synthesize), the lead fixes them directly rather than spawning the responsible teammate. Spawning costs ~30-60 min wall-clock plus a respawn-context overhead; lead-direct fixes are minutes. Reserve teammate-spawn for fixes that need real implementation judgment, larger scope, or repeated iteration.
+
+**Why (2026-05-07):**
+
+- Phase 2 task 3b round 2 had four auditor findings (F1-F4), all under ~30 lines apiece. The lead fixed them directly in commit `521f5e1` rather than spawn api-dev for a 4-finding remediation round. No quality regression; round-close was faster.
+- Phase 2 task 3b round 3 surfaced three test-author bugs at first pytest (cache-not-wired, fakeredis-kwarg, station-info-missing), one off-by-one date assertion, one Redis-flushdb miss, and six auditor findings. The lead fixed all of them lead-direct (commits `c49ed12`, `ca6f099`, `976286a`, `98ec7dc`) — total ~250 lines across 5 files, would have been a full respawn round otherwise. Spawning would have lost ~2 hours plus the brief-writing overhead for a remediation that took ~30 min lead-direct.
+
+**How to apply:**
+
+- **Lead-direct candidates:** mechanical narrowings (bare-except → specific-class), trivial assertion fixes (off-by-one constants, copy-paste typos), test-fixture wiring that needs a one-helper-add, structural exception-attribute extensions (F2 round 3 pattern: add a kwarg, propagate at the boundary, dispatch on the attribute), short docstring/comment additions documenting deviations.
+- **Spawn the teammate when:** the fix needs design judgment (which option to pick from a non-obvious set), spans a larger module surface (>~50 lines or >~3 files), requires iteration against pytest output to converge, OR represents a real new capability (not a fix). Spawn also when the lead would be exercising the dev/test-author/auditor agent's specific knowledge that the lead doesn't have (rare).
+- **Document provenance:** lead-direct commits use `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` (or the Sonnet trailer if the lead is Sonnet). Mention the lead-direct precedent in the commit body for posterity.
+- **Anti-pattern:** spawning a teammate for a 5-line fix because "the rule says dev fixes dev bugs." The rule is "dev produces code; teammates implement; auditor reviews"; when the post-audit fix is 5 mechanical lines, the lead executing that fix is *part of synthesis*, not a delegation skip.
+
+## Canonical-spec operationalization is a brief-draft question, not an impl call
+
+When a canonical contract (`canonical-data-model.md`, `openapi-v1.yaml`) names a field as "first line of [X]" or otherwise leaves a parser definition implicit, surface the operationalization to the user at brief-draft time. Don't ship the brief letting api-dev silently pick a parser definition; that's a covert canonical amendment dressed as an impl detail.
+
+**Why (2026-05-07):** Phase 2 task 3b round 3 audit F1 caught a brief-vs-canonical drift on `ForecastDiscussion.headline` and `senderName`. Canonical §4.1.4 says "headline = `productText` first line" — but real NWS AFD productText starts with a wire-format header (`000\n FXUS66 KSEW DDDDZZ\n AFDSEW\n`), so "first line" is operationally ambiguous. api-dev picked `headline = wmoCollectiveId` ("FXUS66" — a different field entirely), which the auditor caught. The brief was silent on the operationalization; api-dev shouldn't have made the call unilaterally, but neither should the brief have left it to api-dev. Same drift class as 3b-2 F2 (impl-vs-canonical without lead approval) — but the new lesson is that the brief had a chance to catch it earlier.
+
+**How to apply:**
+
+- At brief-draft time, audit each canonical reference for parser-definition ambiguity. "First line of `productText`" — first non-blank? after a header skip? what counts as a header? Pin the answer in the brief OR surface as a real open question for user sign-off.
+- Same applies to "extract from URL," "compose from fields X and Y," "abbreviate," "first sentence of," "next non-empty," and any other content-shaping verb in the canonical-mapping table.
+- Cross-check the brief against the canonical's example output, not just the formula. Canonical §4.1.4 says `senderName = wmoCollectiveId + issuingOffice (e.g. "NWS Seattle WA")` — the formula and the example disagree. That's the brief's signal to surface; impl shouldn't reconcile silently.
+
+## Multi-line commit messages on PowerShell: use `git commit -F` with a written file
+
+PowerShell's parser breaks multi-line `git commit -m "$msg"` invocations when the message contains parentheses, quote marks, or shell-special characters — the parser interprets them as positional arguments to git, producing `error: pathspec 'X' did not match any file(s) known to git` and ALSO leaves a partial commit half-formed. Use `git commit -F <file>` with a written `.txt` file in `c:\tmp\` instead.
+
+**Why (2026-05-08):** during Phase 2 task 3b round 3 remediation, a here-string commit message containing parentheses (`(F1 HIGH, F2 MED, F3-F6 LOW)`) and quoted strings ((`"NWS Seattle WA"`) broke the PowerShell heredoc parsing. Git emitted ~30 `pathspec ... did not match` errors. Workaround: write the commit message to `c:\tmp\<task>-msg.txt`, run `git commit -s -F c:\tmp\<task>-msg.txt`. Cost was a confused round of error messages and a re-stage.
+
+**How to apply:**
+
+- For any non-trivial commit message (>~5 lines, contains parens/quotes/backticks/dollar signs), write the message to `c:\tmp\<phase-task>-msg.txt` first via the Write tool, then `git commit -s -F c:\tmp\<phase-task>-msg.txt`.
+- Trivial commits (one-liner messages with no special chars) can still use `-m "msg"` inline.
+- This is a Windows/PowerShell-specific concern. Bash (via Git Bash or WSL) handles heredocs cleanly — if a command path goes through Bash, `-m "$(cat <<EOF ... EOF)"` works as documented. The two pipelines coexist; pick the one that matches your current shell.
 
 ## No "promotion candidates" or "we'll add it later" framing in v0.1 contracts
 

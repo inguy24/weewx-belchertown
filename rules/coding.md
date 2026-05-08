@@ -192,6 +192,18 @@ If a file passes ~500 lines and contains multiple unrelated concerns, split it. 
 - User-facing error messages: brief, no stack trace, no DB schema names, no internal paths.
 - Operator-facing logs: full context (stack, request ID, inputs).
 
+### Dispatch on exception state via attributes, not message strings
+
+When an exception class needs to convey state (HTTP status, retry-after seconds, internal error code) that callers will dispatch on, expose it as an attribute on the exception instance. Don't parse the message string with `if "404" in str(exc)` or similar substring checks.
+
+**Why (2026-05-08):** clearskies-api 3b round 3 audit F2 caught `if "404" in str(exc)` in `providers/forecast/nws.py` translating NWS `/points` 404 → `GeographicallyUnsupported`. Two failure modes: (a) false positive — any 4xx whose body excerpt contains the literal `"404"` matches; (b) silent regression on wrapper-message format change — if `ProviderHTTPClient`'s message format ever shifts from `"Provider {id} returned unexpected {status}"` to anything else, the substring stops matching and the 404→503 mapping breaks with no test catching it. Remediation added `status_code: int | None` to `ProviderError.__init__`, propagated via `ProviderHTTPClient`'s 4xx/5xx raises, and changed the call site to `if exc.status_code == 404`. Same pattern applies to any future status-or-state-dependent dispatch (Aeris's 401-vs-403 distinctions, OWM's payload-bearing 4xx, etc.).
+
+**How to apply:**
+
+- When designing a provider/wrapper exception class that callers will need to inspect: add structured attributes (e.g. `status_code`, `error_code`, `retry_after_seconds`) at construction time, document them in the class docstring, and have callers dispatch on the attribute.
+- Message strings are for humans (operator logs, error responses). Don't make program flow depend on them.
+- This applies to any exception hierarchy, not just HTTP wrappers — same principle for parser errors with structured position info, file errors with structured paths, etc.
+
 ### DRY — search before writing a new helper
 
 **Before** writing a new utility function, in this order:
