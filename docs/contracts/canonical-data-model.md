@@ -531,29 +531,37 @@ Day-1 set: `nws`, `aeris`, `openweathermap`.
 | `id` | `properties.id` | `id` | concat(`event` + `start` + `sender_name`) |
 | `headline` | `properties.headline` | `details.name` | `event` |
 | `description` | `properties.description` (+ `instruction` appended) | `details.body` | `description` |
-| `severity` | severity-mapping — see below | `details.priority` (severity-mapping) | severity-mapping from `event` keyword |
-| `urgency` | `properties.urgency` | `details.urgency` | (not provided) |
-| `certainty` | `properties.certainty` | `details.certainty` | (not provided) |
-| `event` | `properties.event` | `details.type` | `event` |
-| `effective` | `properties.effective` | `timestamps.issued` | `start` (epoch s, convert) |
-| `expires` | `properties.expires` | `timestamps.expires` | `end` (epoch s, convert) |
-| `senderName` | `properties.senderName` | `details.emergency` (or `place.name`) | `sender_name` |
+| `severity` | severity-mapping — see below | parse `details.type` suffix — see below | severity-mapping from `event` keyword |
+| `urgency` | `properties.urgency` | (not provided) | (not provided) |
+| `certainty` | `properties.certainty` | (not provided) | (not provided) |
+| `event` | `properties.event` | `details.name` (human-readable) | `event` |
+| `effective` | `properties.effective` | `timestamps.issuedISO` (UTC convert) | `start` (epoch s, convert) |
+| `expires` | `properties.expires` | `timestamps.expiresISO` (UTC convert) | `end` (epoch s, convert) |
+| `senderName` | `properties.senderName` | `details.emergency` (string only) ⇢ `place.name` | `sender_name` |
 | `areaDesc` | `properties.areaDesc` | `place.name` | (not provided) |
-| `category` | `properties.category` | `details.category` | (not provided) |
+| `category` | `properties.category` | `details.cat` | (not provided) |
+
+**Aeris real-wire amendments (2026-05-09, 3b-7 fixture-capture evidence):**
+
+- `details.priority` is **NOT** a severity field. It's a NOAA hazard-map display-priority code (e.g. `60` = Wind Advisory, `96` = Fire Weather Watch) for hazard-map ordering when alerts overlap. Aeris docs: "the lower the priority the higher the alert significance" — but the value range is 1–100+, indexed per event type, not by severity tier.
+- Severity is encoded as the **suffix on `details.type`**. Aeris docs: "For non-US/Canadian alerts, the suffix indicates severity: `EX` (Extreme), `SV` (Severe), `MD` (Moderate), `MN` (Minor)." US/Canadian alerts use NWS [VTEC (Valid Time Event Code)](https://www.weather.gov/vtec/) format `XX.YY.Z` where `Z` is the action/severity code (`W`=Warning, `A`=Watch, `Y`=Advisory, `S`=Statement).
+- `details.urgency`, `details.certainty`, `details.category` (full name) are **not** documented response fields and were absent from the captured real-wire response. PARTIAL-DOMAIN per L1 rule extension.
+- `details.cat` IS the actual wire field name carrying category information (e.g. `"fire"`, `"thunderstorm"`).
+- `details.emergency` is a JSON **boolean** when no emergency text is set (real-wire evidence), or a **string** when it is. Type is `bool | str | None`. senderName logic uses `isinstance(emergency, str) and emergency.strip()`; falsy or boolean values fall through to `place.name`.
 
 #### Severity normalization
 
 Canonical: `advisory` / `watch` / `warning`.
 
-| NWS CAP severity | aeris `priority` | OWM `event` keyword pattern | Canonical |
+| NWS CAP severity | aeris `details.type` suffix (US/CA = VTEC; non-US = severity) | OWM `event` keyword pattern | Canonical |
 |---|---|---|---|
-| `Extreme` | 1 (highest) | `*Warning*` | `warning` |
-| `Severe` | 2 | `*Watch*` | `watch` |
-| `Moderate` | 3 | `*Advisory*` / `*Statement*` | `advisory` |
-| `Minor` | 4 | (other) | `advisory` |
-| `Unknown` | 5 (lowest) | (default) | `advisory` |
+| `Extreme` | `.W` (VTEC Warning) / `.EX` (Extreme) | `*Warning*` | `warning` |
+| `Severe` | `.A` (VTEC Watch) / `.SV` (Severe) | `*Watch*` | `watch` |
+| `Moderate` | `.Y` (VTEC Advisory) / `.S` (VTEC Statement) / `.MD` (Moderate) | `*Advisory*` / `*Statement*` | `advisory` |
+| `Minor` | `.MN` (Minor) | (other) | `advisory` |
+| `Unknown` | (no suffix or unknown suffix) | (default) | `advisory` |
 
-Other NWS CAP fields (`urgency`, `certainty`, `category`) pass through unmapped — they're typed strings, no canonical normalization.
+Other NWS CAP fields (`urgency`, `certainty`, `category`) pass through unmapped on the NWS path. On the Aeris path, `urgency` and `certainty` always populate as `null` (PARTIAL-DOMAIN); `category` reads from `details.cat` rather than `details.category`.
 
 ### 4.4 Earthquake providers (per [ADR-040](../decisions/ADR-040-earthquake-providers.md))
 
