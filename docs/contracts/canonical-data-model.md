@@ -510,8 +510,8 @@ Day-1 set: `aeris`, `openmeteo`, `openweathermap`, `iqair`. Path B only — Path
 | `pollutantPM25` | `periods[].pollutants[].pm2_5` | `current.pm2_5` (µg/m³) | `list[0].components.pm2_5` (µg/m³) | `data.current.pollution.pm25` (µg/m³ — convert if needed) |
 | `pollutantPM10` | `periods[].pollutants[].pm10` | `current.pm10` (µg/m³) | `list[0].components.pm10` (µg/m³) | — |
 | `pollutantO3` | `periods[].pollutants[].o3` (ppm) | `current.ozone` (µg/m³ — convert to ppm) | `list[0].components.o3` (µg/m³ — convert) | — |
-| `pollutantNO2` | `periods[].pollutants[].no2` (ppm) | `current.nitrogen_dioxide` (µg/m³) | `list[0].components.no2` (µg/m³) | — |
-| `pollutantSO2` | `periods[].pollutants[].so2` (ppm) | `current.sulphur_dioxide` (µg/m³) | `list[0].components.so2` (µg/m³) | — |
+| `pollutantNO2` | `periods[].pollutants[].no2` (ppm) | `current.nitrogen_dioxide` (µg/m³ — convert to ppm) | `list[0].components.no2` (µg/m³ — convert to ppm) | — |
+| `pollutantSO2` | `periods[].pollutants[].so2` (ppm) | `current.sulphur_dioxide` (µg/m³ — convert to ppm) | `list[0].components.so2` (µg/m³ — convert to ppm) | — |
 | `pollutantCO` | `periods[].pollutants[].co` (ppm) | `current.carbon_monoxide` (µg/m³ — convert to ppm) | `list[0].components.co` (µg/m³ — convert) | — |
 | `observedAt` | `periods[].dateTimeISO` | `current.time` | `list[0].dt` (epoch s) | `data.current.pollution.ts` |
 
