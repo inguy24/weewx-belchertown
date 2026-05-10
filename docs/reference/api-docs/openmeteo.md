@@ -221,6 +221,170 @@ temperature, relative_humidity, dew_point, cloud_cover,
 wind_speed, wind_direction, geopotential_height
 ```
 
+### Air Quality
+
+- **Path:** `/v1/air-quality`
+- **Method:** GET
+- **Host:** `air-quality-api.open-meteo.com` (distinct from `api.open-meteo.com` used by the Forecast endpoint)
+- **Source verified:** 2026-05-10 via https://open-meteo.com/en/docs/air-quality-api
+
+- **Required parameters:**
+
+  | Name | Type | Description |
+  |---|---|---|
+  | `latitude` | float (or comma list) | WGS84 latitude. Multiple locations supported via comma list |
+  | `longitude` | float (or comma list) | WGS84 longitude. West of Greenwich = negative |
+
+- **Optional parameters:**
+
+  | Name | Default | Notes |
+  |---|---|---|
+  | `current` | — | CSV of current-condition AQI variables (see "Current variables" below) |
+  | `hourly` | — | CSV of hourly AQI variables (see "Hourly variables" below) |
+  | `domains` | `auto` | `auto`, `cams_europe`, or `cams_global`. Picks regional model |
+  | `timeformat` | `iso8601` | `unixtime` |
+  | `timezone` | `GMT` | IANA name or `auto` |
+  | `past_days` | `0` | Range 0-92 |
+  | `forecast_days` | `5` | Range 0-7 |
+  | `forecast_hours`, `past_hours` | — | Hour-step variants |
+  | `start_date`, `end_date` | — | `YYYY-MM-DD` range |
+  | `start_hour`, `end_hour` | — | `YYYY-MM-DDTHH:mm` range |
+  | `cell_selection` | `nearest` | `nearest` / `land` / `sea` |
+
+#### Example HTTP request
+
+```
+GET /v1/air-quality?latitude=47.6062&longitude=-122.3321&current=us_aqi,us_aqi_pm2_5,us_aqi_pm10,us_aqi_nitrogen_dioxide,us_aqi_ozone,us_aqi_sulphur_dioxide,us_aqi_carbon_monoxide,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone HTTP/1.1
+Host: air-quality-api.open-meteo.com
+```
+
+Curl:
+
+```
+curl "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=47.6062&longitude=-122.3321&current=us_aqi,us_aqi_pm2_5,us_aqi_pm10,us_aqi_nitrogen_dioxide,us_aqi_ozone,us_aqi_sulphur_dioxide,us_aqi_carbon_monoxide,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone"
+```
+
+#### Example response (current= projection)
+
+```json
+{
+  "latitude": 47.5625,
+  "longitude": -122.34375,
+  "elevation": 51.0,
+  "generationtime_ms": 0.5,
+  "utc_offset_seconds": 0,
+  "timezone": "GMT",
+  "timezone_abbreviation": "GMT",
+  "current_units": {
+    "time": "iso8601",
+    "interval": "seconds",
+    "us_aqi": "USAQI",
+    "us_aqi_pm2_5": "USAQI",
+    "us_aqi_pm10": "USAQI",
+    "us_aqi_nitrogen_dioxide": "USAQI",
+    "us_aqi_ozone": "USAQI",
+    "us_aqi_sulphur_dioxide": "USAQI",
+    "us_aqi_carbon_monoxide": "USAQI",
+    "pm10": "μg/m³",
+    "pm2_5": "μg/m³",
+    "carbon_monoxide": "μg/m³",
+    "nitrogen_dioxide": "μg/m³",
+    "sulphur_dioxide": "μg/m³",
+    "ozone": "μg/m³"
+  },
+  "current": {
+    "time": "2026-05-10T18:00",
+    "interval": 3600,
+    "us_aqi": 42,
+    "us_aqi_pm2_5": 38,
+    "us_aqi_pm10": 22,
+    "us_aqi_nitrogen_dioxide": 12,
+    "us_aqi_ozone": 42,
+    "us_aqi_sulphur_dioxide": 1,
+    "us_aqi_carbon_monoxide": 3,
+    "pm10": 12.4,
+    "pm2_5": 9.1,
+    "carbon_monoxide": 130.0,
+    "nitrogen_dioxide": 14.2,
+    "sulphur_dioxide": 0.4,
+    "ozone": 84.3
+  }
+}
+```
+
+(`hourly=` projections return parallel arrays under `hourly.{variable_name}` with `hourly.time` as the alignment index, identical column-oriented shape to the Forecast endpoint.)
+
+#### Current variables (`current=`)
+
+The documentation states: "Every weather variable available in hourly data is available as current condition as well." Explicit current-supported variables:
+
+**Consolidated AQI:**
+- `us_aqi` — U.S. EPA 0-500 AQI (overall), pre-computed by Open-Meteo
+- `european_aqi` — European AQI scale (0-100+), pre-computed
+
+**Pollutant concentrations (raw):**
+- `pm10`, `pm2_5` — μg/m³
+- `carbon_monoxide` — μg/m³
+- `nitrogen_dioxide` — μg/m³
+- `sulphur_dioxide` — μg/m³
+- `ozone` — μg/m³
+- `dust` — μg/m³ (Saharan dust)
+- `aerosol_optical_depth` — dimensionless
+- `uv_index`, `uv_index_clear_sky`
+- `ammonia` — μg/m³ (Europe only)
+- `alder_pollen`, `birch_pollen`, `grass_pollen`, `mugwort_pollen`, `olive_pollen`, `ragweed_pollen` — grains/m³ (Europe, seasonal)
+
+#### Hourly variables (`hourly=`)
+
+Superset of current. Adds:
+
+**Per-pollutant sub-AQIs (U.S. EPA scale):**
+- `us_aqi_pm2_5`, `us_aqi_pm10`
+- `us_aqi_nitrogen_dioxide`, `us_aqi_ozone`
+- `us_aqi_sulphur_dioxide`, `us_aqi_carbon_monoxide`
+
+**Per-pollutant sub-AQIs (European scale):**
+- `european_aqi_pm2_5`, `european_aqi_pm10`
+- `european_aqi_nitrogen_dioxide`, `european_aqi_ozone`
+- `european_aqi_sulphur_dioxide`
+
+**Additional pollutants and aerosols:**
+- `formaldehyde`, `glyoxal`
+- `non_methane_volatile_organic_compounds`
+- `pm10_wildfire`
+- `peroxyacyl_nitrates`
+- `secondary_inorganic_aerosol`
+- `residential_elementary_carbon`, `total_elementary_carbon`
+- `pm2_5_total_organic_matter`
+- `sea_salt_aerosol`
+- `nitrogen_monoxide`
+- `carbon_dioxide` — ppm (the only gas reported in ppm; all others μg/m³)
+- `methane` — μg/m³
+
+**Notes:**
+
+- The per-pollutant `us_aqi_*` family IS available on `current=` despite not being on the documented "current variables" list — the docs explicitly state every hourly variable is also current-available. This matters because the `aqiMainPollutant` derivation per canonical §4.2 needs the per-pollutant sub-AQIs.
+- All gases (CO, NO2, SO2, O3) and particulates report in **μg/m³** by default. Canonical §3.8 stores `pollutantO3/NO2/SO2/CO` in **ppm** (weewx `group_fraction`); the AQI provider module must convert per the §4.2 footnote `ppm = µg/m³ × 24.45 / molecular_weight`.
+- `current_units.us_aqi` is the string `"USAQI"` (no space). `current_units.pm2_5` is the string `"μg/m³"` (Greek letter μ, not Latin `u`).
+- The endpoint has no `aqi_category` field — EPA category names are derived client-side from the 0-500 value via EPA breakpoint bands (Good / Moderate / USG / Unhealthy / Very Unhealthy / Hazardous).
+- The endpoint has no `main_pollutant` field — derived client-side as the pollutant with the highest sub-AQI value.
+- The endpoint has no location label — `aqiLocation` is PARTIAL-DOMAIN for this provider.
+
+#### Rate limits
+
+Same as forecast endpoint: fair-use threshold (~10,000 calls/day for the free tier); throttled rather than hard-capped. No published per-second cap. The clearskies-api 5 req/s rate limiter is "be polite" not "stay under quota."
+
+#### Error response
+
+```json
+{
+  "error": true,
+  "reason": "Cannot initialize ... invalid String value ... for key current"
+}
+```
+
+HTTP 400 on parameter validation failure. Same shape as the Forecast endpoint's errors.
+
 ## Weather codes (`weather_code`)
 
 WMO code values used in `current.weather_code`, `hourly.weather_code`, and `daily.weather_code`. Common values:
