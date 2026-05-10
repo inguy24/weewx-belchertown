@@ -618,3 +618,28 @@ Sonnet teammates (api-dev + test-author) get spawned with explicit restate of:
 ---
 
 **Brief approved by user 2026-05-09 (Step D before spawn): Q1 = A (real capture), Q2 = A (None on empty senderName).**
+
+---
+
+## Post-fixture-capture amendments (2026-05-09)
+
+Real Aeris fixture capture revealed five canonical-data-model §4.3 mismatches between the canonical Aeris column and the actual Aeris wire shape. Lead web-researched the official Aeris alerts docs + NWS VTEC encoding, then lead-direct amended canonical-data-model §4.3 (meta-repo `224be21`) + impl + tests (api-repo `73e66e2` + `7ea40c9` + `5e64cd1`). Brief calls below are amended in place; original wording preserved in commit history.
+
+**Call 12 SUPERSEDED — severity dispatch.** The original 1-5 priority-int mapping was wrong. Aeris severity is encoded as the **suffix on `details.type`**:
+- US/Canadian alerts use NWS VTEC: `.W` → warning, `.A` → watch, `.Y`/`.S` → advisory.
+- Non-US alerts use Aeris severity: `.EX` → warning, `.SV` → watch, `.MD`/`.MN` → advisory.
+
+`details.priority` is a NOAA hazard-map display-priority code (60 = Wind Advisory, 96 = Fire Weather Watch — per-event-type display ordering), NOT a severity scale. Impl's `_AERIS_SEVERITY_MAP` (priority-int) replaced with `_VTEC_SUFFIX_TO_SEVERITY` + `_AERIS_SUFFIX_TO_SEVERITY` (suffix dispatch). `_normalize_severity(priority)` replaced with `_parse_severity_from_type(type_code)`.
+
+**Call 16 AMENDED — PARTIAL-DOMAIN expansion.** `urgency`, `certainty` are NOT documented Aeris response fields per the official Aeris alerts API documentation. Real fixture confirmed absence. PARTIAL-DOMAIN per L1 rule extension: dropped from CAPABILITY.supplied_canonical_fields AND from `_AerisAlertDetails` wire-shape model. They populate as `None` on canonical AlertRecord regardless of plan tier. `category` REMAINS in CAPABILITY because Aeris DOES supply it via the `details.cat` wire field — see call 19 amendment.
+
+**Call 19 AMENDED — `senderName` operationalization.** `_AerisAlertDetails.emergency` widened from `str | None` (brief spec) to `bool | str | None` (real wire returns boolean `False` when no emergency text is set). senderName logic uses `isinstance(emergency, str) and emergency.strip()` to skip boolean values; falls through to `place.name` per Q2 user decision.
+
+**Call 21 NEW — category field source rename.** `details.category` does NOT exist in real Aeris wire. The actual field is `details.cat` (e.g., `"fire"`, `"thunderstorm"`). `_AerisAlertDetails.category` field renamed to `cat`; `_to_canonical()` now reads `record.details.cat`. canonical-data-model §4.3 amended to point at `details.cat`.
+
+**Event field — also amended.** Canonical §4.3 originally mapped `event = details.type` (structured code like `"FW.A"`). Real-wire evidence + canonical §3.6's "Provider's event name" definition (with human-readable examples like `"Wind Advisory"`, `"Tornado Warning"`) showed that the §4.3 mapping was inconsistent with §3.6. Corrected: `event = details.name` (human-readable, e.g., `"FIRE WEATHER WATCH"`).
+
+**Lessons triage:**
+- P1 (api-dev unilateral type widening — brief-divergence STOP rule violation in commit `9d5207c`): decision-log only; the rule is already in the agent definition.
+- P2 (lead brief-draft cross-check failure): NEW rule added to `rules/clearskies-process.md` — "Cross-check canonical mapping cells against api-docs example responses at brief-draft" — operationalizes the cross-validation step that would have caught the §4.3 mismatch before fixture capture.
+- P3 (auditor recipient-name addressability gap, third round in a row): decision-log only; fallback chain (try `lead` → `team-lead` → `opus` → accumulate-to-closeout) works.

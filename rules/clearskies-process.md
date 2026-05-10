@@ -441,6 +441,23 @@ When a canonical contract (`canonical-data-model.md`, `openapi-v1.yaml`) names a
 - Same applies to "extract from URL," "compose from fields X and Y," "abbreviate," "first sentence of," "next non-empty," and any other content-shaping verb in the canonical-mapping table.
 - Cross-check the brief against the canonical's example output, not just the formula. Canonical §4.1.4 says `senderName = wmoCollectiveId + issuingOffice (e.g. "NWS Seattle WA")` — the formula and the example disagree. That's the brief's signal to surface; impl shouldn't reconcile silently.
 
+## Cross-check canonical mapping cells against api-docs example responses at brief-draft
+
+When a round brief cites a canonical-data-model.md mapping table (`§4.x` provider columns) as the source of truth for a wire-shape field, **cross-check each cell against the corresponding api-docs example response** in `docs/reference/api-docs/<provider>.md` BEFORE drafting the brief. If the api-docs example contradicts the canonical mapping cell, that's a canonical-table bug — surface it to the user at brief-draft time. Do not draft the brief on top of canonical text the api-docs already disagrees with.
+
+This rule operationalizes one layer above "Canonical-spec operationalization is a brief-draft question" — that rule covers parser-definition ambiguity *within* a canonical mapping (e.g., "first line of X"). This rule covers cross-validation *of* the canonical mapping cells against external evidence captured in api-docs files.
+
+**Why (2026-05-09):** Phase 2 task 3b-7 (alerts/aeris) was drafted against canonical-data-model §4.3 verbatim. §4.3 mapped Aeris severity from `details.priority` integer (1-5 → enum). The api-docs file at `docs/reference/api-docs/aeris.md` line 249 already showed `priority: 60` in its example response — inconsistent with the 1-5 scale. A cross-check at brief-draft time would have caught the mismatch before fixture capture. Instead, the contradiction surfaced only when test-author captured the real Aeris fixture (priority=96 for a Fire Weather Watch); the lead then had to web-research the actual Aeris severity model (suffix on `details.type`, not `priority`), amend canonical §4.3, rewrite the impl + tests (~310 lines, mid-flight). Three further mismatches surfaced in the same fixture: `details.urgency` / `details.certainty` / `details.category` were not Aeris response fields at all (PARTIAL-DOMAIN), and the actual category field is named `details.cat` (not `details.category`). All five mismatches were visible in the api-docs file or the published Aeris docs at brief-draft time.
+
+**How to apply:**
+
+- For every canonical-mapping cell the brief references, open `docs/reference/api-docs/<provider>.md` and find the example response. Trace the wire field path; verify the canonical mapping points at it correctly.
+- If the api-docs example doesn't show a field the canonical mapping names, that's a yellow flag — either the example is truncated (mark uncertain in brief) or the field doesn't exist in real responses (PARTIAL-DOMAIN candidate, surface to user).
+- If the api-docs example shows a field shape inconsistent with the canonical mapping (different value range, different field name, different type), that's a canonical-table bug — STOP and surface to user before brief-draft continues.
+- For provider docs not yet captured in `docs/reference/api-docs/`, fetch them via web research and write a `<provider>.md` BEFORE drafting the brief, per the existing "Research what an external system provides before asking the user" rule.
+- The cross-check is brief-draft work, not audit-time work. Catching it at audit time means the impl already shipped against the wrong contract; remediation is a mid-flight rewrite, not a small audit fix.
+- Anti-pattern: drafting calls 12-19 of a brief by reading canonical §4.3 alone, without ever opening the provider's api-docs file. The 3b-7 brief's Section "Operationalization audit checklist" walked through every canonical field but only against the canonical text, not against the wire-shape evidence.
+
 ## Multi-line commit messages on PowerShell: use `git commit -F` with a written file
 
 PowerShell's parser breaks multi-line `git commit -m "$msg"` invocations when the message contains parentheses, quote marks, or shell-special characters — the parser interprets them as positional arguments to git, producing `error: pathspec 'X' did not match any file(s) known to git` and ALSO leaves a partial commit half-formed. Use `git commit -F <file>` with a written `.txt` file in `c:\tmp\` instead.
