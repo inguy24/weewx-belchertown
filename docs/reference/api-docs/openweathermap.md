@@ -5,8 +5,9 @@
 - https://openweathermap.org/current (Current Weather Data)
 - https://openweathermap.org/forecast5 (5 Day / 3 Hour Forecast)
 - https://openweathermap.org/api/one-call-3 (One Call API 3.0)
+- https://openweathermap.org/api/air-pollution (Air Pollution API)
 
-**Last verified:** 2026-04-30
+**Last verified:** 2026-05-10 (Air Pollution section added 3b-11); 2026-04-30 (Current / Forecast / One Call 3.0)
 
 ## Authentication
 
@@ -222,6 +223,82 @@ curl "https://api.openweathermap.org/data/2.5/weather?lat=47.6062&lon=-122.3321&
 - `/data/3.0/onecall/timemachine?lat=&lon=&dt=<unix>&appid=` — single timestamp historical/future point. `dt` accepts 1979-01-01 through +4 days. Optional: `units`, `lang`.
 - `/data/3.0/onecall/day_summary?lat=&lon=&date=YYYY-MM-DD&appid=` — daily aggregate. Range 1979-01-02 through ~1.5 years ahead. Optional: `units`, `lang`, `tz` (`±HH:MM`).
 - `/data/3.0/onecall/overview` — AI-generated weather summary string.
+
+### Air Pollution (free)
+
+- **Path:** `/data/2.5/air_pollution`
+- **Method:** GET
+- **Required parameters:**
+  - `appid` — API key
+  - `lat`, `lon` — location coordinates
+- **Optional parameters:** none documented (no `units`, no `lang` — concentrations are always µg/m³; AQI is always the OWM 1–5 ordinal scale)
+- **Example request:**
+  ```
+  curl "https://api.openweathermap.org/data/2.5/air_pollution?lat=47.6062&lon=-122.3321&appid=$OWM_KEY"
+  ```
+- **Example response:**
+  ```json
+  {
+    "coord": [50.0, 50.0],
+    "list": [
+      {
+        "dt": 1606147200,
+        "main": {
+          "aqi": 4
+        },
+        "components": {
+          "co":    203.609,
+          "no":      0.0,
+          "no2":     0.396,
+          "o3":     75.102,
+          "so2":     0.648,
+          "pm2_5":  23.253,
+          "pm10":   92.214,
+          "nh3":     0.117
+        }
+      }
+    ]
+  }
+  ```
+- **Field details:**
+  - `coord` — `[latitude, longitude]` array.
+  - `list[]` — single entry for current endpoint; multiple for forecast / history endpoints (4 days hourly for forecast).
+  - `list[0].dt` — Unix UTC seconds.
+  - `list[0].main.aqi` — **OWM 1–5 ordinal scale**, NOT EPA 0–500. See "AQI scale" subsection below.
+  - `list[0].components.*` — all concentrations in **µg/m³**, including gases (no ppm/ppb here, unlike Aeris).
+- **No location label.** The response carries `coord` (lat/lon) but NO city / state / country name field. Canonical `aqiLocation` is PARTIAL-DOMAIN for this provider.
+
+#### AQI scale (OWM 1–5 ordinal, with per-pollutant breakpoints)
+
+OWM publishes a 5-level ordinal scale (1 = Good ... 5 = Very Poor), assembled by taking the worst per-pollutant band across SO₂, NO₂, PM₁₀, PM₂.₅, O₃, CO. Each pollutant has its own per-band concentration range in **µg/m³**:
+
+| Index | Name      | SO₂ µg/m³  | NO₂ µg/m³ | PM₁₀ µg/m³ | PM₂.₅ µg/m³ | O₃ µg/m³  | CO µg/m³        |
+|-------|-----------|------------|-----------|------------|-------------|-----------|-----------------|
+| 1     | Good      | [0; 20)    | [0; 40)   | [0; 20)    | [0; 10)     | [0; 60)   | [0; 4400)       |
+| 2     | Fair      | [20; 80)   | [40; 70)  | [20; 50)   | [10; 25)    | [60; 100) | [4400; 9400)    |
+| 3     | Moderate  | [80; 250)  | [70; 150) | [50; 100)  | [25; 50)    | [100; 140)| [9400; 12400)   |
+| 4     | Poor      | [250; 350) | [150; 200)| [100; 200) | [50; 75)    | [140; 180)| [12400; 15400)  |
+| 5     | Very Poor | ≥ 350      | ≥ 200     | ≥ 200      | ≥ 75        | ≥ 180     | ≥ 15400         |
+
+**NH₃ and NO** are reported (0.1–200 µg/m³ and 0.1–100 µg/m³ respectively) but do **not** affect the OWM index calculation. They have no EPA AQI equivalent either — drop during canonical translation.
+
+OWM also publishes regional variants (UK / Europe / USA / Mainland China) at https://openweathermap.org/air-pollution-index-levels; those are NOT returned in the API response.
+
+#### Forecast and History sub-endpoints
+
+| Sub-endpoint | Path                                      | Required extra params  | Notes                              |
+|--------------|-------------------------------------------|------------------------|------------------------------------|
+| Forecast     | `/data/2.5/air_pollution/forecast`        | `lat`, `lon`, `appid`  | 4 days hourly; same shape as current. |
+| History      | `/data/2.5/air_pollution/history`         | `lat`, `lon`, `start`, `end`, `appid` | Unix UTC seconds for `start` / `end`; data available from 2020-11-27 onward. |
+
+#### Air Pollution-specific gotchas
+
+- **OWM AQI 1–5 ≠ EPA AQI 0–500.** To produce a canonical EPA 0–500 AQI value, the normalizer must compute each pollutant's EPA sub-AQI from its concentration via the EPA breakpoint table (in `providers/aqi/_units.py`) — NOT use `main.aqi` directly.
+- **All pollutant concentrations are µg/m³.** Gases (O₃, NO₂, SO₂, CO) must be converted to ppm for canonical `pollutantO3` / `pollutantNO2` / `pollutantSO2` / `pollutantCO` (canonical group_fraction). PM₂.₅ / PM₁₀ pass through as µg/m³.
+- **OWM does not differentiate averaging periods.** EPA AQI sub-tables are defined for 1-hr / 8-hr / 24-hr averages depending on pollutant; OWM returns a snapshot. The normalizer applies EPA breakpoints to the snapshot as an approximation (documented limitation — same pattern third-party AQI services use).
+- **No tier gating.** Air Pollution is on the Free tier per https://openweathermap.org/price; FREE-tier appid works without a One Call subscription. Distinct from the One Call 3.0 endpoint which requires a separate "One Call by Call" sub.
+- **No location label in the response.** Canonical `aqiLocation` stays null for this provider.
+- **NH₃ and NO are extras.** Present on the wire, not in EPA AQI, not on canonical AQIReading — dropped during translation.
 
 ### Other free / paid endpoints (overview only)
 
