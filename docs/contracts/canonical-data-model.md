@@ -507,18 +507,19 @@ Day-1 set: `aeris`, `openmeteo`, `openweathermap`, `iqair`. Path B only — Path
 | `aqiCategory` | `periods[].category` | (derive from `us_aqi` via EPA bands) | (derive from EPA bands after conversion) | `data.current.pollution.mainus`-derived category |
 | `aqiMainPollutant` | `periods[].dominant` | (derive from highest sub-AQI in `us_aqi_pm2_5` / `us_aqi_pm10` / `us_aqi_o3` / etc.) | `list[0].components` largest contributor | `data.current.pollution.mainus` |
 | `aqiLocation` | `place.name` | — | — | `data.city` + `data.state` |
-| `pollutantPM25` | `periods[].pollutants[].pm2_5` | `current.pm2_5` (µg/m³) | `list[0].components.pm2_5` (µg/m³) | `data.current.pollution.pm25` (µg/m³ — convert if needed) |
-| `pollutantPM10` | `periods[].pollutants[].pm10` | `current.pm10` (µg/m³) | `list[0].components.pm10` (µg/m³) | — |
-| `pollutantO3` | `periods[].pollutants[].o3` (ppm) | `current.ozone` (µg/m³ — convert to ppm) | `list[0].components.o3` (µg/m³ — convert) | — |
-| `pollutantNO2` | `periods[].pollutants[].no2` (ppm) | `current.nitrogen_dioxide` (µg/m³ — convert to ppm) | `list[0].components.no2` (µg/m³ — convert to ppm) | — |
-| `pollutantSO2` | `periods[].pollutants[].so2` (ppm) | `current.sulphur_dioxide` (µg/m³ — convert to ppm) | `list[0].components.so2` (µg/m³ — convert to ppm) | — |
-| `pollutantCO` | `periods[].pollutants[].co` (ppm) | `current.carbon_monoxide` (µg/m³ — convert to ppm) | `list[0].components.co` (µg/m³ — convert) | — |
+| `pollutantPM25` | `periods[0].pollutants[]` where `type=="pm2.5"` → `valueUGM3` (µg/m³) | `current.pm2_5` (µg/m³) | `list[0].components.pm2_5` (µg/m³) | `data.current.pollution.pm25` (µg/m³ — convert if needed) |
+| `pollutantPM10` | `periods[0].pollutants[]` where `type=="pm10"` → `valueUGM3` (µg/m³) | `current.pm10` (µg/m³) | `list[0].components.pm10` (µg/m³) | — |
+| `pollutantO3` | `periods[0].pollutants[]` where `type=="o3"` → `valuePPB` (convert PPB → ppm) | `current.ozone` (µg/m³ — convert to ppm) | `list[0].components.o3` (µg/m³ — convert) | — |
+| `pollutantNO2` | `periods[0].pollutants[]` where `type=="no2"` → `valuePPB` (convert PPB → ppm) | `current.nitrogen_dioxide` (µg/m³ — convert to ppm) | `list[0].components.no2` (µg/m³ — convert to ppm) | — |
+| `pollutantSO2` | `periods[0].pollutants[]` where `type=="so2"` → `valuePPB` (convert PPB → ppm) | `current.sulphur_dioxide` (µg/m³ — convert to ppm) | `list[0].components.so2` (µg/m³ — convert to ppm) | — |
+| `pollutantCO` | `periods[0].pollutants[]` where `type=="co"` → `valuePPB` (convert PPB → ppm) | `current.carbon_monoxide` (µg/m³ — convert to ppm) | `list[0].components.co` (µg/m³ — convert) | — |
 | `observedAt` | `periods[].dateTimeISO` | `current.time` | `list[0].dt` (epoch s) | `data.current.pollution.ts` |
 
 Notes:
 
 - **OWM AQI scale is 1–5** (1 Good / 5 Very Poor) — NOT EPA 0–500. The normalizer converts: derive each pollutant's EPA sub-AQI from its concentration (EPA breakpoint table), take max → `aqi`.
 - **µg/m³ → ppm conversion** for O3/NO2/SO2/CO: `ppm = µg/m³ × 24.45 / molecular_weight`, where 24.45 is the molar volume of an ideal gas at 25°C and 1 atm. Per-pollutant molecular weights (O3 = 48.00, NO2 = 46.01, SO2 = 64.07, CO = 28.01 g/mol) live in `weewx_clearskies_api/providers/aqi/_units.py`.
+- **Aeris pollutants[] shape** — `periods[0].pollutants` is an ARRAY of typed objects, NOT an object keyed by pollutant name. Each element has `type` (lowercase id, with dot for `pm2.5`), `valuePPB` (gases only), and `valueUGM3` (all). The Aeris module filters by `type` to extract each canonical pollutant. Aeris returns gases as `valuePPB` (parts per billion); the Aeris module converts PPB → ppm via division by 1000 (a `ppb_to_ppm` helper added to `weewx_clearskies_api/providers/aqi/_units.py`). The existing `ugm3_to_ppm` helper is NOT used on the Aeris path — `valuePPB` is the direct source for gases. PM2.5/PM10 pass through as µg/m³ from `valueUGM3` (matches canonical group_concentration). Aeris's `periods[].category` is lowercase with `usg` abbreviation, so the module derives aqiCategory client-side via `epa_category(aqi)` (matching Open-Meteo's pattern); `periods[].dominant` is normalized from lowercase (`pm2.5`) to canonical id (`PM2.5`). Aeris also supports `pm1` particles which canonical has no field for — dropped.
 - **IQAir nearest-city endpoint** returns only PM2.5 and AQI; other pollutants require the paid Air Pollution endpoint not in the free tier — those canonical fields stay `null`.
 - **Operator's own AQI extension (Path A)** — column names operator-defined; mapping happens at setup via [ADR-035](../decisions/ADR-035-user-driven-column-mapping.md). Common patterns: `aqi_value`, `pm2_5`, `pm10_0`, `o3` — but the operator can name them anything and maps them to canonical fields explicitly.
 

@@ -278,6 +278,66 @@ All endpoints use a path of the form `/<endpoint>/<action>` where `<action>` is 
 - **Required parameters:** `client_id`, `client_secret`
 - **Notes:** Same auth pattern as `/alerts`. Returns aggregated counts/types rather than individual alert objects.
 
+### Air Quality
+
+- **Path:** `/airquality/<action>`
+- **Method:** GET
+- **Required parameters:** `client_id`, `client_secret`, plus a location (either `:id` in path or `p=` query string)
+- **Optional parameters:** `filter` (`airnow` US EPA — default / `china` / `india` — selects AQI methodology), `format` (json|geojson), `fields`
+- **Supported actions:** `:id` (single location), `route` (multiple coordinates along a custom path)
+- **Cost multiplier:** 5x (per Aeris docs)
+- **Update interval:** 1 hour (per Aeris docs)
+- **Time range:** Latest only (no history on this endpoint)
+- **Example request:**
+  ```
+  curl "https://data.api.xweather.com/airquality/47.6,-122.3?filter=airnow&client_id=$ID&client_secret=$SECRET"
+  ```
+- **Example response (truncated):**
+  ```json
+  {
+    "success": true,
+    "error": null,
+    "response": [{
+      "id": null,
+      "loc": { "lat": 47.6, "long": -122.3 },
+      "place": { "name": "seattle", "state": "wa", "country": "us" },
+      "periods": [
+        {
+          "dateTimeISO": "2026-04-30T10:00:00-07:00",
+          "timestamp": 1714485600,
+          "aqi": 42,
+          "category": "good",
+          "color": "00E400",
+          "method": "airnow",
+          "dominant": "pm2.5",
+          "health": { "index": 3, "category": "low", "color": "00E400" },
+          "pollutants": [
+            { "type": "pm2.5", "name": "PM2.5",            "valuePPB": null,  "valueUGM3": 8.5,   "aqi": 42, "category": "good", "color": "00E400", "method": "airnow" },
+            { "type": "pm10",  "name": "PM10",             "valuePPB": null,  "valueUGM3": 12.0,  "aqi": 11, "category": "good", "color": "00E400", "method": "airnow" },
+            { "type": "o3",    "name": "Ozone",            "valuePPB": 32.1,  "valueUGM3": 64.5,  "aqi": 30, "category": "good", "color": "00E400", "method": "airnow" },
+            { "type": "no2",   "name": "Nitrogen Dioxide", "valuePPB": 5.3,   "valueUGM3": 9.9,   "aqi": 5,  "category": "good", "color": "00E400", "method": "airnow" },
+            { "type": "so2",   "name": "Sulfur Dioxide",   "valuePPB": 1.2,   "valueUGM3": 3.1,   "aqi": 2,  "category": "good", "color": "00E400", "method": "airnow" },
+            { "type": "co",    "name": "Carbon Monoxide",  "valuePPB": 150.0, "valueUGM3": 172.0, "aqi": 2,  "category": "good", "color": "00E400", "method": "airnow" }
+          ]
+        }
+      ],
+      "profile": { "tz": "America/Los_Angeles", "sources": [{ "name": "..." }], "stations": [] }
+    }]
+  }
+  ```
+- **Wire-shape notes (relevant to canonical §4.2 aeris mapping):**
+  - `pollutants` is an **ARRAY** of typed objects, NOT an object keyed by pollutant name. Filter by `type` (lowercase, with dot for `pm2.5`) to extract each canonical pollutant.
+  - Gas pollutants (`o3`, `no2`, `so2`, `co`) supply BOTH `valuePPB` (parts per billion) AND `valueUGM3` (micrograms per cubic meter). Particulates (`pm2.5`, `pm10`, `pm1`) supply only `valueUGM3` (PPB is `null`).
+  - Aeris's `periods[].category` is lowercase with `usg` abbreviation (`good | moderate | usg | unhealthy | very unhealthy | hazardous`); canonical `AQIReading.aqiCategory` is Title Case full names. The Aeris module derives `aqiCategory` client-side via `epa_category(aqi)` for consistency with Open-Meteo's pattern (deterministic, single source of truth).
+  - Aeris's `periods[].dominant` is the lowercase pollutant id (`pm2.5`, `pm10`, `o3`, `no2`, `so2`, `co`); the Aeris module normalizes to canonical ids (`PM2.5`, `PM10`, `O3`, `NO2`, `SO2`, `CO`).
+  - Aeris also supports `pm1` (particles < 1µm) in `pollutants[]`; canonical `AQIReading` has no `pollutantPM1` field, so this pollutant is dropped during translation.
+  - `filter=airnow` requests US EPA AQI methodology (Aeris's default). Canonical/ADR-013 lock the 0–500 EPA scale, so the Aeris module passes `filter=airnow` explicitly for determinism.
+  - `aqiLocation` is supplied by Aeris via `place.name` (NOT PARTIAL-DOMAIN).
+- **Documentation gaps** (from the public docs page):
+  - Free-tier vs. paid-tier field restrictions not documented (no obvious omissions in the schema).
+  - HTTP error codes specific to this endpoint not enumerated separately — falls back to the common Aeris status codes documented above.
+  - Plan/tier requirements for endpoint access not stated.
+
 ## Common query parameters (all endpoints)
 
 - `p=<location>` — place; alternative to passing the location in the path
