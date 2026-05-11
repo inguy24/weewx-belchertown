@@ -10,7 +10,7 @@
 | **USGS** | Global (US-comprehensive, global lower threshold) | `https://earthquake.usgs.gov/fdsnws/event/1/query` | FDSN GeoJSON | None | Public domain |
 | **GeoNet** | New Zealand | `https://api.geonet.org.nz/quake` | GeoJSON (`application/vnd.geo+json;version=2`) | None | CC BY 4.0 |
 | **EMSC** | Europe-Mediterranean + global | `https://www.seismicportal.eu/fdsnws/event/1/query` | FDSN JSON / XML | None | CC BY 4.0 |
-| **ReNaSS** | Mainland France + neighbours | `https://renass.unistra.fr/fdsnws/event/1/query` | FDSN GeoJSON | None | CC BY 4.0 |
+| **ReNaSS** | Mainland France + neighbours | `https://api.franceseisme.fr/fdsnws/event/1/query` | FDSN GeoJSON | None | CC BY 4.0 |
 
 All four are free with no key required. ReNaSS, EMSC, USGS implement the FDSN-Event spec; GeoNet uses its own GeoJSON variant.
 
@@ -32,9 +32,13 @@ Geometry: standard GeoJSON Point [lon, lat].
 
 `unid` (string — unique ID), `lastupdate` (ISO 8601), `time` (ISO 8601 UTC), `lat` (float), `lon` (float), `depth` (float km), `mag` (float), `magtype` (string), `evtype` (string — `ke` earthquake / `se` explosion / etc.), `auth` (string — publishing agency), `source_id` (int), `source_catalog` (string), `flynn_region` (string — Flinn-Engdahl region name).
 
-### ReNaSS (FDSN GeoJSON, per Belchertown integration issue #561)
+### ReNaSS (FDSN GeoJSON via api.franceseisme.fr — verified 2026-05-11)
 
-`properties.time` (ISO 8601), `properties.url` (string), `properties.description` (string — location), `properties.mag` (number). Spec-compliant FDSN-Event so additional fields likely match USGS/EMSC superset; only the fields above are confirmed in use by the Belchertown integration.
+The legacy `https://renass.unistra.fr/fdsnws/event/1/query` cited in Belchertown integration issue #561 (2024) now returns HTTP 404. The new EPOS-France endpoint at `https://api.franceseisme.fr/fdsnws/event/1/query` returns FDSN GeoJSON with this property set (confirmed across 10 captured events): `time` (ISO 8601 UTC), `description` (object `{fr: str, en: str}` — location text in both languages), `url` (object `{fr: str, en: str}` — detail-page URLs in both languages), `mag` (number), `magType` (string camelCase, e.g. `ML`, `MLv`), `depth` (number km, positive below surface), `latitude` (number — also in `geometry.coordinates[1]`), `longitude` (number — also in `geometry.coordinates[0]`), `automatic` (bool — `true`=unreviewed/automatic, `false`=reviewed), `type` (string|null — `"earthquake"`/`"quarry blast"`/`"explosion"`/null).
+
+Geometry: standard GeoJSON Point `[lon, lat, -depth_km]` (depth uses GeoJSON convention with the Z axis pointing up, so depth-below-surface is negative in `geometry.coordinates[2]` — `properties.depth` is the positive km canonical value).
+
+Top-level `Feature.id` carries the canonical event id (e.g. `"fr2026trxulp"`). No `properties.publicID` / `properties.unid` — `Feature.id` is the only id.
 
 ## Canonical-field union (proposed)
 

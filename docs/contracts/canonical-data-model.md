@@ -566,26 +566,34 @@ Other NWS CAP fields (`urgency`, `certainty`, `category`) pass through unmapped 
 
 ### 4.4 Earthquake providers (per [ADR-040](../decisions/ADR-040-earthquake-providers.md))
 
-Day-1 set: `usgs`, `geonet`, `emsc`, `renass`. Source for each provider's wire fields: [`EARTHQUAKE-PROVIDER-RESEARCH.md`](../reference/EARTHQUAKE-PROVIDER-RESEARCH.md). All four are free, keyless, and unauthenticated.
+Day-1 set: `usgs`, `geonet`, `emsc`, `renass`. Source for each provider's wire fields: [`EARTHQUAKE-PROVIDER-RESEARCH.md`](../reference/EARTHQUAKE-PROVIDER-RESEARCH.md) and the per-provider api-docs in [`api-docs/`](../reference/api-docs/). All four are free, keyless, and unauthenticated.
 
-| Canonical | usgs (FDSN GeoJSON) | geonet (NZ) | emsc (FDSN JSON) | renass (FDSN GeoJSON) |
+ReNaSS endpoint moved (verified 2026-05-11 against `https://api.franceseisme.fr/fdsnws/event/1/query`); the legacy `https://renass.unistra.fr/fdsnws/event/1/query` returns 404. Cell mappings below reflect the live `api.franceseisme.fr` shape.
+
+| Canonical | usgs (FDSN GeoJSON) | geonet (NZ) | emsc (FDSN JSON) | renass (FDSN GeoJSON via api.franceseisme.fr) |
 |---|---|---|---|---|
 | `id` | `id` | `properties.publicID` | `properties.unid` | `id` |
 | `time` | `properties.time` (epoch ms → ISO UTC) | `properties.time` | `properties.time` | `properties.time` |
 | `latitude` | `geometry.coordinates[1]` | `geometry.coordinates[1]` | `properties.lat` | `geometry.coordinates[1]` |
 | `longitude` | `geometry.coordinates[0]` | `geometry.coordinates[0]` | `properties.lon` | `geometry.coordinates[0]` |
 | `magnitude` | `properties.mag` | `properties.magnitude` | `properties.mag` | `properties.mag` |
-| `magnitudeType` | `properties.magType` | (not provided; assume `ml`) | `properties.magtype` | (often null; provider-specific) |
-| `depth` | `geometry.coordinates[2]` (km) | `properties.depth` (km) | `properties.depth` (km) | `geometry.coordinates[2]` (km) |
-| `place` | `properties.place` | `properties.locality` | `properties.flynn_region` | `properties.description` |
-| `url` | `properties.url` | derived from `publicID` | derived from `unid` | `properties.url` |
+| `magnitudeType` | `properties.magType` | (not provided; assume `ml`) | `properties.magtype` | `properties.magType` (e.g. `ML`, `MLv`) |
+| `depth` | `geometry.coordinates[2]` (km) | `properties.depth` (km) | `properties.depth` (km) | `properties.depth` (km, positive) |
+| `place` | `properties.place` | `properties.locality` | `properties.flynn_region` | `properties.description.en` |
+| `url` | `properties.url` | derived from `publicID` | derived from `unid` | `properties.url.en` |
 | `tsunami` | `properties.tsunami` (0/1 → bool) | (not provided) | (not provided) | (not provided) |
 | `felt` | `properties.felt` | (not provided) | (not provided) | (not provided) |
-| `mmi` | `properties.mmi` | `properties.MMI` | (not provided) | (not provided) |
+| `mmi` | `properties.mmi` | `properties.mmi` | (not provided) | (not provided) |
 | `alert` | `properties.alert` (green/yellow/orange/red) | (not provided) | (not provided) | (not provided) |
-| `status` | `properties.status` (`automatic`/`reviewed`/`deleted`) | `properties.quality` (`best`/`preliminary`/`automatic`/`deleted`) | (not in standard FDSN; in `extras`) | `properties.status` (FDSN standard) |
-| `extras` | `properties.{net, code, ids, sources, types, sig, nst, dmin, rms, gap, type}` | `properties.{quality}` and any non-canonical | `properties.{evtype, auth, source_id, source_catalog, lastupdate}` | (provider-specific) |
+| `status` | `properties.status` (`automatic`/`reviewed`/`deleted`) | `properties.quality` (`best`/`preliminary`/`automatic`/`deleted`) | (not in standard FDSN; in `extras`) | derived from `properties.automatic` (`true` → `"automatic"`, `false` → `"reviewed"`) |
+| `extras` | `properties.{net, code, ids, sources, types, sig, nst, dmin, rms, gap, type}` | `properties.{quality}` and any non-canonical | `properties.{evtype, auth, source_id, source_catalog, lastupdate}` | `properties.{type, description.fr, url.fr}` and any non-canonical |
 | `source` | `usgs` | `geonet` | `emsc` | `renass` |
+
+ReNaSS notes:
+
+- `properties.description` and `properties.url` are bilingual `{fr, en}` objects; canonical fields take the `en` form, the `fr` half routes through `extras` for operators who want it.
+- `properties.type` is `null`/`"earthquake"`/`"quarry blast"`/`"explosion"`. Routes through `extras`; the API does not filter quarry blasts out of the `/earthquakes` response (matches USGS behavior — `properties.type` for USGS is also a passthrough).
+- `properties.depth` is positive km below surface (not the GeoJSON-convention negative `geometry.coordinates[2]`; same shape as USGS / EMSC `properties.depth`).
 
 ### 4.5 Radar providers (per [ADR-015](../decisions/ADR-015-radar-map-tiles-strategy.md))
 

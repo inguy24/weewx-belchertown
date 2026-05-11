@@ -84,6 +84,6 @@ Per-module TTL declared in capability per [ADR-038](ADR-038-data-provider-module
 - USGS FDSN-Event API: https://earthquake.usgs.gov/fdsnws/event/1/
 - GeoNet API: https://api.geonet.org.nz/
 - EMSC SeismicPortal: https://www.seismicportal.eu/webservices.html
-- ReNaSS FDSN endpoint: https://renass.unistra.fr/fdsnws/event/1/query
+- ReNaSS FDSN endpoint: https://api.franceseisme.fr/fdsnws/event/1/query (the legacy `https://renass.unistra.fr/fdsnws/event/1/query` returns 404 since the EPOS-France migration; verified 2026-05-11)
 - Research: [EARTHQUAKE-PROVIDER-RESEARCH.md](../reference/EARTHQUAKE-PROVIDER-RESEARCH.md).
 - Related: [ADR-010](ADR-010-canonical-data-model.md), [ADR-013](ADR-013-aqi-handling.md), [ADR-015](ADR-015-radar-map-tiles-strategy.md), [ADR-016](ADR-016-severe-weather-alerts.md), [ADR-017](ADR-017-provider-response-caching.md), [ADR-024](ADR-024-page-taxonomy.md), [ADR-027](ADR-027-config-and-setup-wizard.md), [ADR-038](ADR-038-data-provider-module-organization.md).
