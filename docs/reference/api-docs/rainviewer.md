@@ -40,11 +40,13 @@ Source for Clear Skies `providers/radar/rainviewer.py`. Captured 2026-05-11 (liv
 
 ## Frame-kind mapping → canonical `RadarFrame.kind`
 
-- `radar.past[i]` with `time` >= `generated`: `current` (the latest past frame is "current")
-- `radar.past[i]` with `time` < `generated`: `past`
-- `radar.nowcast[i]`: `nowcast`
+- The single `radar.past[i]` with `max(time)` → `current` (always exactly one in a non-empty past list)
+- All other `radar.past[i]` → `past`
+- `radar.nowcast[i]` → `nowcast`
 
 `time` is Unix epoch seconds; `RadarFrame.time` is UTC ISO-8601 — convert via `epoch_to_utc_iso8601()` (existing helper at `providers/_common/datetime_utils.py:70`).
+
+> **Correction 2026-05-11:** original capture of this file said "`time >= generated` → current, else past" with "(the latest past frame is current)" as a parenthetical. The parenthetical is the correct semantic; the literal rule was wrong because RainViewer responses have all `past[].time` strictly BEFORE `generated` (~5 min). Live capture shown above: `generated=1778548535`, `max(past[].time)=1778548200` — 335s before generated. The literal rule produced zero current frames. Corrected in 3b-14 lead-direct `f2362ee`.
 
 ## Geographic coverage
 

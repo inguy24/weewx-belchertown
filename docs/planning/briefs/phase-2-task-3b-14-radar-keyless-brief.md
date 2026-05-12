@@ -86,15 +86,18 @@ None this round. (Future: maybe `?since=<iso>` to limit to recent frames. Out of
   "data": {
     "providerId": "rainviewer",
     "frames": [
-      {"time": "2026-05-11T16:30:00Z", "kind": "past"},
+      {"time": "2026-05-11T16:30:00Z", "kind": "past", "path": "/v2/radar/1778540400"},
       …
-      {"time": "2026-05-11T17:50:00Z", "kind": "current"}
+      {"time": "2026-05-11T17:50:00Z", "kind": "current", "path": "/v2/radar/1778547000"}
     ],
-    "attribution": "RainViewer (https://www.rainviewer.com/)"
+    "attribution": "RainViewer (https://www.rainviewer.com/)",
+    "tileHost": "https://tilecache.rainviewer.com"
   },
   "generatedAt": "2026-05-11T18:00:00Z"
 }
 ```
+
+> **Brief amendment 2026-05-11 (post-close, auditor F2):** `tileHost` on RadarFrameList and per-frame `path` on RadarFrame were added in lead-direct `f2362ee`. Both are optional/nullable — set by RainViewer (which needs them to construct tile URLs from the CAPABILITY.tile_url_template `{host}{path}/...` placeholder shape); left as null by WMS-T providers (whose tile URLs are time-driven via `?TIME=<frame.time>`). OpenAPI schema extended additively (non-breaking). The original brief locked these as out-of-scope; the auditor surfaced that RainViewer's browser path would be inoperative without them.
 
 ### Dispatch
 
@@ -160,6 +163,13 @@ CAPABILITY = ProviderCapability(
 )
 ```
 
+> **Brief amendment 2026-05-11 (post-close):** layer names for noaa_mrms, msc_geomet, dwd_radolan in the original brief (sourced from my api-docs files at brief-draft time) did NOT match what those providers actually publish in live WMS GetCapabilities. test-author detected the divergence; lead-direct fix in commit `f2362ee` corrected:
+> - `noaa_mrms.LAYER_NAME = "0"` → `"radar_base_reflectivity_time"`
+> - `msc_geomet.LAYER_NAME = "RADAR_1KM_RDPR"` → `"RADAR_1KM_RRAI"` (RDPR doesn't exist in live capabilities; RRAI/RSNO are the real layers)
+> - `dwd_radolan.LAYER_NAME = "dwd:RX-Produkt"` → `"Niederschlagsradar"` (RX-Produkt absent in live GeoServer)
+>
+> Same lesson as the rainviewer rule-bug: validate brief assertions against real fixture data at brief-draft time, not just structurally.
+
 ### Frame-index getter — two shapes
 
 **rainviewer (JSON):**
@@ -206,7 +216,9 @@ def get_frames() -> RadarFrameList:
 
 ### Frame-kind mapping
 
-**rainviewer:** `radar.past[i].time < generated` → `"past"`; `radar.past[i].time == generated` (the latest) → `"current"`; `radar.nowcast[i]` (if any) → `"nowcast"`. Verbatim per api-docs file.
+**rainviewer:** the past entry with `max(time)` → `"current"` (exactly one); all other `radar.past[i]` → `"past"`; `radar.nowcast[i]` (if any) → `"nowcast"`. Per api-docs/rainviewer.md.
+
+> **Brief amendment 2026-05-11 (post-close):** the original brief said `time >= generated → current, else past`. Against real RainViewer responses (all `past[].time` strictly before `generated`), that rule produces zero "current" frames — test-author's tests caught it, lead-direct fixed in commit `f2362ee`. Rule shown here is the corrected form.
 
 **WMS-T providers:** all frames `"past"` EXCEPT the latest timestamp which is `"current"`. No nowcast frames available from these providers in this round.
 

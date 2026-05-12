@@ -12,7 +12,8 @@ WMS 1.3.0 (Environment Canada's GeoMet service):
 ## WMS request shape
 
 - `SERVICE=WMS`, `VERSION=1.3.0`, `REQUEST=GetMap`
-- `LAYERS=RADAR_1KM_RRAI` (rain), `RADAR_1KM_RSNO` (snow), `RADAR_1KM_RDPR` (rain-or-snow dual-pol QPE — recommended default)
+- `LAYERS=RADAR_1KM_RRAI` (rain — recommended default for live radar tab) or `RADAR_1KM_RSNO` (snow).
+- **Correction 2026-05-11:** the original capture of this file claimed `RADAR_1KM_RDPR` (dual-pol QPE) was a "recommended default" — that layer is NOT present in live GeoMet capabilities; only RRAI + RSNO exist as radar layers. RDPR returns "Layer not available." Corrected in 3b-14 lead-direct `f2362ee`.
 - `CRS=EPSG:3857`
 - `BBOX=...`, `WIDTH=256`, `HEIGHT=256`
 - `FORMAT=image/png`

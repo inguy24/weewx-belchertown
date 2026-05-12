@@ -1486,6 +1486,17 @@ components:
         kind:
           type: string
           enum: [past, current, nowcast]
+        path:
+          type: string
+          nullable: true
+          description: |
+            Per-frame tile path (set by RainViewer; null for WMS-T providers).
+            Dashboard combines this with the response-level `tileHost` plus
+            the provider's CAPABILITY.tile_url_template (`{host}{path}/...`)
+            to construct the per-frame tile URL. WMS-T providers compose
+            tile URLs via the `?TIME=<frame.time>` query parameter on
+            CAPABILITY.wms_endpoint_url instead and leave this null.
+            Added 3b-14 auditor F2.
       required: [time, kind]
 
     RadarFrameList:
@@ -1496,6 +1507,15 @@ components:
           type: array
           items: { $ref: '#/components/schemas/RadarFrame' }
         attribution: { type: string, nullable: true }
+        tileHost:
+          type: string
+          nullable: true
+          description: |
+            Per-fetch tile-server host (set by RainViewer from its JSON
+            envelope's `host` field; null for WMS-T providers, which carry
+            their endpoint URL on CAPABILITY.wms_endpoint_url instead).
+            The dashboard substitutes this into CAPABILITY.tile_url_template's
+            `{host}` placeholder. Added 3b-14 auditor F2.
       required: [providerId, frames]
 
     # ---------- Health ----------

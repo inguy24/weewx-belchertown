@@ -14,7 +14,7 @@ The WMS endpoint is the Clear Skies path (Leaflet `L.tileLayer.wms()`).
 ## WMS request shape
 
 - `SERVICE=WMS`, `VERSION=1.3.0`, `REQUEST=GetMap`
-- `LAYERS=0` (single layer — verify via GetCapabilities; ArcGIS image services typically expose layer id `0`)
+- `LAYERS=radar_base_reflectivity_time` (verified verbatim from live GetCapabilities 2026-05-12; original guess of `0` from "ArcGIS image services typically expose layer id 0" was wrong — corrected in 3b-14 lead-direct `f2362ee`)
 - `CRS=EPSG:3857`
 - `BBOX=...`, `WIDTH=256`, `HEIGHT=256`
 - `FORMAT=image/png`

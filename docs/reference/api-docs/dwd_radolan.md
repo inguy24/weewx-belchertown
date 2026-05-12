@@ -12,8 +12,9 @@ WMS via DWD's GeoServer:
 ## WMS request shape
 
 - `SERVICE=WMS`, `VERSION=1.3.0`, `REQUEST=GetMap`
-- `LAYERS=dwd:RX-Produkt` (5-min reflectivity composite — recommended for live radar tab)
-  - Other layers: `dwd:RW-Produkt` (hourly precipitation), `dwd:RY-Produkt` (5-min quality-checked reflectivity), `dwd:WN-Produkt` (composite with prediction)
+- `LAYERS=Niederschlagsradar` (5-min reflectivity composite — recommended default for live radar tab; verified from live GetCapabilities 2026-05-12)
+  - Sibling: `RADOLAN-RW` (hourly calibrated precipitation accumulation), also present in live capabilities.
+- **Correction 2026-05-11:** the original capture of this file claimed `dwd:RX-Produkt` as the layer; that name is NOT present in live GeoServer capabilities. The real 5-min reflectivity layer is named `Niederschlagsradar` ("precipitation radar" in German). Corrected in 3b-14 lead-direct `f2362ee`.
 - `CRS=EPSG:3857`
 - `BBOX=...`, `WIDTH=256`, `HEIGHT=256`
 - `FORMAT=image/png`
