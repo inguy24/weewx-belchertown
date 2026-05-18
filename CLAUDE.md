@@ -34,6 +34,7 @@ These apply regardless of domain.
 
 ### Collaboration style
 
+- **NEVER use AskUserQuestion.** Do not pop up interactive question/choice prompts. If you need user input, ask in plain text. The user will reply in chat.
 - **Simple means simple.** For sync / match-state / "fix this one mismatch" tasks, do the minimum delta and stop. Don't expand scope unless asked.
 - **Don't parrot the user's framing as fact.** Treat requests as hypotheses to verify, not premises to act on.
 - **Narrate the diagnostic plan before commands.** When investigating a problem, name the hypothesis and what each command tests *before* firing tool calls.
