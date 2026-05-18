@@ -118,6 +118,7 @@ Track the pass/skip/fail count at each round close to detect regressions.
 | 3b-14 close | f2362ee | 2123 | 364 | 0 |
 | 3b-15 close | ad1fe37 | 2283 | 364 | 0 |
 | 3b-16 close | ae4a86d | 2302 | 364 | 0 |
+| post-3b cleanup | 8e691f4 | 2305 | 364 | 0 |
 
 ## GitHub remotes
 
