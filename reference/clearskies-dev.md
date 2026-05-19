@@ -129,6 +129,7 @@ Track gzipped JS bundle size at each round close against ADR-033's 200 KB target
 | P3-T3 priority-pages | 716873a | 96.78 KB | 48% |
 | P3-T4 remaining-pages | 49c44a0 | 93.01 KB | 47% |
 | P3-T5 API wiring | 2e385e7 | 100.0 KB | 50% |
+| P3-T6 mobile-first | a3a70f9 | 95.11 KB | 48% |
 
 ## GitHub remotes
 
