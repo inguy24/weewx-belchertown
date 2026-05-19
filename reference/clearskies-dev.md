@@ -127,6 +127,7 @@ Track gzipped JS bundle size at each round close against ADR-033's 200 KB target
 | P3-T1 scaffold | 52d2d9a | 60.14 KB | 30% |
 | P3-T2 mock-data | 29692cd | 194.77 KB | 97% |
 | P3-T3 priority-pages | 716873a | 96.78 KB | 48% |
+| P3-T4 remaining-pages | 49c44a0 | 93.01 KB | 47% |
 
 ## GitHub remotes
 
