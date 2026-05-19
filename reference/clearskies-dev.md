@@ -43,17 +43,15 @@ Owner: `ubuntu`. Container IP: `192.168.2.113` (DHCP/SLAAC on `br-vlan2`).
 
 ## SSH access
 
-Shell into weather-dev from DILBERT:
+Direct SSH to weather-dev from DILBERT (as ubuntu):
 
 ```bash
-ssh ratbert "lxc exec weather-dev -- bash -lc '<command>'"
+ssh weather-dev "<command>"
 ```
 
-Run as the `ubuntu` user (avoids git "dubious ownership" errors):
+SSH config entry (`~/.ssh/config`): `Host weather-dev` → `192.168.2.113`, user `ubuntu`, key `~/.ssh/claude_weather_dev`.
 
-```bash
-ssh ratbert "lxc exec weather-dev -- sudo -u ubuntu bash -lc '<command>'"
-```
+Ratbert is also reachable via `ssh ratbert` (same key) for LXD management commands that need to run on the host.
 
 ## Sync: DILBERT to weather-dev
 
@@ -81,23 +79,23 @@ scripts/sync-to-weather-dev.sh weewx-clearskies-api
 ### Run pytest (api repo)
 
 ```bash
-ssh ratbert "lxc exec weather-dev -- sudo -u ubuntu bash -lc 'cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest --tb=short -q'"
+ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest --tb=short -q"
 ```
 
 Quick summary only (pass/skip/fail counts):
 
 ```bash
-ssh ratbert "lxc exec weather-dev -- sudo -u ubuntu bash -lc 'cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest --tb=no -q 2>&1 | tail -3'"
+ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest --tb=no -q 2>&1 | tail -3"
 ```
 
 ### Run a specific test file or marker
 
 ```bash
 # One file:
-ssh ratbert "lxc exec weather-dev -- sudo -u ubuntu bash -lc 'cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest tests/test_radar_rainviewer.py -v'"
+ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest tests/test_radar_rainviewer.py -v"
 
 # By marker (e.g., integration tests):
-ssh ratbert "lxc exec weather-dev -- sudo -u ubuntu bash -lc 'cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest -m integration --tb=short'"
+ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest -m integration --tb=short"
 ```
 
 ### Browser testing
@@ -119,6 +117,15 @@ Track the pass/skip/fail count at each round close to detect regressions.
 | 3b-15 close | ad1fe37 | 2283 | 364 | 0 |
 | 3b-16 close | ae4a86d | 2302 | 364 | 0 |
 | post-3b cleanup | 8e691f4 | 2305 | 364 | 0 |
+
+## Dashboard bundle baselines
+
+Track gzipped JS bundle size at each round close against ADR-033's 200 KB target.
+
+| Round | Commit | Gzipped JS | % of budget |
+|---|---|---|---|
+| P3-T1 scaffold | 52d2d9a | 60.14 KB | 30% |
+| P3-T2 mock-data | 29692cd | 194.77 KB | 97% |
 
 ## GitHub remotes
 

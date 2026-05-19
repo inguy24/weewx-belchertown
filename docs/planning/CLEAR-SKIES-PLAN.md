@@ -219,8 +219,8 @@ The visible artifact. Where design discipline gets exercised. Multi-agent execut
 
 | Task | Status | Teammate(s) | Notes |
 |------|--------|-------------|-------|
-| Scaffold from chosen starter template | ⬜ | `dashboard-dev` | Vite + React 19 + shadcn/ui dashboard template per [ADR-002](../decisions/ADR-002-tech-stack.md); clone, strip to skeleton, replace with our design. Apply the two scaffold-time footguns from [SPIKE-FINDINGS.md](../reference/SPIKE-FINDINGS.md) (`react-is` override + `ignoreDeprecations` for tsconfig). |
-| Wire to **mock data first** | ⬜ | `dashboard-dev` | UI develops independently of weewx; fast feedback loop |
+| Scaffold from chosen starter template | ✅ | `dashboard-dev` | Closed 2026-05-18 (`52d2d9a`). Vite + React 19 + shadcn/ui dashboard template per [ADR-002](../decisions/ADR-002-tech-stack.md); clone, strip to skeleton, replace with our design. Applied the two scaffold-time footguns from [SPIKE-FINDINGS.md](../reference/SPIKE-FINDINGS.md) (`react-is` override + `ignoreDeprecations` for tsconfig). |
+| Wire to **mock data first** | ✅ | `dashboard-dev` | Closed 2026-05-18 (`29692cd`). React Router + icon-rail nav + 9 page stubs + mock data layer typed against OpenAPI v1. Bundle 194.77 KB gzipped (97% of 200 KB budget). Axe-core 0 violations. Auditor: 3 accepted fixes (dead code, footer station name, hardcoded timezone); 2 deferred (Recharts keyboard tooltip → Charts task, html lang dynamic → Phase 4 i18n); 1 observation (mobile nav overflow → future task); ADR-009 ECharts refs updated. |
 | Implement priority pages (Now, Forecast, Charts) | ⬜ | `dashboard-dev` (one task per page; lead may run 2–3 page-builder teammates in parallel rounds) | Pages are mostly independent per [ADR-024](../decisions/ADR-024-page-taxonomy.md) — strong fit for parallel teammates |
 | Implement remaining built-in pages (Almanac, Earthquakes, Records, Reports, About, Legal) | ⬜ | `dashboard-dev` (parallel rounds) | 9 built-in pages total per [ADR-024](../decisions/ADR-024-page-taxonomy.md); operator-hideable |
 | Wire to real `clearskies-api` | ⬜ | `dashboard-dev` (coordinates with `api-dev` if contract questions surface) | Replace the mock with the typed API client generated from `docs/contracts/openapi-v1.yaml` |
@@ -300,6 +300,7 @@ Detailed entries in per-domain files: [phase1-scaffold](decision-log-phase1-scaf
 
 | Date | Round | Domain | Summary | Pytest | Commit |
 |------|-------|--------|---------|--------|--------|
+| 2026-05-18 | P3-T2 | dashboard | mock-data wiring: routing + nav + 9 pages + mock layer + theme toggle; 6 commits (e0ae6c6..29692cd) | — | 29692cd |
 | 2026-05-18 | 3b-16 | radar | iframe config slot; closes radar domain + task 3b | 2302/364/0 | ae4a86d |
 | 2026-05-18 | 3b-15 | radar | keyed half A2: OWM + Aeris + tile proxy; mapbox_jma dropped per ADR-015 amend | 2283/364/0 | ad1fe37 |
 | 2026-05-11 | 3b-14 | radar | keyless half: 5 providers (RainViewer, IEM, NOAA, MSC, DWD) + /frames endpoint | 2123/364/0 | f2362ee |

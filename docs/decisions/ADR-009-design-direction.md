@@ -78,9 +78,9 @@ This is the answer to "all the data" + "not cluttered" — Belchertown crams eve
 - Accessibility per [coding rules §5.5](../../rules/coding.md): `aria-label` on icon-only buttons, `aria-hidden="true"` on decorative icons paired with text.
 
 ### Charts
-- **Engine: ECharts** ([ADR-002](ADR-002-tech-stack.md)).
-- **Sampling:** `series.sampling = 'lttb'` for charts with > 1000 source points.
-- **Accessibility:** `aria-label` on every chart container; screen-reader-only data-table fallback alongside; ECharts `aria` config enabled.
+- **Engine: Recharts** ([ADR-002](ADR-002-tech-stack.md)). Originally ECharts; switched to Recharts during tech-stack finalization.
+- **Sampling:** client-side LTTB data reduction for charts with > 1000 source points.
+- **Accessibility:** `aria-label` on every chart container; screen-reader-only data-table fallback alongside. Recharts does not have ECharts' native `aria` keyboard navigation — keyboard tooltip access is a tracked Phase 3 task.
 - Chart series palette matches the categorical palette above.
 
 ### Motion

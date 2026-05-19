@@ -51,6 +51,10 @@ Use the Nygard format. Template at `docs/decisions/_TEMPLATE.md`. Required: Stat
 
 **Sonnet for ALL delegated work.** Implementation, tests, audits, verification, closeout extraction. Opus auditor is not worth the cost — Sonnet auditor validated at 75K tokens with clean results (3b-15 close).
 
+**Lead does NOT do research grunt work.** Reading files, running SSH commands, glob/grep searches, state verification — all of that is delegated to Sonnet agents (Explore, foreground general-purpose, or the relevant specialist). Opus tokens cost real money; Sonnet tokens are an order of magnitude cheaper. The lead's capability is irrelevant — what matters is whether a cheaper agent can do it. If a task is "read these files and summarize" or "check this repo's HEAD and node version," that's Sonnet work. The lead receives the summary, makes judgment calls, and writes detailed prompts for the next agent. The only direct tool calls the lead makes are: spawning agents, SendMessage to monitor them, writing to the scratchpad, and committing to git.
+
+**Why (2026-05-18):** Phase 3 task 1 session start — the lead read 10+ files (rules, ADRs, spike findings), ran SSH commands to verify weather-dev state, ran multiple glob/grep searches to find ADR paths, and read repo files — all before spawning a single agent. Every one of those reads burned Opus tokens on work any Sonnet agent could do. The user pays for these tokens. The lead's job is to delegate the reading to cheap agents, receive summaries, then synthesize into detailed agent prompts.
+
 **Small, focused tasks.** Each agent gets one specific job with a clear deliverable. "Implement 2 provider modules + tile proxy + wiring" is too big. "Implement openweathermap.py radar provider per this spec" is right. Shorter runs = less idle-bug risk, easier to monitor, cheaper to retry.
 
 **Focused agent prompts.** Each agent receives ONLY the context needed for its specific task. Don't load full rules files, full ADRs, or project history into agent prompts. Extract the relevant section and inline it. The lead carries the full context; agents carry task context.
@@ -73,7 +77,7 @@ Use the Nygard format. Template at `docs/decisions/_TEMPLATE.md`. Required: Stat
 
 ## Runtime environment
 
-**Dev/test runs in `weather-dev` LXD container, not Windows.** Shell into container: `ssh ratbert "lxc exec weather-dev -- bash -lc '<command>'"`. File sync: push to GitHub from DILBERT, then run `scripts/sync-to-weather-dev.sh`. Browser testing: `http://192.168.2.113:<port>`. DILBERT = editing + git + planning only.
+**Dev/test runs in `weather-dev` LXD container, not Windows.** Shell into container: `ssh weather-dev "<command>"`. File sync: push to GitHub from DILBERT, then run `scripts/sync-to-weather-dev.sh`. Browser testing: `http://192.168.2.113:<port>`. DILBERT = editing + git + planning only.
 
 **PowerShell multi-line commits: use `git commit -F`.** Write message to `c:\tmp\<task>-msg.txt`, then `git commit -s -F c:\tmp\<task>-msg.txt`. PowerShell heredocs break on parens/quotes.
 
