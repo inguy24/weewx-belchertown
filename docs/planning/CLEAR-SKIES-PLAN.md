@@ -336,6 +336,33 @@ Full entries in [decision-log-phase1-scaffold.md](decision-log-phase1-scaffold.m
 
 ---
 
+## ADR compliance gaps (identified 2026-05-19)
+
+A phase-boundary ADR compliance sweep on 2026-05-19 (per [rules/clearskies-process.md](../../rules/clearskies-process.md) "ADR compliance sweep at each phase boundary") identified 18 v0.1 requirements from Accepted ADRs that have no implementation after Phases 2–4. These are **not blocking** the current Config UI + Deploy work (Phase 5), but must be resolved before the v0.1 public release.
+
+| # | Gap | ADR(s) | Task description |
+|---|-----|--------|-----------------|
+| 1 | Internationalization scaffold | [ADR-021](../decisions/ADR-021-i18n-strategy.md) | Choose i18n framework, extract hardcoded strings, create 13 locale stubs |
+| 2 | Observability / metrics | [ADR-031](../decisions/ADR-031-observability-metrics.md) | Prometheus `/metrics` on health port, instrument requests/providers/cache/DB |
+| 3 | Realtime direct mode | [ADR-005](../decisions/ADR-005-realtime-architecture.md) | `adapters/direct.py` — weewx in-process hook for operators without MQTT |
+| 4 | Earthquakes Leaflet map | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | Install Leaflet + react-leaflet, interactive map with magnitude markers |
+| 5 | NOAA report table parser | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | Parse fixed-width text into sortable HTML table |
+| 6 | Charts page completion | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | Average Climate, Monthly, Annual tabs (3 of 4 are stubs) |
+| 7 | Legal page jurisdiction toggles | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | CCPA, GDPR, Quebec Law 25 sections, auto-detect, toggleable |
+| 8 | Custom page system | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | Operator-configurable pages with slug, icon, card composition |
+| 9 | Hero image system | [ADR-009](../decisions/ADR-009-design-direction.md) | Upload, event triggers (condition, season, time-of-day, alerts) |
+| 10 | Branding API fetch | [ADR-022](../decisions/ADR-022-theming-branding-mechanism.md) | Dashboard fetches accent/logo/theme from API (currently hardcoded) |
+| 11 | Auto-sunrise-sunset theme | [ADR-023](../decisions/ADR-023-light-dark-mode-mechanism.md) | Theme switches at sunrise/sunset (currently falls back to OS) |
+| 12 | Production docker-compose | [ADR-034](../decisions/ADR-034-deployment-topology-default.md) | Caddy + API + realtime + dashboard in stack repo |
+| 13 | Systemd unit files | [ADR-034](../decisions/ADR-034-deployment-topology-default.md) | Service files for native Linux |
+| 14 | macOS launchd plist | [ADR-034](../decisions/ADR-034-deployment-topology-default.md) | Service template for macOS |
+| 15 | Reverse proxy config files | [ADR-037](../decisions/ADR-037-inbound-traffic-architecture.md) | Committed Apache, Caddy, nginx examples |
+| 16 | TypeScript codegen | [ADR-018](../decisions/ADR-018-api-versioning-policy.md) | Generate dashboard types from OpenAPI spec |
+| 17 | API benchmark suite | [ADR-033](../decisions/ADR-033-performance-budget.md) | pytest-benchmark for endpoint performance |
+| 18 | CI release pipelines | [ADR-039](../decisions/ADR-039-distribution-installation-mechanism.md) | PyPI + container registry + GitHub Releases workflows |
+
+---
+
 ## Appendix: Inherited from predecessor plan
 
 These items remain valid context but are no longer driving tasks:
