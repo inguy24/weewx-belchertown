@@ -75,6 +75,10 @@ Use the Nygard format. Template at `docs/decisions/_TEMPLATE.md`. Required: Stat
 
 **Lead synthesizes auditor findings.** Per finding: accept (with specific remediation + reasoning), push back (with reasoning), or defer (with condition). Don't forward raw findings to dev unedited.
 
+**Phase-boundary ADR compliance sweep (mandatory).** Before declaring any phase complete, run the audit in the *other* direction: for each Accepted ADR, verify that every v0.1 implementation requirement has corresponding code, config, or documentation in the repos. The per-round auditor checks the code that *was* written; this sweep catches code that *should have been* written but wasn't. Walk the full ADR index — not just the ADRs the current phase touched. Surface every gap to the user before closing the phase.
+
+**Why (2026-05-19):** Phases 2–4 closed with clean per-round audits, yet a post-Phase-4 sweep found 15+ ADR requirements with zero implementation: the entire configuration UI (ADR-027), internationalization infrastructure (ADR-021), observability/metrics (ADR-031), realtime direct mode (ADR-005), production docker-compose and systemd units (ADR-034), Leaflet maps, NOAA report parser, custom pages, and more. Per-round audits only checked the diff — they never asked "what's missing from the full ADR surface?" The gap went undetected across 4 phases and dozens of audit rounds because nobody ran the reverse check.
+
 ## Runtime environment
 
 **Dev/test runs in `weather-dev` LXD container, not Windows.** Shell into container: `ssh weather-dev "<command>"`. File sync: push to GitHub from DILBERT, then run `scripts/sync-to-weather-dev.sh`. Browser testing: `http://192.168.2.113:<port>`. DILBERT = editing + git + planning only.
