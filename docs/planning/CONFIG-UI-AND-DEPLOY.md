@@ -50,7 +50,7 @@ These are refinements to ADR-027 approved by the user. **ADR-027 must be updated
 
 5. **API installed on the weewx container.** The whole point of the API is that the database doesn't have to cross a firewall. MariaDB stays localhost-only for weather data. The API binds dual-stack `[::]` on port 8765, protected by a shared secret header.
 
-6. **Frontend approach: undecided.** Jinja2 templates + vanilla JS (Python-only, no Node build step) vs. small React app (consistent with dashboard). Leaning Jinja2 — the config tool is a Python package distributed via PyPI; Node adds friction. Decide at Phase A start.
+6. **Frontend: Jinja2 + HTMX + lightweight CSS framework (e.g., Pico CSS).** The config tool is a Python package distributed via PyPI — adding a Node build step for React adds two-toolchain friction that isn't worth it for forms and tables. HTMX handles interactive wizard flow via HTML attributes (server renders fragments, browser swaps them in) — no complex JavaScript needed. Jinja2 produces semantic HTML that's inherently accessible. No build step; static files ship directly in the Python package.
 
 ## Network topology (for deployment phases)
 
@@ -99,9 +99,9 @@ Test container (VLAN 7):         Apache (port 80) + dashboard + realtime (port 8
   - RainViewer: keyless
   - USGS: keyless
 
-## Open question
+## Resolved: subdomain name
 
-**Subdomain name** — needed for NPM proxy host and Apache ServerName. Suggestion: `clearskies.shaneburkhardt.com`. User has not yet answered.
+**`clearskies.shaneburkhardt.com`** — internal-only via NPM "LAN Only" access list. DNS auto-registered by DOGBERT's `Register-IPv6DNS.ps1` from the router NDP table (container hostname must be set to `clearskies`).
 
 ---
 
@@ -152,6 +152,7 @@ The config UI is a standalone Python web application in `weewx-clearskies-stack`
 | Wizard frontend | Step-by-step flow (9 steps) |
 | Master config frontend | Settings dashboard with section nav, edit, test buttons |
 | CLI mode | `questionary` or `rich.prompt` terminal flow |
+| Frontend assets | Jinja2 templates + HTMX + Pico CSS (or similar). No Node build step. |
 
 **CLI commands:**
 ```
@@ -271,7 +272,7 @@ Multi-agent development in `weewx-clearskies-stack`:
 |------|--------|
 | E1 | Start API on weewx, verify `/health/ready` |
 | E2 | Start realtime on test container, verify SSE streams |
-| E3 | Open `https://<subdomain>.shaneburkhardt.com` |
+| E3 | Open `https://clearskies.shaneburkhardt.com` |
 | E4 | Verify all pages with real data |
 | E5 | Verify SSE live updates |
 | E6 | Test on mobile |
