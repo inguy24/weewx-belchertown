@@ -22,7 +22,7 @@ See [docs/reference/SERVER-INVENTORY.md](../reference/SERVER-INVENTORY.md) and [
 
 ### Architecture (as actually deployed)
 
-- **WeeWX 5.3.1** runs on `weewx` LXD container (`192.168.2.121`).
+- **WeeWX 5.3.1** runs on `weewx` LXD container (`192.168.7.20`).
 - Skin source lives at `/etc/weewx/skins/Belchertown/` (not `/home/weewx/skins/...` as the old reference doc said).
 - Static HTML is generated at weewx:`/var/www/weewx/`, which is **the same filesystem** as cloud:`/var/www/weewx/` via an LXD shared disk (`/mnt/weewx` on Ratbert host). No rsync, no cron, no deploy step — files appear on cloud instantly.
 - TLS termination is on **Apache (cloud:443)**, not nginx-proxy-manager. Apache vhost `/etc/apache2/sites-enabled/weather-ssl.conf`.
@@ -33,7 +33,7 @@ See [docs/reference/SERVER-INVENTORY.md](../reference/SERVER-INVENTORY.md) and [
 
 `/etc/weewx/weewx.conf` `[StdRESTful][[MQTT]]` line reads:
 ```
-server_url = mgtt://weewx:<REDACTED>@cloud.shaneburkhardt.com:1883
+server_url = mgtt://weewx:<REDACTED>@nextcloud.shaneburkhardt.com:1883
 ```
 **`mgtt://` is a typo for `mqtt://`.** The matthewwall weewx-mqtt extension cannot parse the bad scheme, so weewx is publishing nothing to EMQX. The wss subscriber chain is fine; there's just no data flowing in. **One-character fix.**
 

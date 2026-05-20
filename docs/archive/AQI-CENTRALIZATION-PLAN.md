@@ -35,7 +35,7 @@ For a full map of containers, paths, sync mechanism, and credentials see [docs/r
 
 Key facts relevant to this plan:
 
-- **WeeWX 5.3.1** runs on the `weewx` LXD container (`192.168.2.121` on Ratbert).
+- **WeeWX 5.3.1** runs on the `weewx` LXD container (`192.168.7.20` on Ratbert).
 - **Skin source:** `/etc/weewx/skins/Belchertown/` (NOT `/home/weewx/...`).
 - **Extension code:** `/etc/weewx/bin/user/airvisual.py` and `/etc/weewx/bin/user/belchertown.py` (both 252KB+).
 - **Database:** MariaDB on the weewx container, db `weewx`, table `archive`.

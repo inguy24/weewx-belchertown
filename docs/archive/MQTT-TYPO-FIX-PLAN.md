@@ -22,8 +22,8 @@ See [WEATHER-EVALUATION-PLAN.md](WEATHER-EVALUATION-PLAN.md) Phase 1 findings fo
 |---|------|---------|----------|
 | 1 | Verify the typo is still present | `ssh ratbert "lxc exec weewx -- grep -n 'server_url' /etc/weewx/weewx.conf"` | Output contains `mgtt://...` |
 | 2 | Backup weewx.conf | `ssh ratbert "lxc exec weewx -- cp /etc/weewx/weewx.conf /etc/weewx/weewx.conf.bak.\$(date +%Y%m%d-%H%M%S)"` | Backup file created |
-| 3 | Confirm EMQX is running on cloud | `ssh ratbert "lxc exec cloud -- systemctl status emqx \|\| pgrep -fa beam.smp"` | EMQX/beam.smp process present |
-| 4 | Confirm EMQX has user `weewx` (publisher) | EMQX dashboard at `http://cloud.shaneburkhardt.com:18083` → Authentication → Built-in DB → look for username `weewx`. Or CLI: `ssh ratbert "lxc exec cloud -- emqx ctl admins list"` | User exists |
+| 3 | Confirm EMQX is running on cloud | `ssh ratbert "lxc exec nextcloud -- systemctl status emqx \|\| pgrep -fa beam.smp"` | EMQX/beam.smp process present |
+| 4 | Confirm EMQX has user `weewx` (publisher) | EMQX dashboard at `http://nextcloud.shaneburkhardt.com:18083` → Authentication → Built-in DB → look for username `weewx`. Or CLI: `ssh ratbert "lxc exec nextcloud -- emqx ctl admins list"` | User exists |
 | 5 | Confirm EMQX has user `weewx-web` (browser subscriber) | Same dashboard | User exists |
 | 6 | Note the password for `weewx` user from weewx.conf | (grep server_url line, password is between `weewx:` and `@`) | Have it for later validation |
 

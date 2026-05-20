@@ -9,7 +9,7 @@ Authoritative map of where every piece of the weather stack lives. Generated fro
 | Host | Role | Network |
 |---|---|---|
 | **Ratbert** (LXD host) | LXD container host on home network | manages bridges `br-vlan2`, `br-vlan7`, `br-internal` |
-| **weewx** (LXD container) | WeeWX 5.3.1 engine, generates static HTML, runs MQTT publisher | eth0 `192.168.2.121` (br-vlan2) |
+| **weewx** (LXD container) | WeeWX 5.3.1 engine, generates static HTML, runs MQTT publisher | eth0 `192.168.7.20` (br-vlan7) |
 | **cloud** (LXD container) | Apache HTTPS frontend + EMQX MQTT broker + Nextcloud | eth0 `192.168.7.2` (br-vlan7), eth1 `10.0.1.3` (br-internal) |
 
 The two containers are **on different VLAN bridges**, so traffic between them traverses the home network's L3 router (Mikrotik).
@@ -52,7 +52,7 @@ Both containers see the same files instantly. weewx writes; Apache on cloud read
 
 - `/var/www/weather/` — owner `shane:shane`, last modified 2025-06-11. **Older site, abandoned.**
 - `/var/www/bak1/` — backup from 2022. **Abandoned.**
-- `/var/www/html/` — Nextcloud (cloud.shaneburkhardt.com), not weather-related.
+- `/var/www/html/` — Nextcloud (nextcloud.shaneburkhardt.com), not weather-related.
 
 ---
 
@@ -72,7 +72,7 @@ Both containers see the same files instantly. weewx writes; Apache on cloud read
 - **Extension:** `matthewwall/weewx-mqtt` (`/etc/weewx/bin/user/mqtt.py`)
 - **Enabled in:** `weewx.conf` line 635 — `restful_services = ..., user.mqtt.MQTT`
 - **Config:** `weewx.conf` `[StdRESTful][[MQTT]]`
-- **Configured publish URL:** `mgtt://weewx:<REDACTED>@cloud.shaneburkhardt.com:1883` (see CREDENTIALS.md)
+- **Configured publish URL:** `mgtt://weewx:<REDACTED>@nextcloud.shaneburkhardt.com:1883` (see CREDENTIALS.md)
 - **Configured topic:** `weewx`
 - **🚨 BUG: scheme is `mgtt://` instead of `mqtt://` — typo. weewx-mqtt cannot parse this and is failing silently.**
 

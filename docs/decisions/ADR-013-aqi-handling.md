@@ -22,7 +22,7 @@ AQI providers are **clearskies-api plugin modules** per [ADR-038](ADR-038-data-p
 - **Path A — operator's own weewx extension** (e.g., `weewx-airvisual`) writes custom AQI columns to the archive. Operator maps those columns to canonical AQI fields at setup via [ADR-035](INDEX.md). Out of scope for Clear Skies — we never see the extension.
 - **Path B — operator picks an AQI provider** in clearskies-api setup. The corresponding plugin module handles the API call and translation to canonical fields.
 
-**Historical AQI:** clearskies-api persists AQI readings to its own datastore (separate from the read-only weewx archive). The Records section and AQI chart read from this store. Specific mechanism (SQLite file, table layout, retention) is a Phase 2 implementation detail.
+**Historical AQI:** `/aqi/history` reads from the weewx archive. Path A operators already have AQI columns in their archive — clearskies-api queries them like any other observation. Path B (provider-only) operators get live `/aqi/current` but no history unless they also configure a weewx extension to log AQI readings. clearskies-api does **not** maintain its own persistent AQI store; the weewx archive is the single source of truth for all time-series data.
 
 **Canonical AQI fields** (defined in [ADR-010](ADR-010-canonical-data-model.md)): `aqi`, `aqiCategory`, `aqiMainPollutant`, `aqiLocation`, plus optional `pollutantPM25` / `pollutantPM10` / `pollutantO3` / `pollutantNO2` / `pollutantSO2` / `pollutantCO`. Canonical scale: U.S. EPA AQI 0–500.
 
@@ -41,12 +41,11 @@ AQI providers are **clearskies-api plugin modules** per [ADR-038](ADR-038-data-p
 - Phase 2 builds Aeris / OpenMeteo / OpenWeatherMap / IQAir modules under `weewx_clearskies_api/providers/aqi/`, conforming to [ADR-038](ADR-038-data-provider-module-organization.md)'s five responsibilities.
 - Setup wizard ([ADR-027](ADR-027-config-and-setup-wizard.md)) presents Path A vs Path B as a choice. Path A → column-mapping flow per [ADR-035](INDEX.md). Path B → provider-pick + key entry.
 - Operators with neither path configured see no AQI features — render-time sensor-availability detection self-hides the tile, chart, and Records section.
-- Historical-AQI persistence is real Phase 2 work (small writeable datastore, retention policy, backup guidance).
+- `/aqi/history` implementation reads weewx archive AQI columns using the same DB access pattern as other observation history endpoints. No separate writeable datastore needed.
 - Non-EPA-native AQI scales (European AQI, etc.) need a translation table in the relevant module — Phase 2.
 
 ## Out of scope
 
-- Persistence mechanism specifics (Phase 2).
 - AQI scale conversion table for non-EPA sources (Phase 2).
 - AQI caching strategy ([ADR-017](INDEX.md), Pinned).
 - Cross-station AQI ([ADR-011](ADR-011-multi-station-scope.md), single-station only).

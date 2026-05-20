@@ -10,7 +10,7 @@ Load alongside [rules/weather-skin.md](../rules/weather-skin.md) when working on
 - **HTTPS termination:** **Apache on the cloud container at port 443** (NOT nginx-proxy-manager). Vhost: `/etc/apache2/sites-enabled/weather-ssl.conf`. Cert: `/etc/letsencrypt/live/weather.shaneburkhardt.com/`
 - **DocumentRoot:** `/var/www/weewx/` on cloud (which is the SAME filesystem as `/var/www/weewx/` on the weewx container — see "Static site sync" below)
 - **Cert renewal:** certbot.timer (daily); cert issued 2026-04-25
-- **NPM role:** **Not used for `weather.shaneburkhardt.com`.** Same hosting model as `cloud.shaneburkhardt.com` (Nextcloud) — Apache on the cloud container terminates TLS directly. NPM is in the path for *other* hostnames but not this one. (Confirmed by user 2026-04-29.)
+- **NPM role:** **Not used for `weather.shaneburkhardt.com`.** Same hosting model as `nextcloud.shaneburkhardt.com` (Nextcloud) — Apache on the cloud container terminates TLS directly. NPM is in the path for *other* hostnames but not this one. (Confirmed by user 2026-04-29.)
 - **Access:** `ssh ratbert "lxc exec cloud -- <command>"`
 
 ### Static site sync (weewx → cloud)
@@ -26,9 +26,9 @@ The site is "synced" via an LXD shared disk, NOT rsync/cron/Ftp/Rsync skins:
 ## Weewx engine
 
 - **Host container:** `weewx` on Ratbert
-- **Container IP:** 192.168.2.121
+- **Container IP:** 192.168.7.20
 - **Database:** MariaDB 10.11 (shared with Kodi)
-- **Database host:** Same weewx container (localhost or 192.168.2.121 from remote)
+- **Database host:** Same weewx container (localhost or 192.168.7.20 from remote)
 - **Data tables:** `archive` (historical data), `current_observation` (live conditions)
 - **Custom archive columns (added by extensions):** `aqi` (REAL), `main_pollutant` (TEXT), `aqi_level` (TEXT), `aqi_location` (TEXT) — written by `AirVisualService` every archive interval; `ow_*` columns written by `OpenWeatherService` (unused by skin)
 - **Weewx version:** 5.3.1 (verified 2026-04-29)

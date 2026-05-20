@@ -117,6 +117,13 @@ Track the pass/skip/fail count at each round close to detect regressions.
 | 3b-15 close | ad1fe37 | 2283 | 364 | 0 |
 | 3b-16 close | ae4a86d | 2302 | 364 | 0 |
 | post-3b cleanup | 8e691f4 | 2305 | 364 | 0 |
+| P4-R1 close | 66cb2e9 | 2311 | 365 | 0 |
+
+## Realtime pytest baselines
+
+| Round | Commit | Passed | Skipped | Failed |
+|---|---|---|---|---|
+| P4-T1 initial | cf7b6ab | 72 | 0 | 0 |
 
 ## Dashboard bundle baselines
 
@@ -132,6 +139,13 @@ Track gzipped JS bundle size at each round close against ADR-033's 200 KB target
 | P3-T6 mobile-first | a3a70f9 | 95.11 KB | 48% |
 | P3-T7 light-dark-mode | 14eeb95 | 95.68 KB | 48% |
 | P3-T8 theming-branding | af1ff8e | 96.16 KB | 48% |
+| P4-T2 SSE wiring | f2a30e4 | 96.16 KB | 48% |
+
+## Dashboard vitest baselines
+
+| Round | Commit | Passed | Skipped | Failed |
+|---|---|---|---|---|
+| P4-T2 initial | f2a30e4 | 40 | 0 | 0 |
 
 ## GitHub remotes
 
