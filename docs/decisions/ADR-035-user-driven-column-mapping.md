@@ -1,12 +1,15 @@
 ---
 status: Accepted
 date: 2026-05-02
+updated: 2026-05-20
 deciders: shane
 supersedes:
 superseded-by:
 ---
 
 # ADR-035: User-driven column mapping
+
+> Updated 2026-05-20 with UX refinements from live testing.
 
 ## Context
 
@@ -22,6 +25,10 @@ At first-run, clearskies-api introspects the weewx archive schema and the config
 2. **Non-stock columns are presented to the operator** with a heuristic name-match suggestion (case-insensitive substring match against canonical field names). For each, the operator picks a canonical SPA variable from the catalog, OR `not mapped`.
 3. **Mapping persists** in the operator's config file per [ADR-027](ADR-027-config-and-setup-wizard.md). It's config, not code.
 4. **Re-mapping** at any time via the configuration UI; takes effect on the next request — no service restart.
+5. **When all columns are stock (auto-mapped), the wizard shows a summary and skips the mapping table entirely** — the step auto-advances without operator input.
+6. **Only unmapped columns are presented** in the mapping table — not the full archive schema. Reduces noise for operators with a handful of custom sensors.
+7. **Battery/diagnostic columns are excluded from mapping suggestions.** Columns matching `*Battery*`, `*Link*`, or `*Status*` patterns are sensor metadata, not weather observations, and are silently skipped in the suggestion list.
+8. **The mapping table validates on submit:** duplicate canonical mappings (two columns mapped to the same canonical field) and invalid canonical names (not in the catalog) are flagged inline with visual callouts before the step can advance.
 
 **Worked example — AQI ([ADR-013](ADR-013-aqi-handling.md) Path A):** an operator running `weewx-airvisual` has columns `aqi`, `main_pollutant`, `aqi_level`, `aqi_location`. The flow suggests `aqi` → `aqi`, `main_pollutant` → `aqiMainPollutant`, `aqi_level` → `aqiCategory`, `aqi_location` → `aqiLocation`. Operator confirms.
 

@@ -11,6 +11,8 @@ superseded-by:
 
 > Updated 2026-05-20 with refinements from CONFIG-UI-AND-DEPLOY planning session.
 
+> Updated 2026-05-20 with wizard flow refinements from live testing session.
+
 ## Context
 
 Three runtime services (`weewx-clearskies-api`, `weewx-clearskies-realtime`, `weewx-clearskies-stack`) need configuration: bind addresses/ports, DB connection, log destinations, CORS, rate limits, forecast-provider credentials per [ADR-006](ADR-006-compliance-model.md), and the optional cross-host shared secret per [ADR-008](ADR-008-auth-model.md) and [ADR-037](ADR-037-inbound-traffic-architecture.md).
@@ -205,9 +207,31 @@ weewx-clearskies-config --show-secrets        # re-prints current secrets for cr
 weewx-clearskies-config --headless            # non-interactive flags-only mode
 ```
 
+### Wizard flow (5 steps)
+
+Reduced from the original 9-step design during live testing (2026-05-20). Removed steps: topology (auto-detected from DB host — localhost = same-host, remote = cross-host) and bind addresses (auto-configured from topology; still accessible in master config for power users). API Keys merged into Providers (step 4).
+
+**Step 1 — Database connection.** DB type + connection string. Unchanged from prior design.
+
+**Step 2 — Schema introspection + column mapping.** Auto-skips entirely when all columns are stock (no custom columns detected). When non-stock columns exist, shows only the unmapped columns — not the full archive table. Battery/diagnostic columns (matching `*Battery*`, `*Link*`, `*Status*` patterns) are excluded from mapping suggestions; these are sensor metadata, not weather observations. Heuristic name-match suggestions are shown per [ADR-035](ADR-035-user-driven-column-mapping.md).
+
+**Step 3 — Station identity.** Auto-populated from the API's `/station` endpoint, not from local `weewx.conf`. Fields: station name, latitude/longitude, altitude (displayed in operator's preferred unit system). An explicit "Detect from weewx.conf" button appears only when the config tool is running on the weewx host. "Use my location" browser geolocation is also available.
+
+**Step 4 — Provider selection + API keys (merged).** Forecast and alert provider dropdowns. When a key-required provider is selected, an inline key entry field appears immediately — no separate step. Inline connectivity test runs after key entry. Single-provider keyless domains (earthquakes, radar) are shown as informational panels with no dropdown. Alert provider selection considers forecast provider overlap (NWS is default for US users where forecast + alert come from the same provider).
+
+**Step 5 — Review + apply.** Summary of all choices; operator confirms; config written to disk.
+
+**Auth flow refinements (from live testing):**
+- Bootstrap auto-logs in after credentials are set — no redirect to a separate login page.
+- Login redirects to `/wizard` if no config exists; redirects to `/admin/config` if config exists.
+- Auth errors redirect to `/login` page, not raw JSON.
+- Sessions persist across config tool restarts (on-disk session store when tool is re-launched).
+
+**Wizard state persistence:** wizard reads existing config files to pre-populate all fields. Writes partial progress to disk as each step completes — a partial wizard run produces a valid partial config, not an empty file.
+
 ### Configuration UI collected fields
 
-DB type + connection (auto-detected from local `weewx.conf` when the tool runs on the same host as weewx; otherwise entered manually); forecast provider + credentials per [ADR-007](ADR-007-forecast-providers.md); bind addresses for api/realtime; reverse-proxy topology (same-host default vs. cross-host with generated `WEEWX_CLEARSKIES_PROXY_SECRET` per [ADR-008](ADR-008-auth-model.md)); public hostname for the docker-compose Caddy path; logging destination; UI's own bind/port + TLS cert paths + `[ui] enabled` flag (latter not flippable from the UI — would lock the operator out).
+DB type + connection; forecast provider + credentials per [ADR-007](ADR-007-forecast-providers.md); alert provider; station identity (populated from `/station` endpoint); public hostname for the docker-compose Caddy path; logging destination; UI's own bind/port + TLS cert paths + `[ui] enabled` flag (latter not flippable from the UI — would lock the operator out). Topology and bind addresses for api/realtime are auto-configured from the DB connection and available in the master config for power users.
 
 NOT collected: theme/branding ([ADR-022](ADR-022-theming-branding-mechanism.md)), i18n locale ([ADR-021](ADR-021-i18n-strategy.md)), end-user accounts (none — see [ADR-008](ADR-008-auth-model.md)).
 
