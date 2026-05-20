@@ -239,7 +239,7 @@ Multi-agent for the SSE bridge work; deploy rehearsal is single-track (lead-driv
 | `clearskies-realtime` service: SSE bridge from weewx loop packets | ✅ | `realtime-dev` + `test-author` | Minimal, focused, ~few hundred lines of Python |
 | Wire dashboard to live SSE updates | ✅ | `dashboard-dev` | Native EventSource → `useRealtimeObservation` hook, 40 tests, 96.16 KB bundle |
 | `/aqi/history` persistence layer | ✅ | `api-dev` + `test-author` | Writeable AQI store per [ADR-013](../decisions/ADR-013-aqi-data-persistence.md). Currently 501 stub. Moved from Phase 2 — not a Phase 3 blocker (dashboard ships with live `/aqi` only; historical AQI chart added when this lands). |
-| Spin up an ephemeral `weather-deploy-rehearsal` LXD container on Ratbert | ⬜ | lead (Opus) | Separate from the long-lived `weather-dev` container (stood up in Phase 1). Pristine container that gets the public docs treatment — mirrors what a new user would do, cross-machine, manual gates. Tear down + rebuild for each rehearsal pass. |
+| Spin up an ephemeral `weather-deploy-rehearsal` LXD container on Ratbert | ✅ | lead (Opus) | Ubuntu 24.04 on br-vlan2 (192.168.2.120), security.nesting=true, 4 GB RAM. Python 3.12.3, Node 22.22.2, Docker 29.5.1 + Compose v5.1.3, uv 0.11.15, git 2.43.0. Reachable from DILBERT, Docker pulls verified. |
 | Full end-to-end deploy rehearsal there using the public docs only | ⬜ | lead (Opus) + `auditor` | If the public docs don't work, the public docs are wrong — fix them |
 | Polish, accessibility audit, perf audit | ✅ | `dashboard-dev` + `auditor` | 7 a11y fixes, axe-core 0 violations/9 routes, bundle 96.21 KB; realtime port+filter fix; API station.py+ruff+marker; 3 audit findings (1 med remediated, 1 low remediated, 1 low deferred) |
 | Documentation completeness review | ✅ | `docs-author` + `auditor` | Full doc suite (README/INSTALL/CONFIG/SECURITY/CHANGELOG) for API+realtime+stack; dashboard SECURITY+DEVELOPMENT+fixes; audit clean |
@@ -300,6 +300,7 @@ Detailed entries in per-domain files: [phase1-scaffold](decision-log-phase1-scaf
 
 | Date | Round | Domain | Summary | Pytest | Commit |
 |------|-------|--------|---------|--------|--------|
+| 2026-05-19 | P4-R4 | deploy | T4: weather-deploy-rehearsal LXD container on Ratbert — Ubuntu 24.04, br-vlan2 (192.168.2.120), security.nesting, 4 GB RAM. Deps: Python 3.12.3, Node 22.22.2, Docker 29.5.1+Compose v5.1.3, uv 0.11.15, git 2.43.0. Reachable from DILBERT, Docker pulls verified. | — | — |
 | 2026-05-19 | P4-R3 | polish+docs | T6: 7 a11y fixes (axe-core 0/9 routes), realtime port 8766 + RedactionFilter list, API station.py + ruff; T7: full doc suite for API/realtime/stack, dashboard SECURITY+DEVELOPMENT; 3 audit findings (F1+F3 remediated, F2 deferred) | API 2311/365/0, RT 78/0/0, Dash 40/0/0 | 6ee7b24/640d2dc/2dcb6f6/89948e5 |
 | 2026-05-19 | P4-R2 | dashboard | SSE wiring: useSSE + useRealtimeObservation hooks, 40 tests, vite proxy; 4 audit findings remediated | Dash 40/0/0 | f2a30e4 |
 | 2026-05-19 | P4-R1 | api+realtime | /aqi/history persistence + realtime SSE bridge; 2311/365/0 api, 72/0/0 realtime | API 2311/365/0, RT 72/0/0 | 66cb2e9/cf7b6ab |

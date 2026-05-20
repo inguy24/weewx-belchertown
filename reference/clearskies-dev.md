@@ -41,6 +41,18 @@ Meta repo (`c:\CODE\weather-belchertown\`) default branch: **master**.
 
 Owner: `ubuntu`. Container IP: `192.168.2.113` (DHCP/SLAAC on `br-vlan2`).
 
+### weather-deploy-rehearsal (deploy rehearsal)
+
+```
+/root/   # runs as root (pristine container, no ubuntu user)
+```
+
+Container IP: `192.168.2.120` (DHCP on `br-vlan2`). Ephemeral — tear down and rebuild per rehearsal pass. `security.nesting=true`, `limits.memory=4GB`.
+
+Access: `ssh ratbert "lxc exec weather-deploy-rehearsal -- <command>"`
+
+Toolchain: Python 3.12.3, Node 22.22.2, Docker 29.5.1 + Compose v5.1.3, uv 0.11.15, git 2.43.0.
+
 ## SSH access
 
 Direct SSH to weather-dev from DILBERT (as ubuntu):
