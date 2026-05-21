@@ -1,5 +1,5 @@
 ---
-status: Proposed
+status: Accepted
 date: 2026-05-04
 updated: 2026-05-20
 deciders: shane
