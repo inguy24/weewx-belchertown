@@ -1,6 +1,6 @@
 # Plan: Config UI UX Fixes from Live Testing
 
-**Status:** Approved 2026-05-20. Not yet started.
+**Status:** Complete (2026-05-20). All 6 rounds executed.
 **Predecessor:** Phase A (config UI build) + Phase E live testing session.
 **Context:** Live browser testing of the wizard on `weather-test.shaneburkhardt.com` surfaced 30 issues across auth flow, wizard UX, provider config, and architecture. This plan addresses all of them.
 
@@ -71,28 +71,36 @@ These reduce the wizard from 8 confusing steps to 5 clean ones. Each elimination
 |---|-------|-----|-------------|
 | 29 | AQI scale conversion done in API, should be in dashboard | API should serve raw provider data + provider's native AQI value. Dashboard converts to operator's preferred scale (US EPA / European AQI / native). Remove `_units.py` EPA conversion from API response path (keep as optional utility). | `weewx-clearskies-api` repo |
 | 30 | Provider reference guide missing | Write a docs page explaining each provider: coverage, data source, key requirements, rate limits, strengths/weaknesses. Link from wizard. | `weewx-clearskies-stack` docs |
+| 31 | MQTT configuration missing from wizard | Add Data Pipeline step (step 4) with Direct/MQTT mode selector, broker config, test connection. Fix config_writer INI nesting. | `wizard/state.py`, `wizard/routes.py`, `config_writer.py`, `state_persistence.py`, new `step_mqtt.html` |
 
 ---
 
 ## Execution approach
 
-### Round 1: Critical UX (Priority 1, items 1-5)
+### Round 1: Critical UX (Priority 1, items 1-5) — COMPLETE
 All auth flow and session persistence fixes. Unblocks usable testing.
+**Commit:** `30f2824` in weewx-clearskies-stack
 
-### Round 2: Wizard simplification (Priority 2, items 8-11)
+### Round 2: Wizard simplification (Priority 2, items 8-11) — COMPLETE
 Reduce steps from 8 to 5. Restructure routes and templates.
+**Commit:** `636daca` in weewx-clearskies-stack
 
-### Round 3: Wizard improvements (Priority 3, items 12-21)
+### Round 3: Wizard improvements (Priority 3, items 12-21) — COMPLETE
 Station auto-populate, typography, inline results, column mapping fixes, geolocation, altitude units, timezone.
+**Commit:** `fdee8b5` in weewx-clearskies-stack
 
-### Round 4: Provider improvements (Priority 4, items 22-28)
+### Round 4: Provider improvements (Priority 4, items 22-28) — COMPLETE
 Provider UX overhaul: inline keys, badges, single-provider skip, alert intelligence, Open-Meteo AQI.
+**Commit:** `cf8ca92` in weewx-clearskies-stack
 
-### Round 5: Architecture (Priority 5, items 29-30)
+### Round 5: Architecture (Priority 5, items 29-30) — COMPLETE
 API AQI refactor (separate repo), provider reference docs.
+**Commits:** `31406da` in weewx-clearskies-api (item 29), `f9c9430` in weewx-clearskies-stack (item 30)
 
-### Round 6: Test + audit
+### Round 6: Test + audit — COMPLETE
 Re-test full wizard flow, accessibility audit, fix any remaining issues.
+**Findings:** MQTT config gap (added as new item 31), 8 MQTT audit findings (all remediated), 5 accessibility audit findings (all remediated), ProtectSystem systemd fix, non-editable pip install fix.
+**Commits (weewx-clearskies-stack):** `596c13b` MQTT impl, remediation commit, a11y fix commit, `779bcca` systemd templates
 
 ---
 

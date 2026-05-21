@@ -13,12 +13,12 @@
 | Phase B | **Complete** | Container moved to VLAN 7 (192.168.7.7), hostname `clearskies`, DB user created |
 | Phase C | **Complete** | API on weewx, Apache + realtime + dashboard + config tool on test container |
 | Phase D | **Complete** | Services running, Apache vhost, NPM proxy at `weather-test.shaneburkhardt.com` |
-| Phase E | **Paused** | Live browser testing surfaced 30 UX issues. Fix plan inserted. |
-| **UX Fix Plan** | **Next** | See [CONFIG-UI-UX-FIXES.md](CONFIG-UI-UX-FIXES.md) — 6 rounds, then resume Phase E |
+| Phase E | **Ready to resume — UX fixes complete** | Live browser testing surfaced 30 UX issues. Fix plan inserted. |
+| **UX Fix Plan** | **Complete** | See [CONFIG-UI-UX-FIXES.md](CONFIG-UI-UX-FIXES.md) — 6 rounds, then resume Phase E |
 
-### Resume point after UX fixes
+### Resume point
 
-When the UX fix plan completes, resume this plan at **Phase E step E3** (browser testing). Steps E1–E2 (service verification) were already done. The test URL is `https://weather-test.shaneburkhardt.com/`. Services may need restarting — check before testing.
+UX fixes are complete. Resume this plan at **Phase E step E3** (browser testing). Steps E1–E2 (service verification) were already done. The test URL is `https://weather-test.shaneburkhardt.com/`. Services may need restarting — check before testing.
 
 ### Hotfixes applied during Phase E testing
 
