@@ -448,6 +448,35 @@ paths:
               schema: { $ref: '#/components/schemas/PageListResponse' }
         default: { $ref: '#/components/responses/Problem' }
 
+  /pages/{slug}/content:
+    get:
+      tags: [Pages]
+      summary: Page markdown content
+      description: |
+        Returns operator-authored markdown content for a named page (ADR-024).
+        The slug must identify a known page (built-in or custom).  Hidden pages
+        are still servable — content can be pre-authored before the page is
+        made visible.
+
+        Returns an empty-string markdown with null updatedAt when the page
+        exists but no content file has been placed in the content directory.
+        This is not an error; it means the operator has not authored content
+        for that page yet.
+      operationId: getPageContent
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+          description: Page slug (e.g. "now", "about", "legal").
+      responses:
+        '200':
+          description: Page markdown content (may be empty string if not yet authored)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarkdownResponse' }
+        default: { $ref: '#/components/responses/Problem' }
+
   /charts/groups:
     get:
       tags: [Charts]
