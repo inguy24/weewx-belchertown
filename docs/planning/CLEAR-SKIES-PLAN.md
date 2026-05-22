@@ -365,6 +365,7 @@ A phase-boundary ADR compliance sweep on 2026-05-19 identified 18 gaps; a deeper
 
 **Tier 1 (release-blocking):** Gaps #4, #16, #17 resolved 2026-05-22 (docker-compose stack).
 **Tier 2 (complete misses):** Gaps #1, #2, #3, #26 resolved 2026-05-22 (i18n, metrics, perf infra).
+**Tier 3 (major gaps):** Gaps #5, #6, #7 resolved 2026-05-22 (realtime direct mode, Leaflet maps, custom page system).
 
 | # | Gap | ADR(s) | Severity | Status | Notes |
 |---|-----|--------|----------|--------|-------|
@@ -372,9 +373,9 @@ A phase-boundary ADR compliance sweep on 2026-05-19 identified 18 gaps; a deeper
 | 2 | Prometheus metrics endpoint | [ADR-031](../decisions/ADR-031-observability-metrics.md) | **Complete miss** | ✅ | Shipped 2026-05-22: `/metrics` on health port (8081) behind `CLEARSKIES_METRICS_ENABLED`. 7 ADR-031 metrics, 46 tests. Known partial: `provider_calls_total{outcome="cache_hit"}` deferred. |
 | 3 | Performance measurement infrastructure | [ADR-033](../decisions/ADR-033-performance-budget.md) | **Complete miss** | ✅ | Shipped 2026-05-22: Lighthouse CI + bundle size workflow in dashboard, pytest-benchmark in API. Targets not gates per ADR-033. |
 | 4 | Production docker-compose.yml | [ADR-034](../decisions/ADR-034-deployment-topology-default.md) | **Release blocker** | ✅ | Shipped 2026-05-22: docker-compose.yml + Caddyfile + .env.example in stack repo. Caddy + api + realtime + dashboard init container. All 3 images build on weather-dev. |
-| 5 | Realtime direct mode | [ADR-005](../decisions/ADR-005-realtime-architecture.md) | **Major** | ⬜ | MQTT-only. `__main__.py` says "not yet implemented." Default should be `direct`, is `mqtt`. |
-| 6 | Leaflet maps (earthquake + radar) | [ADR-015](../decisions/ADR-015-radar-tile-providers.md), [ADR-024](../decisions/ADR-024-page-taxonomy.md) | **Major** | ⬜ | Leaflet not installed. Map components are placeholders. |
-| 7 | Custom page system (`/:slug`) | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | **Major** | ⬜ | No `/:slug` route, no custom-page composition. |
+| 5 | Realtime direct mode | [ADR-005](../decisions/ADR-005-realtime-architecture.md) | **Major** | ✅ | Shipped 2026-05-22: DirectAdapter + ClearSkiesLoopRelay weewx extension. Default mode changed to `direct`. Commit c0dc851 in realtime repo. |
+| 6 | Leaflet maps (earthquake + radar) | [ADR-015](../decisions/ADR-015-radar-tile-providers.md), [ADR-024](../decisions/ADR-024-page-taxonomy.md) | **Major** | ✅ | Shipped 2026-05-22: Leaflet earthquake map with magnitude-sized PAGER-colored markers + radar map on Now page with animation controls. Commits 1a3c218, e46fb6c in dashboard repo. |
+| 7 | Custom page system (`/:slug`) | [ADR-024](../decisions/ADR-024-page-taxonomy.md) | **Major** | ✅ | Shipped 2026-05-22: GET /pages/{slug}/content API endpoint + custom-page.tsx with `/:slug` route + react-markdown rendering. Commits 5c9bcbc (API), 42eb0dc (dashboard). |
 | 8 | Font mismatch: Geist instead of Inter | [ADR-009](../decisions/ADR-009-design-direction.md) | **Medium** | ⬜ | ADR-009 specifies Inter with tabular figures. Dashboard uses Geist Variable. |
 | 9 | Hero image system | [ADR-009](../decisions/ADR-009-design-direction.md) | **Medium** | ⬜ | No default hero SVG shipped. No upload pipeline. No event triggers. |
 | 10 | Branding API endpoint | [ADR-022](../decisions/ADR-022-theming-branding-mechanism.md) | **Medium** | ⬜ | Dashboard hardcodes branding. No accent picker, logo upload, or `custom.css` hatch in wizard. |

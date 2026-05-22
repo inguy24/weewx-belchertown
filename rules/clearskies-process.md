@@ -13,6 +13,10 @@ Incident history and rationale at [reference/process-rule-history.md](../referen
 
 **Read the ADR before the plan.** Plan body summaries drift. ADR wins on conflict — fix the plan to match.
 
+**Read the ADRs before touching architecture.** Before proposing any infrastructure change, deployment fix, proxy configuration, service placement, or config-file change: read the relevant ADRs (especially ADR-034 deployment topology, ADR-027 config wizard, ADR-038 wizard-to-API channel). Do NOT guess the architecture from observation alone — the live state may be broken or interim. The ADRs define what the system SHOULD look like; divergence means a bug to fix, not a new architecture to invent. Session context or resume prompts may be stale or wrong; ADRs are authoritative.
+
+**Why (2026-05-22):** Phase 5 session wasted significant time patching a wrong architecture: running the API on weather-dev (not the weewx host), adding Apache ProxyPass rules between the dashboard and API, manually writing `api.conf` on the wrong host, and proposing the wizard write `api.conf` locally. All of these contradicted ADR-034 (API co-locates with weewx), ADR-038 (API writes its own config via `/setup/apply`), and ADR-027 (wizard auto-detects topology). None of the ADRs were read until the user intervened. The ADRs had all the answers; the session burned tokens and user patience reinventing them badly.
+
 **Recover lost state immediately.** If the user references a decision you can't find in files: STOP. Tell them. Ask for context. Write it down before the next item.
 
 ## ADR content standards
