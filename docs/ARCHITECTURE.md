@@ -4,7 +4,7 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-05-23 (all 40 ADRs read, all 5 repos code-audited).
+Last verified: 2026-05-24 (native API install on weewx container confirmed running; Redis 7.0.15 installed and active on weewx host, CLEARSKIES_CACHE_URL set in secrets.env).
 
 ---
 
@@ -17,8 +17,24 @@ Last verified: 2026-05-23 (all 40 ADRs read, all 5 repos code-audited).
 | **Dashboard** | weewx-clearskies-dashboard | Weather UI (static SPA, 9 pages + custom pages) | React 19, Vite 8, Tailwind CSS v4, shadcn/ui, Recharts, Leaflet, Lucide + Weather Icons, i18next | None (init container) | — |
 | **Config UI** | weewx-clearskies-stack | Setup wizard (7 steps) + ongoing config admin | FastAPI, Jinja2, HTMX, Pico CSS (Python-only, no Node build step) | 9876 | — |
 | **Caddy** | upstream (caddy:2-alpine) | Reverse proxy, TLS termination (auto Let's Encrypt), static file server | Caddy | 80, 443 | — |
-| **Redis** | upstream (redis:7-alpine) | Optional cache for provider API responses | Redis | 6379 | — |
+| **Redis** | upstream (redis:7-alpine) | Cache for provider API responses (TTLs: forecast 30 min, alerts 5 min, AQI 15 min) | Redis 7.0.15 | 6379 | — |
 | **Design Tokens** | weewx-clearskies-design-tokens | Tailwind config + design variables npm package | Phase 6+ placeholder — no code yet. Tokens currently live in dashboard repo. | — | — |
+
+## Authoritative port registry
+
+**These ports are locked. Do not use different ports without explicit user approval and an update to this table.**
+
+| Port | Protocol | Service | Host | Binding | Notes |
+|------|----------|---------|------|---------|-------|
+| **80** | TCP | Caddy | front-end host | `0.0.0.0` | HTTP → public. Docker publishes as `80:80`. |
+| **443** | TCP+UDP | Caddy | front-end host | `0.0.0.0` | HTTPS + HTTP/3 → public. Docker publishes as `443:443` and `443:443/udp`. |
+| **8765** | TCP | API | weewx host | `0.0.0.0` | TLS always. Caddy proxies `/api/v1/*` here. |
+| **8081** | TCP | API health | weewx host | `127.0.0.1` | `/health/live`, `/health/ready`, `/metrics`. Loopback only. |
+| **8766** | TCP | Realtime | front-end host | Docker network | SSE stream. Caddy proxies `/sse` here. Not exposed to host. |
+| **8082** | TCP | Realtime health | front-end host | `127.0.0.1` | Loopback only. |
+| **9876** | TCP | Config UI | front-end host | Docker network | Wizard + admin. Caddy proxies `/wizard`, `/bootstrap`, `/login`, `/admin`, `/static` here. Not exposed to host. |
+| **6379** | TCP | Redis | weewx host | `127.0.0.1` | Cache (active). Loopback only. CLEARSKIES_CACHE_URL=redis://localhost:6379/0 in secrets.env. |
+| **1883** | TCP | MQTT broker | weewx host | varies | Only if MQTT mode. Realtime subscribes here. |
 
 ## Container inventory
 
@@ -30,9 +46,11 @@ Each repo builds its own container image independently (ADR-034). A dashboard CS
 | `realtime` | `weewx-clearskies-realtime/Dockerfile` | Long-running | front-end host |
 | `dashboard` | `weewx-clearskies-dashboard/Dockerfile` | **Init container** — multi-stage Node 22 build, copies `dist/` to `/dist` volume, exits | front-end host |
 | `caddy` | `caddy:2-alpine` | Long-running | front-end host |
-| `redis` | `redis:7-alpine` | Long-running (optional) | weewx host |
+| `redis` | `redis:7-alpine` | Long-running | weewx host |
 
 > **Config UI is NOT containerized.** It has no Dockerfile and is not in any compose file. It is distributed as a pip package (`weewx-clearskies-config`) and run manually by the operator. ADR-027 says "bundled compose adds a `config` service" — this is an unimplemented requirement. See Known gaps.
+
+> **API native install (2026-05-24):** The API is currently installed natively on the `weewx` LXD container (not in Docker) via pip into a Python 3.12 venv at `/home/ubuntu/repos/weewx-clearskies-api/.venv`, managed by systemd unit `weewx-clearskies-api.service`. Config at `/etc/weewx-clearskies/api.conf`. Health port (8081) also serves TLS. This is the production deployment path on bare-metal / LXD; the Dockerfile exists for Docker compose deployments.
 
 ## Default topology: two-host split (ADR-034)
 
@@ -62,9 +80,12 @@ weewx host                          front-end host
 |-------------|-------------|----------------|
 | `/api/v1/*` | API container (remote `{$CLEARSKIES_API_URL}` or local `api:8765`) | Weather data JSON endpoints |
 | `/sse` | `realtime:8766` (local Docker network) | Server-Sent Events stream |
+| `/wizard*` | `config:9876` (local Docker network) | Setup wizard (7-step flow) |
+| `/bootstrap*` | `config:9876` | First-run admin credential setup |
+| `/login*`, `/logout*` | `config:9876` | Admin auth |
+| `/admin*` | `config:9876` | Ongoing config management |
+| `/static/*` | `config:9876` | Config UI static assets (CSS, JS) |
 | `/*` (fallback) | `/srv/dashboard` static files (shared volume from init container) | React SPA with `try_files` fallback to `index.html` |
-
-**NOT proxied (gap):** `/wizard`, `/bootstrap`, `/login`, `/admin` — config UI is not reachable through Caddy.
 
 Security headers on all responses: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Server` header removed.
 
@@ -220,7 +241,7 @@ Config UI is a standalone FastAPI app, run via `weewx-clearskies-config` CLI on 
 
 API client defaults to `/api/v1` (relative, works with Caddy proxy). Override: `VITE_API_BASE_URL` env var. SSE URL: `VITE_SSE_URL` env var (or `/sse` via proxy). Mock mode: `VITE_USE_MOCK=true`.
 
-No global error boundary. Each component independently shows `TileError` with retry button on API failure. **No first-run/unconfigured detection.**
+Global error boundary (`src/components/error-boundary.tsx`) wraps the entire app tree in `main.tsx`. Catches any uncaught render error (including Leaflet `TileLayer` throws on unresolved tile URL variables) and shows a "Something went wrong / Reload page" recovery UI instead of a blank page. Each component still independently shows per-tile error states for API failures. **No first-run/unconfigured detection** (ARCHITECTURE.md Known gap #3, partially addressed — error boundary exists, first-run redirect still pending).
 
 ## Configuration files
 
@@ -278,7 +299,7 @@ Each module: outbound API call → response parsing → canonical field translat
 | Backend | Config | When to use |
 |---------|--------|------------|
 | `memory` (default) | No config needed | Single worker (v0.1 default) |
-| `redis` (optional) | `CLEARSKIES_CACHE_URL=redis://localhost:6379/0` | Multi-worker deploys |
+| `redis` (**active on weewx host**) | `CLEARSKIES_CACHE_URL=redis://localhost:6379/0` (set in `/etc/weewx-clearskies/secrets.env`) | Multi-worker deploys |
 
 Per-provider TTLs: forecast 30 min, alerts 5 min, AQI 15 min, radar metadata 5 min.
 
@@ -360,7 +381,7 @@ weewx-clearskies-stack/
 |---|-----|----------|---------------|----------------------|----------|
 | 1 | Config UI not in compose/Caddy | ADR-027: "bundled compose adds a `config` service", "accessible at `/admin` through the reverse proxy" | No Dockerfile, not in any compose file, not proxied by Caddy | **Fix required.** Config UI is part of the site UI (like WordPress `/wp-admin`), not a standalone service. Add to compose, add Caddy proxy rules for `/wizard`, `/bootstrap`, `/login`, `/admin`. Operator should never think about it as separate. | First-run UX |
 | 2 | API crashes without api.conf | API must be running for wizard (ADR-038a: wizard calls `/setup/*`) | `FileNotFoundError` at startup | **Fix required.** API needs a "life-support mode" — start without config, serve health port with `{"configured": false}` status, serve `/setup/*` endpoints. Dashboard and wizard use health port to detect unconfigured state. | Wizard flow |
-| 3 | Dashboard shows error wall when unconfigured | Should detect unconfigured state and redirect to `/wizard` | Shows "Unable to load" on every tile, no global error boundary | **Fix required.** Dashboard checks API health port on load. If `configured: false`, redirect to `/wizard`. | First-run UX |
+| 3 | Dashboard shows error wall when unconfigured | Should detect unconfigured state and redirect to `/wizard` | Shows "Unable to load" on every tile; first-run redirect still missing | **Partially fixed.** Global `ErrorBoundary` added (`src/components/error-boundary.tsx`) — blank-page crash on render errors resolved. Remaining: dashboard checks API health port on load; if `configured: false`, redirect to `/wizard`. | First-run UX |
 | 4 | Realtime crashes without realtime.conf | Same pattern as API | `FileNotFoundError` at startup | Lower priority — wizard configures API first; realtime config written during wizard apply step. Consider same life-support pattern. | Wizard flow |
 | 5 | No stack.conf example | ADR-027 references `stack.conf` | Does not exist | Deferred — CLI flags sufficient for v0.1. | Low |
 | 6 | ADR-034 container table incomplete | ADR-027 adds config service | ADR-034 lists only 4 containers | Amend ADR-034 to add config UI row after gap #1 is implemented. | ADR consistency |
