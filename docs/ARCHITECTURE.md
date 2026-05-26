@@ -15,7 +15,7 @@ Last verified: 2026-05-24 (native API install on weewx container confirmed runni
 | **API** | weewx-clearskies-api | REST API for weewx archive data, provider aggregation, setup endpoints | FastAPI (Python 3.12+), sync handlers, SQLAlchemy 2.x sync, uvicorn | 8765 | 8081 |
 | **Realtime** | weewx-clearskies-realtime | Bridges weewx loop packets to Server-Sent Events | FastAPI (Python), sse-starlette, uvicorn | 8766 | 8082 |
 | **Dashboard** | weewx-clearskies-dashboard | Weather UI (static SPA, 9 pages + custom pages) | React 19, Vite 8, Tailwind CSS v4, shadcn/ui, Recharts, Leaflet, Lucide + Weather Icons, i18next | None (init container) | — |
-| **Config UI** | weewx-clearskies-stack | Setup wizard (7 steps) + ongoing config admin | FastAPI, Jinja2, HTMX, Pico CSS (Python-only, no Node build step) | 9876 | — |
+| **Config UI** | weewx-clearskies-stack | Setup wizard (8 steps) + ongoing config admin | FastAPI, Jinja2, HTMX, Pico CSS (Python-only, no Node build step) | 9876 | — |
 | **Caddy** | upstream (caddy:2-alpine) | Reverse proxy, TLS termination (auto Let's Encrypt), static file server | Caddy | 80, 443 | — |
 | **Redis** | upstream (redis:7-alpine) | Cache for provider API responses (TTLs: forecast 30 min, alerts 5 min, AQI 15 min) | Redis 7.0.15 | 6379 | — |
 | **Design Tokens** | weewx-clearskies-design-tokens | Tailwind config + design variables npm package | Phase 6+ placeholder — no code yet. Tokens currently live in dashboard repo. | — | — |
@@ -84,10 +84,52 @@ weewx host                          front-end host
 | `/bootstrap*` | `config:9876` | First-run admin credential setup |
 | `/login*`, `/logout*` | `config:9876` | Admin auth |
 | `/admin*` | `config:9876` | Ongoing config management |
+| `/webcam/*` | `file_server` from `/var/www/clearskies/webcam/` | Live webcam still + timelapse. No `try_files` — returns 404 for missing files. |
 | `/static/*` | `config:9876` | Config UI static assets (CSS, JS) |
 | `/*` (fallback) | `/srv/dashboard` static files (shared volume from init container) | React SPA with `try_files` fallback to `index.html` |
 
 Security headers on all responses: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Server` header removed.
+
+## Webcam
+
+The webcam feature is a UI concern. The API has no webcam knowledge.
+
+### File serving
+
+An external capture process writes two files to the weewx LXD container at `/var/www/weewx/webcam/`:
+
+- `weather_cam.jpg` — live still image
+- `weewx_timelapse.mp4` — timelapse video
+
+An LXD disk device mounts the host path `/mnt/weewx/webcam` read-only into the `weather-dev` container at `/var/www/clearskies/webcam/`. Caddy serves the `/webcam/*` path via `file_server` from that directory with no `try_files` fallback — a request for a missing file returns 404 immediately.
+
+### Configuration flow
+
+The setup wizard (stack repo, step 7 of 8) collects webcam settings: enabled flag, image URL, video URL, and refresh interval. On apply (`/wizard/apply`), the wizard writes two outputs:
+
+| Output | Path | Purpose |
+|--------|------|---------|
+| `webcam.json` | `/var/www/clearskies/webcam.json` | Static JSON fetched directly by the dashboard; contains `enabled`, `imageUrl`, `videoUrl`, `refreshInterval` |
+| `[webcam]` section | `stack.conf` | Persists settings so the wizard can pre-fill them on re-run |
+
+The dashboard fetches `/webcam.json` on the Now page. If `enabled` is true, it renders the webcam card. If the fetch fails or `enabled` is false, the card is hidden gracefully — no error state surfaced to the user.
+
+### Data flow
+
+```
+External capture process
+  → /mnt/weewx/webcam/ (host path on weewx container)
+  → LXD disk device (read-only mount)
+  → /var/www/clearskies/webcam/ (weather-dev container)
+  → Caddy file_server (/webcam/*)
+  → browser
+
+Wizard step 7 (apply)
+  → /var/www/clearskies/webcam.json  (dashboard config)
+  → stack.conf [webcam]              (wizard re-run pre-fill)
+  → Dashboard fetches /webcam.json on Now page load
+  → renders webcam card if enabled, hides gracefully on error
+```
 
 ## API endpoints (30+ total, verified from code)
 
@@ -210,8 +252,9 @@ Config UI is a standalone FastAPI app, run via `weewx-clearskies-config` CLI on 
 | `/wizard/step/6` | POST | Provider selection + API keys |
 | `/wizard/step/6/key-fields/{domain}/{id}` | GET | Inline key entry fields |
 | `/wizard/step/6/test-key/{id}` | POST | Test provider connectivity |
-| `/wizard/step/7` | GET | Review summary |
-| `/wizard/apply` | POST | Finalize config + write files |
+| `/wizard/step/7` | GET/POST | Webcam settings (enabled, image URL, video URL, refresh interval) |
+| `/wizard/step/8` | GET | Review summary |
+| `/wizard/apply` | POST | Finalize config + write files (writes `api.conf`, `webcam.json`, `stack.conf`) |
 | `/wizard/restart-status` | GET | Service restart status |
 
 ### Admin (ongoing config)
