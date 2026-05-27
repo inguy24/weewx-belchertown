@@ -103,8 +103,8 @@ Wire each new endpoint's router into `main.py` following the pattern task 1 set.
 
 - **Query parameters.**
   - `period` — `ytd` (default), `all-time`, or `YYYY` (4-digit year). Validate; reject malformed.
-  - `section` — optional enum, restrict to one of the OpenAPI's 9 values. Omit = all sections.
-- **Sections.** Per OpenAPI enum: `temperature, wind, rain, humidity, barometer, sun, aqi, inside-temp, custom`. `custom` is operator-mapped non-stock columns from `ColumnRegistry.unmapped` — but operator mapping isn't built yet (Phase 4), so `custom` returns `[]` this round.
+  - `section` — optional enum, restrict to one of the OpenAPI's 7 values. Omit = all sections.
+- **Sections.** Per OpenAPI enum: `temperature, wind, rain, humidity, barometer, sun, aqi`. (`inside-temp` and `custom` were removed — see decision note below.)
 - **Per-section field mapping (lead-confirmed; bake into `weewx_clearskies_api/services/records.py` as a constant).** Each entry: `(label, canonicalField, kind: high|low, aggregator: max|min|sum|avg)`. Within a section, omit any record whose `canonicalField` is not in `ColumnRegistry.mapped`; if the section ends up with zero records after pruning, omit the section key entirely (the "self-hide" rule below).
   - **temperature** (primary field `outTemp`):
     - `("High temperature", outTemp, high, max)`
@@ -131,12 +131,7 @@ Wire each new endpoint's router into `main.py` following the pattern task 1 set.
     - `("High solar radiation", radiation, high, max)`
     - `("High UV index", UV, high, max)`
   - **aqi** — self-hides this round. AQI in this project's weewx is provided by the `AirVisualService` extension, which writes operator-custom columns (`aqi`, `main_pollutant`, `aqi_level`, `aqi_location`) per `reference/weather-skin.md`. Operator-custom columns flow through the Phase 4 operator-mapping UI (per ADR-035 + ADR-013) before the api can surface them. The `aqi` section reappears in this endpoint when the mapping UI ships in Phase 4 OR when 3b's AQI provider plugin lands, whichever the operator configures. No special-case wiring this round.
-  - **inside-temp** (primary fields `inTemp` and/or `inHumidity`):
-    - `("High indoor temperature", inTemp, high, max)`
-    - `("Low indoor temperature", inTemp, low, min)`
-    - `("High indoor humidity", inHumidity, high, max)`
-    - `("Low indoor humidity", inHumidity, low, min)`
-  - **custom** — returns `[]` this round (operator-mapping UI is Phase 4 per ADR-027).
+  - **Decision: `inside-temp` and `custom` sections removed.** `inside-temp` was dropped because indoor temperature is not a weather record meaningful to site visitors — it reflects the station hardware environment, not outdoor conditions. `custom` was deferred to future extensibility work; surfacing it before the Phase 4 operator-mapping UI (ADR-027) ships would produce an empty section every time, adding noise without value. Both were removed from the OpenAPI enum simultaneously (2026-05-26).
 - **Period filtering.**
   - `ytd` — `WHERE dateTime >= jan_1_of_current_utc_year`.
   - `all-time` — no time filter.
