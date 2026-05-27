@@ -24,7 +24,7 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-016](ADR-016-severe-weather-alerts.md) | Severe weather alerts source — clearskies-api plugin modules per ADR-038; day-1 set: nws/aeris/openweathermap; single source per deploy; setup wizard suggests by region | Accepted | 2026-05-02 |
 | [ADR-017](ADR-017-provider-response-caching.md) | Provider-response caching — pluggable backend (`memory` default, `redis` optional); per-provider TTL declarations; multi-worker requires Redis | Accepted | 2026-05-02 |
 | [ADR-018](ADR-018-api-versioning-policy.md) | API versioning policy — URL path; major bump only on breaking changes; no support-window promise (GPL v3 AS-IS); RFC 9457 errors | Accepted | 2026-05-02 |
-| [ADR-019](ADR-019-units-handling.md) | Units handling — server passes weewx target_unit through with metadata; no server-side conversion; no per-user override at v0.1 | Accepted | 2026-05-02 |
+| [ADR-019](ADR-019-units-handling.md) | Units handling — server passes weewx target_unit through with metadata; no server-side conversion; no per-user override at v0.1 | Superseded by ADR-041, ADR-042 | 2026-05-02 |
 | [ADR-020](ADR-020-time-zone-handling.md) | Time zone handling — UTC on wire; station-local display via IANA TZ in StationMetadata; `Intl.DateTimeFormat`; no per-user override at v0.1 | Accepted | 2026-05-02 |
 | [ADR-021](ADR-021-i18n-strategy.md) | i18n strategy — 13 locales for v0.1 (en/de/es/fil/fr/it/ja/nl/pt-PT/pt-BR/ru/zh-CN/zh-TW); no RTL | Accepted | 2026-05-02 |
 | [ADR-022](ADR-022-theming-branding-mechanism.md) | Theming / branding mechanism — CSS variables + runtime config; curated accent palette (6 entries); operator logo upload; custom.css escape hatch | Accepted | 2026-05-02 |
@@ -47,6 +47,10 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-038a](ADR-038a-wizard-api-channel.md) | Wizard-to-API secure channel & API-mediated configuration (amends ADR-027, ADR-008) | Accepted | 2026-05-20 |
 | [ADR-039](ADR-039-distribution-installation-mechanism.md) | Distribution / installation — PyPI + container registry + GitHub Releases; Linux native or Docker; macOS native or Docker; Windows = Docker Desktop; no bespoke OS installers | Accepted | 2026-05-04 |
 | [ADR-040](ADR-040-earthquake-providers.md) | Earthquake providers — day-1 set: usgs/geonet/emsc/renass; single source per deploy; setup wizard suggests by region; USGS provides global fallback | Accepted | 2026-05-05 |
+| [ADR-041](ADR-041-realtime-bff.md) | Realtime service as BFF — proxies API, serves SSE, applies unit conversion; single dashboard gateway (amends ADR-005, supersedes ADR-019) | Accepted | 2026-05-26 |
+| [ADR-042](ADR-042-unit-system.md) | Unit system — full weewx compatibility; 14 unit groups; BFF converts to operator display units; dashboard has zero unit knowledge | Accepted | 2026-05-26 |
+| [ADR-043](ADR-043-skinconf-compliance.md) | skin.conf compliance — keep/replace/ignore per section; wizard imports existing skin.conf for migration | Accepted | 2026-05-26 |
+| [ADR-044](ADR-044-sky-condition-classification.md) | Current conditions text — sky (kc + σ variability via Ineichen-Perez/pvlib, provider cloud cover primary), precipitation (rain gauge + wet-bulb filter), wind (Beaufort/WMO), comfort (dewpoint/NWS), composition rules, day/night, sensor fusion priorities | Accepted | 2026-05-26 |
 
 > **Note:** This list is not assumed complete. The user has explicitly flagged that decisions get missed. New Pinned slots are added as they're identified, before the corresponding work begins.
 
