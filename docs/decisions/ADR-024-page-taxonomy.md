@@ -122,6 +122,21 @@ At dashboard startup, the api service checks: does `/NOAA/` directory exist on t
 - Mobile bottom-nav overflow design beyond "≤ 5 slots, More for the rest" — Phase 3.
 - Configuration UI page-management UX — [ADR-027](ADR-027-config-and-setup-wizard.md) scope.
 
+## Amendment: 2026-05-27
+
+### Earthquakes → Seismic rename
+
+The "Earthquakes" page is renamed to "Seismic" in the navigation menu and route (`/seismic`). The API endpoint path (`/api/v1/earthquakes`) is unchanged for backwards compatibility. The page gains a two-card layout (map + scrollable list) and fault line overlay (ADR-046). Wizard adds seismic configuration fields (radius, minimum magnitude, default time window).
+
+### Almanac expansions
+
+The Almanac page gains two features previously deferred to Phase 6+:
+
+1. **Climatological values chart** — 12-month averages (high/low temp, dewpoint, rainfall) from archive data. New `/api/v1/climatology/monthly` endpoint.
+2. **Expanded astronomy** — planet visibility (evening/morning/all-night classification), special moon names (traditional + harvest + blue + hunter + supermoon), lunar eclipses, meteor showers. Four new almanac endpoints.
+
+The "Phase 6+" note in the Almanac per-page content section (item 4) is superseded by this amendment.
+
 ## References
 - Related: [ADR-002](ADR-002-tech-stack.md), [ADR-009](ADR-009-design-direction.md), [ADR-010](ADR-010-canonical-data-model.md), [ADR-011](ADR-011-multi-station-scope.md), [ADR-014](ADR-014-almanac-data-source.md), [ADR-015](ADR-015-radar-map-tiles-strategy.md), [ADR-022](ADR-022-theming-branding-mechanism.md), [ADR-023](ADR-023-light-dark-mode-mechanism.md), [ADR-026](ADR-026-accessibility-commitments.md), [ADR-027](ADR-027-config-and-setup-wizard.md).
 - Walk: [CLEAR-SKIES-CONTENT-DECISIONS.md](../reference/CLEAR-SKIES-CONTENT-DECISIONS.md), [DESIGN-INSPIRATION-NOTES.md](../reference/DESIGN-INSPIRATION-NOTES.md), [BELCHERTOWN-CONTENT-INVENTORY.md](../reference/BELCHERTOWN-CONTENT-INVENTORY.md).

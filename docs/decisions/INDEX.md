@@ -51,6 +51,8 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-042](ADR-042-unit-system.md) | Unit system — full weewx compatibility; 14 unit groups; BFF converts to operator display units; dashboard has zero unit knowledge | Accepted | 2026-05-26 |
 | [ADR-043](ADR-043-skinconf-compliance.md) | skin.conf compliance — keep/replace/ignore per section; wizard imports existing skin.conf for migration | Accepted | 2026-05-26 |
 | [ADR-044](ADR-044-sky-condition-classification.md) | Current conditions text — sky (kc + σ variability via Ineichen-Perez/pvlib, provider cloud cover primary), precipitation (rain gauge + wet-bulb filter), wind (Beaufort/WMO), comfort (dewpoint/NWS), composition rules, day/night, sensor fusion priorities | Accepted | 2026-05-26 |
+| [ADR-045](ADR-045-background-cache-warming.md) | Background cache warming — daemon thread pre-computes slow endpoints on configurable intervals; reuses ADR-017 CacheBackend | Proposed | 2026-05-27 |
+| [ADR-046](ADR-046-gem-active-faults.md) | GEM Global Active Faults Database for seismic fault overlay — CC-BY-SA 4.0, bundled GeoJSON, radius-clipped serving | Proposed | 2026-05-27 |
 
 > **Note:** This list is not assumed complete. The user has explicitly flagged that decisions get missed. New Pinned slots are added as they're identified, before the corresponding work begins.
 
