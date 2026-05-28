@@ -1,6 +1,7 @@
 ---
-status: Accepted (2026-05-26)
+status: Proposed
 date: 2026-05-26
+amended: 2026-05-28
 deciders: shane
 ---
 
@@ -15,6 +16,8 @@ The existing implementation (`local_conditions.py` in the API repo) uses naive s
 **Current location of logic:** API repo (`services/local_conditions.py`). Per ADR-041, display-facing transformations belong in the BFF. This ADR governs the methodology regardless of which service hosts it.
 
 ## Decision
+
+> **Amendment (2026-05-28):** Sections 5–8 added. §5 comfort/humidity descriptor replaced with 2D temperature-comfort matrix (§5–7). §8 input stability specification added. §4 Beaufort 1 renamed "Very Light Breeze". Original §6–7 renumbered to §9–10.
 
 ### 1. Sky condition
 
@@ -118,7 +121,7 @@ Rain rate thresholds (AMS Glossary of Meteorology; WMO classification):
 | Beaufort | m/s | Label |
 |---|---|---|
 | 0 | < 0.5 | Calm |
-| 1 | 0.5–1.5 | Light Air |
+| 1 | 0.5–1.5 | Very Light Breeze |
 | 2 | 1.6–3.3 | Light Breeze |
 | 3 | 3.4–5.4 | Gentle Breeze |
 | 4 | 5.5–7.9 | Moderate Breeze |
@@ -131,28 +134,143 @@ Rain rate thresholds (AMS Glossary of Meteorology; WMO classification):
 | 11 | 28.5–32.6 | Violent Storm |
 | 12 | ≥ 32.7 | Hurricane Force |
 
+> **Amendment (2026-05-28):** Beaufort 1 renamed from "Light Air" to "Very Light Breeze". All other labels unchanged.
+
 **Gusty qualifier:** Append "and Gusty" when `windGust ≥ windSpeed + 12 mph` AND `windGust ≥ 18 mph`. This follows NWS ASOS practice where "gusty" means sustained-to-gust spread exceeds a meaningful threshold.
 
 **Calm suppression:** Beaufort 0 (Calm) is omitted from the composed text — "Overcast" reads better than "Overcast and Calm."
 
-### 5. Comfort / humidity descriptor
+### 5. Temperature axis
 
-**Dewpoint-based** (NWS and AMS practice — dewpoint is a better humidity indicator than relative humidity because it is independent of temperature):
+> **Amendment (2026-05-28):** This section replaces the original §5 (Comfort / humidity descriptor), which used a 1D dewpoint-only axis. The new design is a 2D matrix combining an apparent-temperature axis (this section) with a moisture axis (§6).
 
-| Dewpoint | Descriptor |
+The temperature dimension is derived from **apparent temperature** (`appTemp`, in °F). Apparent temperature (also called "feels like" temperature) accounts for both wind chill and heat index effects, giving a unified thermal comfort metric across all seasons.
+
+| Tier | appTemp range | Base label |
+|---|---|---|
+| 1 | ≤ −10°F (≤ −23.3°C) | Dangerously Cold |
+| 2 | −9 to 0°F (−22.8 to −17.8°C) | Bitter Cold |
+| 3 | 1 to 10°F (−17.2 to −12.2°C) | Extreme Cold |
+| 4 | 11 to 20°F (−11.7 to −6.7°C) | Very Cold |
+| 5 | 21 to 32°F (−6.1 to 0°C) | Cold |
+| 6 | 33 to 45°F (0.6 to 7.2°C) | Chilly |
+| 7 | 46 to 60°F (7.8 to 15.6°C) | Cool |
+| 8 | 61 to 75°F (16.1 to 23.9°C) | Pleasant |
+| 9 | 76 to 85°F (24.4 to 29.4°C) | Warm |
+| 10 | 86 to 95°F (30 to 35°C) | Hot |
+| 11 | 96 to 104°F (35.6 to 40°C) | Very Hot |
+| 12 | ≥ 105°F (≥ 40.6°C) | Dangerously Hot |
+
+**Source:** `appTemp` is a weewx-computed field available in loop packets and archive records. When `appTemp` is null or absent, the temperature label is omitted.
+
+### 6. Moisture axis
+
+> **Amendment (2026-05-28):** New section. Dewpoint-based moisture tiers for the 2D matrix.
+
+The moisture dimension uses **dewpoint** (°F). Dewpoint is independent of air temperature and is the standard NWS and AMS measure of atmospheric moisture loading.
+
+| Tier | Dewpoint range | Moisture modifier |
+|---|---|---|
+| A | < 45°F (< 7.2°C) | (none — omitted) |
+| B | 45–54°F (7.2–12.2°C) | (none — omitted) |
+| C | 55–59°F (12.8–15°C) | Slightly Humid |
+| D | 60–64°F (15.6–17.8°C) | Humid |
+| E | 65–69°F (18.3–20.6°C) | Very Humid |
+| F | 70–74°F (21.1–23.3°C) | Oppressive |
+| G | ≥ 75°F (≥ 23.9°C) | Miserable |
+
+Tiers A–B (dewpoint below 55°F) produce no humidity modifier — the temperature label stands alone.
+
+**Near-saturation override:** When **dewpoint depression** (outTemp − dewpoint) ≤ 5°F, regardless of the absolute dewpoint value, append "and Foggy" to the conditions text. This indicates near-saturation conditions likely producing fog, heavy dew, or frost. The override applies at any temperature tier and takes precedence over the normal moisture modifier for that tier.
+
+### 7. Full 2D matrix
+
+> **Amendment (2026-05-28):** New section. Defines the composite descriptor for every temperature-tier × moisture-tier combination.
+
+**Composition rules for the matrix:**
+
+1. **Warm temperatures, dry moisture (tiers 6–12 × A–B):** output = temperature label only (e.g., "Pleasant", "Warm", "Cool").
+2. **Warm temperatures, humid moisture (tiers 6–12 × C–G):** output = temperature label + "and" + moisture label (e.g., "Warm and Humid", "Hot and Oppressive").
+3. **Cold temperatures (tiers 1–5, appTemp ≤ 32°F):** moisture modifier is always omitted, regardless of dewpoint tier. Cold air cannot hold enough moisture for humidity descriptors to be physically meaningful. Output = temperature label only.
+4. **NWS Heat Index danger escalation** (takes precedence over temperature+moisture label):
+   - Heat Index ≥ 104°F (40°C): output = "Dangerous Heat"
+   - Heat Index ≥ 125°F (51.7°C): output = "Extreme Danger Heat"
+5. **NWS Wind Chill danger escalation** (takes precedence over temperature label):
+   - Wind Chill ≤ −25°F (−31.7°C): output = "Dangerous Cold"
+   - Wind Chill ≤ −45°F (−42.8°C): output = "Extreme Danger Cold"
+6. **Near-saturation override** (§6): when dewpoint depression ≤ 5°F, append "and Foggy" to the output of any rule above (including danger escalations).
+
+NWS danger thresholds source: NWS Heat Index Chart (HI ≥ 103°F Danger / ≥ 125°F Extreme Danger) and NWS Wind Chill Chart (WC ≤ −25°F Danger / ≤ −45°F Extreme Danger). The HI boundary of 104°F used here corresponds to the lower bound of the NWS "Danger" zone (103–124°F, conservatively rounded to 104°F to avoid false triggers at 103°F sensor noise).
+
+**Matrix — rows = temperature tier, columns = moisture tier:**
+
+Cells marked "—" are physically implausible (e.g., dewpoint ≥ 55°F when appTemp ≤ 32°F requires unusual atmospheric conditions such as advection fog; the cold-temperature suppression rule in item 3 handles them uniformly regardless).
+
+| appTemp tier | A (dp < 45°F) | B (dp 45–54°F) | C (dp 55–59°F) | D (dp 60–64°F) | E (dp 65–69°F) | F (dp 70–74°F) | G (dp ≥ 75°F) |
+|---|---|---|---|---|---|---|---|
+| **1** ≤ −10°F Dangerously Cold | Dangerously Cold | Dangerously Cold | Dangerously Cold | Dangerously Cold | Dangerously Cold | Dangerously Cold | Dangerously Cold |
+| **2** −9 to 0°F Bitter Cold | Bitter Cold | Bitter Cold | Bitter Cold | Bitter Cold | Bitter Cold | Bitter Cold | Bitter Cold |
+| **3** 1–10°F Extreme Cold | Extreme Cold | Extreme Cold | Extreme Cold | Extreme Cold | Extreme Cold | Extreme Cold | Extreme Cold |
+| **4** 11–20°F Very Cold | Very Cold | Very Cold | Very Cold | Very Cold | Very Cold | Very Cold | Very Cold |
+| **5** 21–32°F Cold | Cold | Cold | Cold | Cold | Cold | Cold | Cold |
+| **6** 33–45°F Chilly | Chilly | Chilly | Chilly and Slightly Humid | Chilly and Humid | Chilly and Very Humid | Chilly and Oppressive | Chilly and Miserable |
+| **7** 46–60°F Cool | Cool | Cool | Cool and Slightly Humid | Cool and Humid | Cool and Very Humid | Cool and Oppressive | Cool and Miserable |
+| **8** 61–75°F Pleasant | Pleasant | Pleasant | Pleasant and Slightly Humid | Pleasant and Humid | Pleasant and Very Humid | Pleasant and Oppressive | Pleasant and Miserable |
+| **9** 76–85°F Warm | Warm | Warm | Warm and Slightly Humid | Warm and Humid | Warm and Very Humid | Warm and Oppressive | Warm and Miserable |
+| **10** 86–95°F Hot | Hot | Hot | Hot and Slightly Humid | Hot and Humid | Hot and Very Humid | Hot and Oppressive | Hot and Miserable |
+| **11** 96–104°F Very Hot | Very Hot | Very Hot | Very Hot and Slightly Humid | Very Hot and Humid | Very Hot and Very Humid | Very Hot and Oppressive | Very Hot and Miserable |
+| **12** ≥ 105°F Dangerously Hot | Dangerously Hot | Dangerously Hot | Dangerously Hot and Slightly Humid | Dangerously Hot and Humid | Dangerously Hot and Very Humid | Dangerously Hot and Oppressive | Dangerously Hot and Miserable |
+
+**Danger overrides (applied after table lookup):**
+
+| Condition | Output |
 |---|---|
-| < 55°F (12.8°C) | (comfortable — omitted) |
-| 55–59°F (12.8–15°C) | (comfortable — omitted) |
-| 60–64°F (15.6–17.8°C) | Humid |
-| 65–69°F (18.3–20.6°C) | Very Humid |
-| 70–74°F (21.1–23.3°C) | Oppressive |
-| ≥ 75°F (23.9°C) | Miserable |
+| Heat Index ≥ 125°F | "Extreme Danger Heat" |
+| Heat Index ≥ 104°F | "Dangerous Heat" |
+| Wind Chill ≤ −45°F | "Extreme Danger Cold" |
+| Wind Chill ≤ −25°F | "Dangerous Cold" |
 
-Thresholds aligned with NWS dewpoint comfort scale. The descriptor is omitted when conditions are comfortable (dewpoint < 60°F) to avoid cluttering the text.
+Danger overrides supersede the table cell. Near-saturation "and Foggy" appended after any output, including danger overrides (e.g., "Dangerous Cold and Foggy").
 
-### 6. Composition rules
+### 8. Input stability
 
-Components are assembled in priority order: **[sky, precipitation, wind, comfort]**. Null/omitted components are dropped.
+> **Amendment (2026-05-28):** New section. Documents smoothing, hysteresis, and hold-time design to prevent conditions text from bouncing across tier boundaries as raw loop packets oscillate.
+
+Three stability mechanisms are applied in sequence before any threshold comparison:
+
+1. **Smoothed inputs** — ring-buffer averages over the windows below.
+2. **Hysteresis** — once a tier is established, require crossing 2°F / 2 mph past the opposite boundary before switching.
+3. **Minimum hold time** — the composed conditions text string is held for 5 minutes minimum before any change is allowed (backup mechanism if smoothing and hysteresis do not fully eliminate oscillation).
+
+**Smoothing windows:**
+
+| Input | Buffer window | Samples (~5s interval) | Rationale |
+|---|---|---|---|
+| Solar radiation (kc) | 30 min | 400 | ADR-044 §1 spec — sky conditions change slowly |
+| UV | 10 min | 120 | Cloud-pass noise |
+| appTemp | 10 min | 120 | Temperature does not legitimately change 5°F in seconds |
+| dewpoint | 10 min | 120 | Same |
+| outTemp (depression calc) | 10 min | 120 | Paired with dewpoint for near-saturation check |
+| windSpeed | 5 min | 60 | Wind is legitimately gusty — shorter window |
+| windGust | 5 min | 60 | Same |
+| rainRate | 2 min | 24 | Rain onset/cessation must register quickly |
+| heatindex | 10 min | 120 | Follows temperature |
+| windchill | 10 min | 120 | Follows temperature + wind |
+
+**Hysteresis values:**
+
+| Dimension | Hysteresis band |
+|---|---|
+| All temperature thresholds (appTemp, heatindex, windchill) | ±2°F |
+| All wind thresholds (windSpeed, windGust) | ±2 mph |
+| All dewpoint thresholds | ±2°F |
+| Rain rate thresholds | ±0.02 in/hr |
+
+**Minimum hold time:** 5 minutes. The conditions text string is cached after each composition. If smoothed+hysteresis inputs produce a different result, the new text replaces the cached value only after the 5-minute hold expires. This prevents rapid flipping even when smoothing and hysteresis do not fully suppress boundary oscillation.
+
+### 9. Composition rules
+
+Components are assembled in priority order: **[sky, precipitation, wind, temperature-comfort]**. Null/omitted components are dropped.
 
 | Parts | Format |
 |---|---|
@@ -166,7 +284,7 @@ Examples:
 - "Mostly Cloudy, Heavy Rain, Fresh Breeze and Gusty, and Oppressive"
 - "Moderate Breeze" (night, no provider cloud cover, no precipitation)
 
-### 7. Data source priority
+### 10. Data source priority
 
 Each component independently selects its source:
 
@@ -175,7 +293,7 @@ Each component independently selects its source:
 | Sky condition | Solar radiation kc + σ(kc) analysis (day) | Provider cloud cover % (night, twilight, startup, no pyranometer) |
 | Precipitation | Local rain gauge | Provider precipType (with wet-bulb filter) |
 | Wind | Local anemometer | (no fallback — omit if absent) |
-| Comfort | Local dewpoint | (no fallback — omit if absent) |
+| Temperature-comfort | Local appTemp + dewpoint + outTemp | (no fallback — omit if absent) |
 
 Local sensor data is always authoritative over provider forecasts. Provider data is used only when local sensors cannot answer the question (sky condition at night, frozen precipitation type).
 
