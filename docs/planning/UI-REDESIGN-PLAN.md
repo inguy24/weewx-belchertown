@@ -97,7 +97,7 @@ the user reviews before it's binding.
 > a data-display component before you know the data exists and the design tokens are set.
 
 ### Track A — Foundations (design system; no provider-data dependency)
-- **A0. ADR reconciliation gate (UI-impacting ADRs).** Before any component design, make every
+- **A0. ADR reconciliation gate (UI-impacting ADRs).** ✅ **DONE — 2026-05-29 (reconciled + re-approved + deployed).** Before any component design, make every
   UI-impacting ADR **complete and accurate against the current code**. This is NOT a new ADR — it edits
   existing ADRs **in place** (status → Proposed → user re-approves, per `rules/clearskies-process.md`).
   Known divergences to fix (see [C0-PAGE-INVENTORY.md](../design/C0-PAGE-INVENTORY.md) reconciliation
@@ -178,13 +178,15 @@ Mockups are throwaway exploration artifacts, NOT the React implementation.
 
 ## Next action
 **C0 (page inventory) is DONE** → [docs/design/C0-PAGE-INVENTORY.md](../design/C0-PAGE-INVENTORY.md)
-(the full Track C work list + the as-built reconciliation surface). Next, in this order/parallelism:
-- **A0 (ADR reconciliation gate)** — make UI-impacting ADRs complete & accurate vs current code
-  **before** component design. Foundational; precedes A1.
+(the full Track C work list + the as-built reconciliation surface). **A0 (ADR reconciliation gate) is DONE**
+— 2026-05-29 (reconciled, user re-approved, deployed). Next, in this order/parallelism:
 - **A1 (theme & color system)** as the first Proposed ADR — root dependency for dark-mode backgrounds
-  & all visuals. Starts once A0's theming-relevant ADRs (022/023/009) are confirmed accurate.
+  & all visuals. Now unblocked (A0's theming-relevant ADRs 022/023/009 confirmed accurate).
+- **A2 (background system)**, **A3 (icon system)**, **A4 (card model & grid-compatible sizing)** —
+  the remaining Track A foundations, sequenced after A1.
 - **B2 + B3 global research gates** — Recharts background support + a11y-contrast/perf budget (can run
-  in parallel with A0/A1).
+  in parallel with Track A).
 
-Then walk Track C component by component using the per-component workflow (prior-decision check → data inventory
-→ composition → mockup → ADR → exec plan). Per-component data inventory (B1) happens just-in-time inside each.
+Then walk Track C component by component (C1…C6, plus any additional cards from the full C0 work list) using the per-component workflow
+(prior-decision check → data inventory → composition → mockup → ADR → exec plan). Per-component data
+inventory (B1) happens just-in-time inside each.
