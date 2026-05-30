@@ -109,8 +109,17 @@ the user reviews before it's binding.
   041/042/044. → edits to existing ADRs (no new ADR). **This gate precedes A1.**
 - **A1. Theme & color system** (light + dark, tokens) → ADR. 
 - **A2. Background system** (condition × theme, layered, photographic, operator-replaceable) → ADR.
-  Has a **config/asset feature** dimension (upload/override + storage/serving) — may split into a design ADR
-  + a config ADR.
+  🔵 **ADR drafted + prototype accepted (2026-05-30).** Approach validated in a browser prototype the
+  operator accepted ([mockups/background-prototype.html](../design/mockups/background-prototype.html)):
+  static **blurred scene photo + real on-glass rain/snow overlay** (screen blend, 3px blur, 75% day /
+  25% night opacity). Decisions in **[ADR-047](../decisions/ADR-047-background-system.md) (Proposed —
+  awaiting user approval)**; build tasks in **[briefs/A2-background-system.md](briefs/A2-background-system.md)**;
+  exact recipe + preserved code in
+  [background-system-implementation-notes.md](../design/background-system-implementation-notes.md).
+  Snow/storm scenes driven by **provider current conditions** (PWS can't gauge snow); day/night from
+  **almanac sun** (not the theme toggle); scene computed server-side with a 15-min precip-linger.
+  Operator upload/storage mechanism = **separate config ADR (deferred)**. Lightning-assisted storm
+  detection parked in the [main plan backlog](CLEAR-SKIES-PLAN.md).
 - **A3. Icon system** — confirm Weather Icons (hero) + Lucide (utility) satisfy the two-family preference → ADR (likely short).
 - **A4. Card model & grid-compatible sizing** (1/2/3/4-col footprints, spacing/row tokens; NOT the grid engine) → ADR.
 

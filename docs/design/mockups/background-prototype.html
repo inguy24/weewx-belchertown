@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clear Skies — background + glass overlay prototype (static, real photos)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+
+  #stage { position: fixed; inset: 0; background: #000; }
+
+  /* Layer 1: the weather scene photo. Blurred only when precipitation is on the "glass". */
+  #bgBlur {
+    position: absolute; inset: -40px;
+    background-size: cover; background-position: center;
+    filter: brightness(1) saturate(1.05);
+    transform: scale(1.05);
+  }
+
+  /* Layer 2: a REAL photo of rain/frost on glass, blended over the scene. No animation. */
+  #overlay {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0; mix-blend-mode: overlay;
+    transition: opacity 0.2s ease;
+  }
+
+  #scrim { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 60%, rgba(0,0,0,0.32) 100%); }
+
+  /* translucent demo card to judge legibility over the composite */
+  #card {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: min(420px, 86vw); padding: 28px 30px; border-radius: 22px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.28);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  #card.darktext { color: #0f172a; text-shadow: 0 1px 2px rgba(255,255,255,0.4); }
+  #card .temp { font-size: 78px; font-weight: 700; line-height: 1; letter-spacing: -2px; }
+  #card .cond { font-size: 20px; font-weight: 500; margin-top: 4px; opacity: 0.95; }
+  #card .row { display: flex; gap: 22px; margin-top: 18px; font-size: 14px; opacity: 0.9; }
+  #card .row b { font-weight: 600; }
+
+  #attrib {
+    position: absolute; right: 12px; bottom: 10px; z-index: 5;
+    font-size: 11px; color: rgba(255,255,255,0.82);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.22); padding: 3px 8px; border-radius: 6px;
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  }
+  #attrib:empty { display: none; }
+
+  #panel {
+    position: absolute; left: 12px; top: 12px; z-index: 10;
+    background: rgba(15,23,42,0.85); color: #e2e8f0; padding: 14px 16px;
+    border-radius: 12px; font-size: 13px; width: 256px;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4); max-height: 94vh; overflow:auto;
+  }
+  #panel h1 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  #panel .sub { font-size: 11px; opacity: 0.7; margin-bottom: 12px; line-height: 1.35; }
+  #panel label { display: block; margin: 10px 0 4px; font-weight: 600; font-size: 12px; }
+  #panel select, #panel input[type=range] { width: 100%; }
+  #panel select { padding: 5px; border-radius: 6px; border: 1px solid #475569;
+    background: #1e293b; color: #e2e8f0; }
+  .seg { display: flex; gap: 6px; margin-top: 4px; }
+  .seg button { flex: 1; padding: 6px 0; border-radius: 6px; border: 1px solid #475569;
+    background: #1e293b; color: #cbd5e1; cursor: pointer; font-size: 12px; }
+  .seg button.on { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .val { float:right; opacity:0.7; font-weight:400; }
+  #panel .note { font-size: 10px; opacity: 0.6; margin-top: 12px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bgBlur"></div>
+  <div id="overlay"></div>
+  <div id="scrim"></div>
+
+  <div id="card">
+    <div class="temp">68°</div>
+    <div class="cond">Partly cloudy and breezy</div>
+    <div class="row">
+      <span><b>Wind</b> 9 mph NW</span>
+      <span><b>Humidity</b> 54%</span>
+      <span><b>Dew</b> 51°</span>
+    </div>
+  </div>
+
+  <div id="attrib"></div>
+</div>
+
+<div id="panel">
+  <h1>Background + glass overlay</h1>
+  <div class="sub">Static. Precipitation = a real photo of rain/frost on glass, blended over a
+    blurred scene photo. No animation, no canvas, no dependencies.</div>
+
+  <label for="bgSel">Sky state (background photo)</label>
+  <select id="bgSel"></select>
+
+  <label>Precipitation overlay (real glass photo)</label>
+  <div class="seg" id="fxSeg">
+    <button data-fx="none" class="on">None</button>
+    <button data-fx="rain">Rain</button>
+    <button data-fx="snow">Snow</button>
+  </div>
+
+  <label>Overlay blend mode</label>
+  <select id="blendSel">
+    <option value="overlay">overlay</option>
+    <option value="soft-light">soft-light</option>
+    <option value="hard-light">hard-light</option>
+    <option value="screen">screen</option>
+    <option value="multiply">multiply</option>
+    <option value="lighten">lighten</option>
+    <option value="normal">normal</option>
+  </select>
+
+  <label>Overlay opacity <span class="val" id="opVal">75%</span> <span style="opacity:.6;font-weight:400">(auto: day 75 / night 25)</span></label>
+  <input type="range" id="opacity" min="0" max="100" value="75">
+
+  <label>Background blur <span class="val" id="blurVal">3px</span></label>
+  <input type="range" id="blur" min="0" max="20" value="3">
+
+  <label>Card text (legibility test)</label>
+  <div class="seg" id="txtSeg">
+    <button data-txt="light" class="on">Light</button>
+    <button data-txt="dark">Dark</button>
+  </div>
+
+  <div class="note">Throwaway exploration artifact (UI-REDESIGN-PLAN “Mockups”), not the React build.
+    Tune blend + opacity + blur until the wet/frosted glass reads right, then we lock it.</div>
+</div>
+
+<script>
+const ROOT = '../../../';
+const BG = ROOT+'Graphics/Backgrounds/';
+const STACK = ROOT+'repos/weewx-clearskies-stack/weewx_clearskies_config/static/';
+
+const IMAGES = [
+  { label:'Clear — Day (clear / partly cloudy)', src: STACK+'sky.jpg', attrib:'', cardText:'dark', tod:'day' },
+  { label:'Clear — Night (Milky Way)',           src: BG+'clear_night_nathan_anderson.jpg', attrib:'Photo: Nathan Anderson', cardText:'light', tod:'night' },
+  { label:'Cloudy — Day (mostly cloudy / overcast)', src: BG+'cloudy_day_Davies_Design_Studio.jpg', attrib:'Photo: Davies Design Studio', cardText:'dark', tod:'day' },
+  { label:'Cloudy — Night',                      src: BG+'cloudy_night_ben-mathis-seibel.jpg', attrib:'Photo: Ben Mathis-Seibel', cardText:'light', tod:'night' },
+  { label:'Storm — Day (thunderstorm)',          src: BG+'storm_day_Raychel_Sanner.jpg', attrib:'Photo: Raychel Sanner', cardText:'light', tod:'day' },
+  { label:'Storm — Night (lightning)',           src: BG+'storm_night_felix-mittermeier.jpg', attrib:'Photo: Felix Mittermeier', cardText:'light', tod:'night' },
+];
+const OVERLAYS = {
+  rain: BG+'rain_on_glass.jpg',
+  snow: BG+'snow_on_glass_transparent.png',   // hand-made frost cutout, real colours on transparent
+};
+// locked: screen blend reads best for both rain and snow
+const DEFAULT_BLEND = { rain: 'screen', snow: 'screen' };
+// locked: overlay opacity by time of day (day brighter/heavier, night subtle)
+const OP_BY_TOD = { day: 75, night: 25 };
+
+const bgBlur  = document.getElementById('bgBlur');
+const overlay = document.getElementById('overlay');
+const attribEl= document.getElementById('attrib');
+const cardEl  = document.getElementById('card');
+const bgSel   = document.getElementById('bgSel');
+
+let current = IMAGES[0];
+let mode = 'none';
+
+function applyBlur() {
+  const px = mode === 'none' ? 0 : +document.getElementById('blur').value;
+  bgBlur.style.filter = `blur(${px}px) brightness(${px? 0.93:1}) saturate(1.05)`;
+}
+function applyOverlay() {
+  if (mode === 'none') { overlay.style.opacity = 0; return; }
+  overlay.style.backgroundImage = `url("${OVERLAYS[mode]}")`;
+  overlay.style.mixBlendMode = document.getElementById('blendSel').value;
+  overlay.style.opacity = (+document.getElementById('opacity').value)/100;
+}
+function applyTodOpacity() {
+  const op = OP_BY_TOD[current.tod] ?? 75;
+  document.getElementById('opacity').value = op;
+  document.getElementById('opVal').textContent = op + '%';
+}
+function setBackground(item) {
+  current = item;
+  bgBlur.style.backgroundImage = `url("${item.src}")`;
+  attribEl.textContent = item.attrib || '';
+  cardEl.classList.toggle('darktext', item.cardText === 'dark');
+  document.querySelectorAll('#txtSeg button').forEach(b =>
+    b.classList.toggle('on', b.dataset.txt === item.cardText));
+  applyTodOpacity();          // day/night drives overlay opacity
+  applyOverlay();
+}
+
+IMAGES.forEach((it,i) => {
+  const o = document.createElement('option'); o.value=i; o.textContent=it.label; bgSel.appendChild(o);
+});
+bgSel.addEventListener('change', e => setBackground(IMAGES[+e.target.value]));
+
+document.getElementById('fxSeg').addEventListener('click', e => {
+  if (e.target.tagName!=='BUTTON') return;
+  document.querySelectorAll('#fxSeg button').forEach(b=>b.classList.remove('on'));
+  e.target.classList.add('on'); mode = e.target.dataset.fx;
+  if (DEFAULT_BLEND[mode]) document.getElementById('blendSel').value = DEFAULT_BLEND[mode];
+  applyBlur(); applyTodOpacity(); applyOverlay();
+});
+document.getElementById('txtSeg').addEventListener('click', e => {
+  if (e.target.tagName!=='BUTTON') return;
+  document.querySelectorAll('#txtSeg button').forEach(b=>b.classList.remove('on'));
+  e.target.classList.add('on');
+  cardEl.classList.toggle('darktext', e.target.dataset.txt==='dark');
+});
+document.getElementById('blendSel').addEventListener('change', applyOverlay);
+document.getElementById('opacity').addEventListener('input', e => {
+  document.getElementById('opVal').textContent = e.target.value+'%'; applyOverlay();
+});
+document.getElementById('blur').addEventListener('input', e => {
+  document.getElementById('blurVal').textContent = e.target.value+'px'; applyBlur();
+});
+
+setBackground(IMAGES[0]); applyBlur(); applyOverlay();
+</script>
+</body>
+</html>

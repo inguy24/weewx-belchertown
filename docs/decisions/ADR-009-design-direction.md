@@ -34,6 +34,13 @@ Multi-page, card-based dashboard with icon-rail navigation, operator-uploadable 
 - Skip-to-main-content link per [coding rules §5.3](../../rules/coding.md).
 
 ### Hero treatment (Now page only)
+> **Reconciled 2026-05-30 — see [ADR-047](ADR-047-background-system.md).** The page **background** is
+> now a global, condition-keyed *photographic* system (ADR-047: clear/cloudy/storm × day-night scene
+> photos + on-glass rain/snow overlays, behind every page). For the **background/backdrop role**,
+> ADR-047 supersedes this section's Now-page-only in-house-SVG default. The operator-upload + event-
+> trigger model described below is **retained as future scope** for an optional foreground hero and
+> for operator-replaceable backgrounds, not as the default backdrop. (This note keeps ADR-009 Accepted;
+> the background decision lives in ADR-047.)
 - **Default = a single in-house-authored SVG/vector graphic shipped with Clear Skies.** NOT photography. NOT locale-specific. Pre-tuned for WCAG AA against the overlay. Authored under the project license ([ADR-003](ADR-003-license.md)).
 - **Operator-uploadable images replace the default.** Licensing-ownership acknowledgment required at upload (operator's risk, not the project's). Alt text required ([coding rules §5.5](../../rules/coding.md)). Format JPEG/PNG/WebP, ≤ 2 MB default ceiling, aspect ≥ 16:9.
 - **Event-tied images.** Operator binds each upload to one or more triggers; the system picks the highest-priority match at render time. v0.1 trigger types: `default`, `active severe-weather alert (any|category)`, `weather condition (snow|rain|thunderstorm|clear|cloudy|fog)`, `date range`, `season (hemisphere-aware)`, `time-of-day`. Triggers AND-able; operator sets priority on overlap.

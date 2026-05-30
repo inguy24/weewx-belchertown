@@ -53,6 +53,7 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-044](ADR-044-sky-condition-classification.md) | Current conditions text — sky (kc + σ variability via Ineichen-Perez/pvlib, provider cloud cover primary), precipitation (rain gauge + wet-bulb filter), wind (Beaufort/WMO), comfort (dewpoint/NWS), composition rules, day/night, sensor fusion priorities | Accepted | 2026-05-26 |
 | [ADR-045](ADR-045-background-cache-warming.md) | Background cache warming — daemon thread pre-computes slow endpoints on configurable intervals; reuses ADR-017 CacheBackend | Proposed | 2026-05-27 |
 | [ADR-046](ADR-046-gem-active-faults.md) | GEM Global Active Faults Database for seismic fault overlay — CC-BY-SA 4.0, bundled GeoJSON, radius-clipped serving | Proposed | 2026-05-27 |
+| [ADR-047](ADR-047-background-system.md) | Background system (A2) — condition-keyed photo backgrounds (clear/cloudy/storm × day-night) + real on-glass rain/snow overlays; provider-driven snow/storm; server-computed scene tag + 15-min precip linger | Accepted | 2026-05-30 |
 
 > **Note:** This list is not assumed complete. The user has explicitly flagged that decisions get missed. New Pinned slots are added as they're identified, before the corresponding work begins.
 
