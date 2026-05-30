@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A3 — Material Symbols · Meteocons-style gradients</title>
+<style>
+  /* ── CSS variables — mirrors A3-icon-options.html ─────────────────── */
+  :root {
+    --bg: #eef0f3; --fg: #15171c; --card: #fff;
+    --muted: #646b76; --border: #e2e5ea; --accent: oklch(0.48 0.22 260);
+  }
+  [data-theme="dark"] {
+    --bg: #0e1014; --fg: #f1f3f6; --card: #1a1d24;
+    --muted: #99a0ac; --border: #282c35; --accent: oklch(0.70 0.15 260);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    padding: 22px; line-height: 1.4;
+    transition: background .2s, color .2s;
+  }
+  h1  { font-size: 21px; margin: 0 0 4px; }
+  h2  { font-size: 15px; margin: 26px 0 6px; }
+  .sub { color: var(--muted); font-size: 13px; max-width: 880px; margin: 0 0 8px; }
+
+  /* ── sticky control bar ─────────────────────────────────────────────── */
+  .bar {
+    position: sticky; top: 0; z-index: 9;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    background: var(--bg); padding: 8px 0 12px;
+    border-bottom: 1px solid var(--border); margin-bottom: 14px;
+  }
+  .bar button {
+    background: var(--card); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 13px; font-size: 13px; cursor: pointer;
+  }
+  .bar label { font-size: 12px; color: var(--muted); }
+
+  /* ── icon grid ──────────────────────────────────────────────────────── */
+  .set {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 13px; padding: 14px 16px; margin-bottom: 13px;
+  }
+  .set-h {
+    display: flex; align-items: baseline; gap: 10px;
+    flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .set-h .n   { font-weight: 700; font-size: 14px; }
+  .set-h .opt { font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 6px; padding: 2px 7px; }
+  .set-h .desc{ font-size: 12px; color: var(--muted); }
+  .set-h .lic { font-size: 10.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; }
+
+  .icon-grid {
+    display: grid;
+    gap: 10px;
+  }
+  .icon-col {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  .icon-label {
+    font-size: 10px; color: var(--muted);
+    text-align: center; letter-spacing: .02em;
+  }
+  .icon-col svg { display: block; }
+
+  /* ── reference row (Meteocons) ──────────────────────────────────────── */
+  .ref-row {
+    display: grid; gap: 10px;
+  }
+  .ref-col {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  .ref-col img { display: block; }
+  .ref-col .icon-label { font-size: 10px; color: var(--muted); text-align: center; }
+
+  /* ── in-context card ────────────────────────────────────────────────── */
+  .ctx-card {
+    display: inline-flex; align-items: center; gap: 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px 22px;
+    margin-top: 6px;
+  }
+  .ctx-card .temp   { font-size: 48px; font-weight: 700; line-height: 1; }
+  .ctx-card .cond   { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .ctx-card .feels  { font-size: 11px; color: var(--muted); }
+  .ctx-card .badge  { font-size: 10px; font-weight: 700; color: var(--accent); margin-top: 6px; }
+
+  .note { font-size: 11.5px; color: var(--muted); margin: 4px 0 10px; max-width: 880px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     INLINE SVG DEFS — gradient definitions shared by all icons
+     Gold:  #FFD24D (light gold top) → #F5A623 (amber bottom)
+     Grey:  #F3F5F8 (near-white top) → #C7CDD6 (blue-grey bottom)
+     Rain:  #7BB8E8 (soft cornflower blue) — solid, legible
+     Snow:  #E0ECFA (very pale blue-white) — soft flake color
+     Bolt:  #FFD24D (same gold as sun, ties the palette together)
+     Moon:  #86C3DB → #72B9D5 (Meteocons clear-night soft blue/periwinkle)
+     ════════════════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <!-- Gold gradient: warm sun/amber -->
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FFD24D"/>
+      <stop offset="100%" stop-color="#F5A623"/>
+    </linearGradient>
+    <!-- Grey gradient: cloud volume/depth -->
+    <linearGradient id="greyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F3F5F8"/>
+      <stop offset="100%" stop-color="#C7CDD6"/>
+    </linearGradient>
+    <!-- Rain drop: soft cornflower blue -->
+    <linearGradient id="rainGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#9CCEF5"/>
+      <stop offset="100%" stop-color="#5BA3DC"/>
+    </linearGradient>
+    <!-- Snow flake: pale icy blue-white -->
+    <linearGradient id="snowGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#E8F4FF"/>
+      <stop offset="100%" stop-color="#B8D8F5"/>
+    </linearGradient>
+    <!-- Moon: Meteocons clear-night soft blue/periwinkle (matches @meteocons/svg-static) -->
+    <linearGradient id="moonGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#86C3DB"/>
+      <stop offset="100%" stop-color="#72B9D5"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<h1>A3 — Material Symbols · Meteocons-style gradients</h1>
+<p class="sub">
+  Google Material Symbols (Apache-2.0), filled variant, fetched as SVG from Iconify and inlined so
+  each sub-shape can receive a <code>&lt;linearGradient&gt;</code> fill.
+  <strong>Sun = warm gold</strong> (#FFD24D → #F5A623), <strong>Clouds = volumetric grey</strong>
+  (#F3F5F8 → #C7CDD6, lighter at top). For <em>partly-cloudy-day</em> the sun sub-paths receive gold
+  and the cloud sub-path receives grey — the make-or-break detail.
+</p>
+
+<!-- ── Control bar ─────────────────────────────────────────────────────── -->
+<div class="bar">
+  <button id="themeBtn" onclick="toggleTheme()">◐ Dark</button>
+  <label>Hero size <span id="szlab">96px</span></label>
+  <input type="range" min="40" max="180" value="96" id="sz" oninput="setSize(this.value)">
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 1 — Recolored Material Symbols (the STAR)
+     ════════════════════════════════════════════════════════════════════ -->
+<h2>1 · Recolored Material Symbols — hero size</h2>
+<p class="note">
+  All 8 conditions. Partly-cloudy-day: cloud path → grey gradient; sun body + all 5 ray paths → gold gradient.
+  Moon (bedtime): soft blue/periwinkle gradient matching Meteocons clear-night (#86C3DB → #72B9D5).
+</p>
+
+<div class="set">
+  <div class="set-h">
+    <span class="opt">M-GRAD</span>
+    <span class="n">Material Symbols — Meteocons-style gradients</span>
+    <span class="desc">Sun = gold gradient · Clouds = grey gradient · Split fills on partly-cloudy</span>
+    <span class="lic">Apache-2.0</span>
+  </div>
+  <div id="mainGrid" class="icon-grid"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 2 — In-context current-conditions card (Rain)
+     ════════════════════════════════════════════════════════════════════ -->
+<h2>2 · In context — current-conditions card (Rain)</h2>
+<p class="note">Hero-size Rain icon in a realistic current-conditions card.</p>
+
+<div id="ctxCard" class="ctx-card">
+  <!-- populated by JS -->
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 3 — Meteocons reference row (for cloud-look comparison)
+     ════════════════════════════════════════════════════════════════════ -->
+<h2>3 · Reference — Meteocons static fills (compare cloud rendering)</h2>
+<p class="note">
+  Official <code>@meteocons/svg-static@0.1.0</code> (MIT) via jsDelivr.
+  The STAR is section 1 above; this row lets you compare cloud volume and shading side-by-side.
+</p>
+<div class="set">
+  <div class="set-h">
+    <span class="opt">REF</span>
+    <span class="n">Meteocons filled — reference only</span>
+    <span class="desc">Same 8 conditions · unmodified Meteocons colors</span>
+    <span class="lic">MIT</span>
+  </div>
+  <div id="refGrid" class="ref-row"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════════════════
+
+const LABELS = [
+  'Clear day', 'Partly cloudy', 'Overcast',
+  'Fog', 'Rain', 'Snow', 'Thunderstorm', 'Clear night'
+];
+
+const METEO_NAMES = [
+  'clear-day', 'partly-cloudy-day', 'overcast',
+  'fog', 'rain', 'snow', 'thunderstorms', 'clear-night'
+];
+const METEO_BASE = 'https://cdn.jsdelivr.net/npm/@meteocons/svg-static@0.1.0/fill/';
+
+let heroSize = 96;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SVG BUILDERS — each returns an <svg> element (NOT innerHTML string)
+//  so we can size them at render time via heroSize.
+//
+//  All path data sourced directly from:
+//    https://api.iconify.design/material-symbols/<name>.svg
+//  viewBox is always "0 0 24 24".
+// ═══════════════════════════════════════════════════════════════════════
+
+function makeSVG(size, inner) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">${inner}</svg>`;
+}
+
+// ── 1. Clear day — sunny ─────────────────────────────────────────────
+// Single path: sun circle + 8 rays, all gold.
+// Path from material-symbols/sunny.svg
+function svgSunny(size) {
+  const d = 'M11 5V1h2v4zm6.65 2.75l-1.375-1.375l2.8-2.875l1.4 1.425zM19 13v-2h4v2zm-8 10v-4h2v4zM6.35 7.7L3.5 4.925l1.425-1.4L7.75 6.35zm12.7 12.8l-2.775-2.875l1.35-1.35l2.85 2.75zM1 13v-2h4v2zm3.925 7.5l-1.4-1.425l2.8-2.8l.725.675l.725.7zm2.825-4.25Q6 14.5 6 12t1.75-4.25T12 6t4.25 1.75T18 12t-1.75 4.25T12 18t-4.25-1.75';
+  return makeSVG(size, `<path fill="url(#goldGrad)" d="${d}"/>`);
+}
+
+// ── 2. Partly cloudy day — partly-cloudy-day ─────────────────────────
+// One <path> with 7 subpaths in a single d= attribute. We split into
+// two <path> elements (grey cloud + gold sun) WITHOUT changing geometry.
+//
+// Subpath geometry map (all coords verified against the live SVG):
+//   [A] M6 20 ... T10.5 20z        — lower-left blob          → CLOUD (grey)
+//   [B] m8.975-2.8 ... T14.975 17.2 — sun circle body          → SUN (gold)
+//   [C] M11 5V1h2v4z                — top ray                  → SUN (gold)
+//   [D] m6.65 2.75 ...z             — NE ray                   → SUN (gold)
+//   [E] M19 13v-2h4v2z              — right ray                → SUN (gold)
+//   [F] m.05 7.5 ...z               — SE ray                   → SUN (gold)
+//   [G] M6.35 7.75 ...z             — SW ray                   → SUN (gold)
+//
+// THE BUG (now fixed): subpath [B] begins with a RELATIVE move
+// 'm8.975-2.8'. In the original single path it is relative to the cloud's
+// closepoint (6,20) -> resolving to absolute (14.975, 17.2). When [A] was
+// moved into its own <path>, [B]'s relative move re-anchored to (0,0),
+// shifting the sun body and every ray off-position — the "exploded" sun.
+// Fix: start the gold path at the ABSOLUTE point M14.975 17.2 (= 6+8.975,
+// 20-2.8). No other coordinate is touched; relative rays [D]/[F] stay
+// relative to their preceding absolute subpaths, which are preserved here.
+// fill-rule is the SVG default (nonzero) on the original, set explicitly.
+function svgPartlyCloudy(size) {
+  const cloudPath = 'M6 20q-1.65 0-2.825-1.175T2 16t1.175-2.825T6 12q1.2 0 2.213.65t1.462 1.775l.25.575h.6q1.05 0 1.763.725T13 17.5t-.725 1.775T10.5 20z';
+  // Sun body anchored absolutely (was 'm8.975-2.8' -> 'M14.975 17.2') + 5 rays — all gold
+  const sunPath = 'M14.975 17.2q-.1-1.575-1.137-2.725t-2.613-1.425q-.775-1.35-2.087-2.137T6.25 10q.65-1.825 2.225-2.912T12 6q2.5 0 4.25 1.75T18 12q0 1.625-.8 3.013T14.975 17.2M11 5V1h2v4zm6.65 2.75l-1.4-1.4l2.8-2.85l1.425 1.425zM19 13v-2h4v2zm.05 7.5l-2.8-2.85l1.4-1.4l2.85 2.8zM6.35 7.75L3.525 4.925L4.95 3.5l2.8 2.85z';
+  return makeSVG(size,
+    `<path fill-rule="nonzero" fill="url(#greyGrad)" d="${cloudPath}"/>` +
+    `<path fill-rule="nonzero" fill="url(#goldGrad)" d="${sunPath}"/>`
+  );
+}
+
+// ── 3. Overcast — cloud ──────────────────────────────────────────────
+// Single cloud blob path, grey gradient.
+function svgCloud(size) {
+  const d = 'M6.5 20q-2.275 0-3.887-1.575T1 14.575q0-1.95 1.175-3.475T5.25 9.15q.625-2.3 2.5-3.725T12 4q2.925 0 4.963 2.038T19 11q1.725.2 2.863 1.488T23 15.5q0 1.875-1.312 3.188T18.5 20z';
+  return makeSVG(size, `<path fill="url(#greyGrad)" d="${d}"/>`);
+}
+
+// ── 4. Fog — foggy ──────────────────────────────────────────────────
+// Cloud shape (top area) + fog stripe dots, all grey.
+function svgFoggy(size) {
+  // Full foggy path from material-symbols/foggy.svg
+  const d = 'M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22m-1-3q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19zm4 3q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22zm-2.5-6q-2.275 0-3.887-1.612T2 10.5q0-2.075 1.375-3.625t3.4-1.825q.8-1.425 2.188-2.238T12 2q2.25 0 3.913 1.438t2.012 3.587q1.725.15 2.9 1.425T22 11.5q0 1.875-1.312 3.188T17.5 16z';
+  return makeSVG(size, `<path fill="url(#greyGrad)" d="${d}"/>`);
+}
+
+// ── 5. Rain — rainy ─────────────────────────────────────────────────
+// Cloud body (grey) + rain drop streaks (blue).
+// The rainy path has the cloud shape + 3 angled rain streaks as one compound path.
+// We split: cloud body = first large subpath, rain drops = remaining subpaths.
+// From material-symbols/rainy.svg:
+//   Cloud: M7.5 16q-2.275 0-3.887-1.612T2 10.5q0-2.075 1.375-3.625t3.4-1.825
+//          q.8-1.425 2.188-2.238T12 2q2.25 0 3.913 1.438t2.012 3.587
+//          q1.725.15 2.9 1.425T22 11.5q0 1.875-1.312 3.188T17.5 16z
+//   Rain drops (3 streaks — relative move subpaths starting with m):
+//     Leftmost:   M7.95 21.9q-.375.2-.762.063t-.588-.513l-1.5-3q-.2-.375-.062-.762t.512-.588t.763-.062t.587.512l1.5 3q.2.375.063.763t-.513.587
+//     Middle:     m6 0q-.375.2-.762.063t-.588-.513l-1.5-3q-.2-.375-.062-.762t.512-.588t.763-.062t.587.512l1.5 3q.2.375.063.763t-.513.587
+//     Rightmost:  m-12 0q-.375.2-.762.063T6.6 21.45l-1.5-3q-.2-.375-.062-.762t.512-.588t.763-.062t.587.512l1.5 3q.2.375.063.763t-.513.587
+// Note: Iconify normalises the path so let's use the exact fetched data.
+function svgRainy(size) {
+  const cloudPath = 'M7.5 16q-2.275 0-3.887-1.612T2 10.5q0-2.075 1.375-3.625t3.4-1.825q.8-1.425 2.188-2.238T12 2q2.25 0 3.913 1.438t2.012 3.587q1.725.15 2.9 1.425T22 11.5q0 1.875-1.312 3.188T17.5 16z';
+  const rainPath = 'M13.95 21.9q-.375.2-.762.063t-.588-.513l-1.5-3q-.2-.375-.062-.762t.512-.588t.763-.062t.587.512l1.5 3q.2.375.063.763t-.513.587m6 0q-.375.2-.762.063t-.588-.513l-1.5-3q-.2-.375-.062-.762t.512-.588t.763-.062t.587.512l1.5 3q.2.375.063.763t-.513.587m-12 0q-.375.2-.762.063T6.6 21.45l-1.5-3q-.2-.375-.062-.762t.512-.588t.763-.062t.587.512l1.5 3q.2.375.063.763t-.513.587';
+  return makeSVG(size,
+    `<path fill="url(#greyGrad)" d="${cloudPath}"/>` +
+    `<path fill="url(#rainGrad)" d="${rainPath}"/>`
+  );
+}
+
+// ── 6. Snow — weather-snowy ──────────────────────────────────────────
+// Cloud body (grey) + snow dot particles (pale blue-white).
+// From material-symbols/weather-snowy.svg — large cloud + 6 dot subpaths.
+function svgSnowy(size) {
+  const cloudPath = 'M7.5 15q-2.275 0-3.887-1.612T2 9.5q0-2.075 1.375-3.625t3.4-1.825q.8-1.425 2.188-2.238T12 1q2.25 0 3.913 1.438t2.012 3.587q1.725.15 2.9 1.425T22 10.5q0 1.875-1.312 3.188T17.5 15z';
+  const snowPath = 'M5.613 18.638q-.363-.363-.363-.888t.363-.888t.887-.362t.888.363t.362.887t-.363.888T6.5 19t-.888-.363m3 3q-.362-.362-.362-.887t.363-.888t.887-.362t.888.363t.362.887t-.363.888T9.5 22t-.888-.363m3-3q-.362-.362-.362-.887t.363-.888t.887-.362t.888.363t.362.887t-.363.888T12.5 19t-.888-.363m6 0q-.362-.362-.362-.887t.363-.888t.887-.362t.888.363t.362.887t-.363.888T18.5 19t-.888-.363m-3 3q-.362-.362-.362-.887t.363-.888t.887-.362t.888.363t.362.887t-.363.888T15.5 22t-.888-.363';
+  return makeSVG(size,
+    `<path fill="url(#greyGrad)" d="${cloudPath}"/>` +
+    `<path fill="url(#snowGrad)" d="${snowPath}"/>`
+  );
+}
+
+// ── 7. Thunderstorm — thunderstorm ───────────────────────────────────
+// Cloud body (grey) + 2 lightning bolt subpaths (gold, ties to sun gold).
+// From material-symbols/thunderstorm.svg — cloud + 2 bolt shapes.
+function svgThunderstorm(size) {
+  const cloudPath = 'M7.5 16q-2.275 0-3.887-1.612T2 10.5q0-2.075 1.375-3.625t3.4-1.825q.8-1.425 2.188-2.238T12 2q2.25 0 3.913 1.438t2.012 3.587q1.725.15 2.9 1.425T22 11.5q0 1.875-1.312 3.188T17.5 16z';
+  // Two lightning bolts — gold (judgment call: bolt = same gold as sun, unifying the palette)
+  const boltPath = 'm7.5 23l.9-2.5H6.5L7.75 17h2.5l-1.075 2.5h2.075L8.5 23zm6.75-1l.7-2H13l1.075-3h2.5l-.875 2h2.05l-2.5 3z';
+  return makeSVG(size,
+    `<path fill="url(#greyGrad)" d="${cloudPath}"/>` +
+    `<path fill="url(#goldGrad)" d="${boltPath}"/>`
+  );
+}
+
+// ── 8. Clear night — bedtime (crescent moon) ─────────────────────────
+// Filled crescent moon shape. Moon gradient matches Meteocons clear-night:
+// #86C3DB (top) → #72B9D5 (bottom) — soft blue/periwinkle, kept as a
+// gradient for volume.
+function svgBedtime(size) {
+  const d = 'M12.1 22q-2.1 0-3.937-.8t-3.2-2.162t-2.163-3.2T2 11.9q0-3.65 2.325-6.437T10.25 2q-.45 2.475.275 4.838t2.5 4.137t4.138 2.5T22 13.75q-.65 3.6-3.45 5.925T12.1 22';
+  return makeSVG(size, `<path fill="url(#moonGrad)" d="${d}"/>`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ICON TABLE
+// ═══════════════════════════════════════════════════════════════════════
+const ICONS = [
+  { label: 'Clear day',     fn: svgSunny        },
+  { label: 'Partly cloudy', fn: svgPartlyCloudy },
+  { label: 'Overcast',      fn: svgCloud        },
+  { label: 'Fog',           fn: svgFoggy        },
+  { label: 'Rain',          fn: svgRainy        },
+  { label: 'Snow',          fn: svgSnowy        },
+  { label: 'Thunderstorm',  fn: svgThunderstorm },
+  { label: 'Clear night',   fn: svgBedtime      },
+];
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════════════════
+function buildMainGrid() {
+  const grid = document.getElementById('mainGrid');
+  grid.style.gridTemplateColumns = `repeat(${ICONS.length}, 1fr)`;
+  grid.innerHTML = ICONS.map(ic => `
+    <div class="icon-col">
+      ${ic.fn(heroSize)}
+      <div class="icon-label">${ic.label}</div>
+    </div>
+  `).join('');
+}
+
+function buildCtxCard() {
+  const card = document.getElementById('ctxCard');
+  card.innerHTML = `
+    ${svgRainy(heroSize)}
+    <div>
+      <div class="temp">54°</div>
+      <div class="cond">Rain · Light showers</div>
+      <div class="feels">Feels like 51° · Humidity 88%</div>
+      <div class="badge">M-GRAD · Material Symbols</div>
+    </div>
+  `;
+}
+
+function buildRefRow() {
+  const grid = document.getElementById('refGrid');
+  grid.style.gridTemplateColumns = `repeat(${METEO_NAMES.length}, 1fr)`;
+  grid.innerHTML = METEO_NAMES.map((name, i) => `
+    <div class="ref-col">
+      <img src="${METEO_BASE}${name}.svg"
+           width="${Math.min(heroSize, 80)}" height="${Math.min(heroSize, 80)}"
+           alt="${LABELS[i]}" loading="lazy" style="object-fit:contain">
+      <div class="icon-label">${LABELS[i]}</div>
+    </div>
+  `).join('');
+}
+
+function render() {
+  buildMainGrid();
+  buildCtxCard();
+  buildRefRow();
+}
+
+function setSize(v) {
+  heroSize = +v;
+  document.getElementById('szlab').textContent = v + 'px';
+  render();
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isDark ? '◐ Dark' : '◑ Light';
+}
+
+render();
+</script>
+</body>
+</html>

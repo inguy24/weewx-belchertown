@@ -127,7 +127,14 @@ the user reviews before it's binding.
   **almanac sun** (not the theme toggle); scene computed server-side with a 15-min precip-linger.
   Operator upload/storage mechanism = **separate config ADR (deferred)**. Lightning-assisted storm
   detection parked in the [main plan backlog](CLEAR-SKIES-PLAN.md).
-- **A3. Icon system** — confirm Weather Icons (hero) + Lucide (utility) satisfy the two-family preference → ADR (likely short).
+- **A3. Icon system** — two families. **HERO family DONE** → **[ADR-049](../decisions/ADR-049-hero-weather-icons.md)
+  (Accepted 2026-05-30):** hero weather glyphs = **Material Symbols (filled), recolored Meteocons-style**
+  (gold sun, grey volumetric clouds, gold lightning, periwinkle moon) as inline SVG with gradient fills.
+  Weather Icons (too thin), Meteocons-direct (weak/animated-broken precip), and emoji sets (cartoony) all
+  rejected. Locked recipe: [mockups/A3-material-gradient.html](../design/mockups/A3-material-gradient.html).
+  **UTILITY/STAT/NAV family DEFERRED to a follow-up ADR (next session)** — full site-wide candidate inventory
+  across 4 line packs (Lucide/Phosphor/Tabler/Solar) + catalog links being assembled in
+  [mockups/A3-icon-options.html](../design/mockups/A3-icon-options.html); operator may mix packs. → ADR.
 - **A4. Card model & grid-compatible sizing** (1/2/3/4-col footprints, spacing/row tokens; NOT the grid engine) → ADR.
 
 ### Track B — Research gates
@@ -199,8 +206,10 @@ Mockups are throwaway exploration artifacts, NOT the React implementation.
 [ADR-048](../decisions/ADR-048-theme-color-tokens.md) Accepted 2026-05-30. Next, in this order/parallelism:
 - **A2 (background system)** — ADR-047 Accepted; build brief ready at
   [briefs/A2-background-system.md](briefs/A2-background-system.md) (3 deliverables, not yet executed).
-- **A3 (icon system)**, **A4 (card model & grid-compatible sizing)** — remaining Track A foundations,
-  via mockups.
+- **A3 (icon system)** — **hero family DONE** (ADR-049). **Remaining: the utility/stat/nav icon family**
+  (deferred to a new session) — review the full inventory in [mockups/A3-icon-options.html](../design/mockups/A3-icon-options.html),
+  pick per-icon across packs (mixing allowed), then write the follow-up ADR.
+- **A4 (card model & grid-compatible sizing)** — remaining Track A foundation, via mockups.
 - **B2 + B3 global research gates** — Recharts background support + a11y-contrast/perf budget (can run
   in parallel with Track A).
 
