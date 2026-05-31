@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C1 — Current Conditions card (correct 2×2 size)</title>
+<style>
+  :root {
+    /* A4 grid tokens */
+    --gap-grid: 1rem;
+    --container-max: 80rem;
+    --card-half-row: 5.5rem;      /* base grid row track */
+    --card-radius: 0.875rem;
+    --card-pad: 1rem;
+
+    /* Raised glass opacity for legibility (C1 gap #10): light 0.92 */
+    --glass-bg: rgba(255,255,255,0.92);
+    --glass-border: rgba(0,0,0,0.10);
+    --glass-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+
+    --fg: #18181b;
+    --fg-muted: #5b5b63;
+    --title-rule: rgba(0,0,0,0.12);
+
+    --hi: #c81e1e;
+    --lo: #1d4ed8;
+    --curve-line: #2563eb;
+    --curve-fill: rgba(37,99,235,0.15);
+    --curve-future: #5b91e8;
+    --curve-now: #dc2626;
+    --curve-grid: rgba(0,0,0,0.14);
+
+    /* Day scene behind the glass cards (softened) */
+    --scene: linear-gradient(160deg, #7fb6d6 0%, #a9d0e8 35%, #cfe5f3 70%, #eaf3fa 100%);
+  }
+  [data-theme="dark"] {
+    --glass-bg: rgba(30,35,55,0.90);
+    --glass-border: rgba(255,255,255,0.12);
+    --glass-shadow: 0 4px 28px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.30);
+    --fg: #f0f4f8;
+    --fg-muted: #aab2c0;
+    --title-rule: rgba(255,255,255,0.14);
+    --hi: #f87171;
+    --lo: #93c5fd;
+    --curve-line: #60a5fa;
+    --curve-fill: rgba(96,165,250,0.18);
+    --curve-future: #93c5fd;
+    --curve-now: #f87171;
+    --curve-grid: rgba(255,255,255,0.16);
+    --scene: linear-gradient(160deg, #06101f 0%, #0b1830 40%, #0f2042 70%, #060d20 100%);
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--scene);
+    color: var(--fg);
+    min-height: 100vh;
+    padding: 2rem;
+    font-variant-numeric: tabular-nums;
+    transition: background .25s ease;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  :focus-visible { outline: 2px solid var(--curve-line); outline-offset: 2px; border-radius: 4px; }
+
+  /* ── The A4 Now-page grid ─────────────────────────────────────────── */
+  .grid {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap-grid);
+    grid-auto-rows: var(--card-half-row);   /* 5.5rem per track */
+    grid-auto-flow: row dense;
+  }
+  /* Explicit, conflict-free spans */
+  .span-hero { grid-column: span 4; grid-row: span 1; }   /* full-width × 1 track  = 5.5rem */
+  .span-cc   { grid-column: span 2; grid-row: span 4; }   /* 2 cols × 4 tracks     ≈ 22rem  */
+
+  .card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(8px) saturate(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    padding: var(--card-pad);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Hero (4 × ½) ─────────────────────────────────────────────────── */
+  .hero { flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; }
+  .hero-logo {
+    width: 3.25rem; height: 3.25rem; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero-text { text-align: right; }
+  .hero-name { font-size: 1.35rem; font-weight: 700; line-height: 1.15; }
+  .hero-loc  { font-size: .9rem; color: var(--fg-muted); margin-top: .15rem; }
+
+  /* ── Current Conditions card internals ────────────────────────────── */
+  .cc-title {
+    font-size: .8rem; font-weight: 700; color: var(--fg);
+    padding-bottom: .4rem; margin-bottom: .6rem;
+    border-bottom: 1px solid var(--title-rule); flex-shrink: 0;
+  }
+  /* top region: big icon (left) + text (right) — natural height, never clipped */
+  .cc-top { display: flex; align-items: center; gap: 1.1rem; flex: 1 1 auto; min-height: 0; }
+  .cc-icon { width: 112px; height: 112px; flex-shrink: 0; }
+  .cc-text { min-width: 0; display: flex; flex-direction: column; gap: .25rem; }
+  .cc-temp { display: flex; align-items: flex-start; line-height: .9; }
+  .cc-temp b { font-size: 4.75rem; font-weight: 700; letter-spacing: -.03em; }
+  .cc-temp span { font-size: 1.9rem; color: var(--fg-muted); margin-top: .35rem; }
+  .cc-feels { font-size: .85rem; color: var(--fg-muted); }
+  .cc-sentence { font-size: .9rem; color: var(--fg); line-height: 1.35; }
+  .cc-hilo { font-size: .85rem; font-weight: 600; color: var(--fg-muted); }
+  .cc-hilo .h { color: var(--hi); }
+  .cc-hilo .l { color: var(--lo); }
+
+  /* curve pinned to the bottom of the card */
+  .cc-curve { flex-shrink: 0; padding-top: .6rem; border-top: 1px solid var(--title-rule); }
+  .cc-curve-label { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: .25rem; }
+  .cc-curve svg { display: block; width: 100%; height: 112px; }   /* fixed height — no auto */
+</style>
+</head>
+<body>
+
+<div class="grid">
+
+  <!-- HERO — col-span-4 × half-row -->
+  <header class="card hero span-hero" aria-label="Weather station">
+    <span class="hero-logo" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 40 40">
+        <defs>
+          <linearGradient id="lg-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD24D"/><stop offset="1" stop-color="#F5A623"/></linearGradient>
+          <linearGradient id="lg-grey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3F5F8"/><stop offset="1" stop-color="#C7CDD6"/></linearGradient>
+        </defs>
+        <circle cx="20" cy="17" r="6" fill="url(#lg-gold)"/>
+        <ellipse cx="22" cy="26" rx="8" ry="5" fill="url(#lg-grey)"/>
+        <ellipse cx="16" cy="27" rx="5" ry="4" fill="url(#lg-grey)"/>
+      </svg>
+    </span>
+    <div class="hero-text">
+      <h1 class="hero-name">Shane's Weather Station</h1>
+      <p class="hero-loc">Huntington Beach, CA</p>
+    </div>
+  </header>
+
+  <!-- CURRENT CONDITIONS — col-span-2 × 4 tracks (true 2×2) -->
+  <article class="card span-cc" aria-labelledby="cc-h">
+    <h2 id="cc-h" class="cc-title">Current Conditions</h2>
+
+    <div class="cc-top">
+      <svg class="cc-icon" role="img" aria-labelledby="cc-icon-t" viewBox="0 0 24 24">
+        <title id="cc-icon-t">Partly Cloudy</title>
+        <defs>
+          <linearGradient id="cc-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD24D"/><stop offset="1" stop-color="#F5A623"/></linearGradient>
+          <linearGradient id="cc-grey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3F5F8"/><stop offset="1" stop-color="#C7CDD6"/></linearGradient>
+        </defs>
+        <path fill="url(#cc-grey)" d="M6 20q-1.65 0-2.825-1.175T2 16t1.175-2.825T6 12q1.2 0 2.213.65t1.462 1.775l.25.575h.6q1.05 0 1.763.725T13 17.5t-.725 1.775T10.5 20z"/>
+        <path fill="url(#cc-gold)" d="M14.975 17.2q-.1-1.575-1.137-2.725t-2.613-1.425q-.775-1.35-2.087-2.137T6.25 10q.65-1.825 2.225-2.912T12 6q2.5 0 4.25 1.75T18 12q0 1.625-.8 3.013T14.975 17.2M11 5V1h2v4zm6.65 2.75l-1.4-1.4l2.8-2.85l1.425 1.425zM19 13v-2h4v2zm.05 7.5l-2.8-2.85l1.4-1.4l2.85 2.8zM6.35 7.75L3.525 4.925L4.95 3.5l2.8 2.85z"/>
+      </svg>
+      <div class="cc-text">
+        <div class="cc-temp" role="group" aria-label="Current temperature 72 degrees Fahrenheit">
+          <b>72</b><span aria-hidden="true">°F</span>
+        </div>
+        <p class="cc-feels">Feels like 75°F</p>
+        <p class="cc-sentence">Warm and Humid, Partly Cloudy, with Light Rain</p>
+        <p class="cc-hilo">
+          <span class="h" aria-hidden="true">High 78°</span> &nbsp;
+          <span class="l" aria-hidden="true">Low 59°</span>
+          <span class="sr-only">Today's high 78 degrees, low 59 degrees</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="cc-curve">
+      <p class="cc-curve-label" aria-hidden="true">Today's Temperature</p>
+      <div role="img" aria-label="Today's temperature, midnight to midnight. Overnight low near 59° around 5 AM, 72° now at 1 PM, forecast afternoon high of 78°, easing to about 63° by midnight. Past shown as a filled area, forecast as a dashed line.">
+        <svg aria-hidden="true" viewBox="0 0 720 104" preserveAspectRatio="xMidYMid meet">
+          <!-- Y gridlines + labels, spanning the full width -->
+          <line x1="32" y1="12" x2="714" y2="12" stroke="var(--curve-grid)" stroke-width="0.5"/>
+          <text x="28" y="16" text-anchor="end" font-size="14" fill="var(--fg)">80°</text>
+          <line x1="32" y1="42" x2="714" y2="42" stroke="var(--curve-grid)" stroke-width="0.5"/>
+          <text x="28" y="46" text-anchor="end" font-size="14" fill="var(--fg)">70°</text>
+          <line x1="32" y1="72" x2="714" y2="72" stroke="var(--curve-grid)" stroke-width="0.5"/>
+          <text x="28" y="76" text-anchor="end" font-size="14" fill="var(--fg)">60°</text>
+          <line x1="32" y1="84" x2="714" y2="84" stroke="var(--curve-grid)" stroke-width="0.5"/>
+
+          <!-- Actual (past): midnight → now (1 PM), filled -->
+          <polygon points="32,60 117,69 174,75 231,66 288,51 345,42 401,36 401,84 32,84" fill="var(--curve-fill)"/>
+          <polyline points="32,60 117,69 174,75 231,66 288,51 345,42 401,36" fill="none" stroke="var(--curve-line)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Forecast (future): now → midnight, dashed -->
+          <polyline points="401,36 458,18 515,27 572,42 629,54 714,63" fill="none" stroke="var(--curve-future)" stroke-width="2" stroke-dasharray="5 3" stroke-linecap="round" stroke-linejoin="round"/>
+
+          <!-- Now divider + current dot -->
+          <line x1="401" y1="14" x2="401" y2="84" stroke="var(--curve-now)" stroke-width="1.25" stroke-dasharray="2 2"/>
+          <text x="401" y="11" text-anchor="middle" font-size="14" font-weight="700" fill="var(--fg)">Now</text>
+          <circle cx="401" cy="36" r="4" fill="var(--curve-now)" stroke="var(--glass-bg)" stroke-width="1.5"/>
+
+          <!-- X axis: midnight → midnight -->
+          <text x="32"  y="100" text-anchor="start"  font-size="14" fill="var(--fg)">12a</text>
+          <text x="203" y="100" text-anchor="middle" font-size="14" fill="var(--fg)">6a</text>
+          <text x="373" y="100" text-anchor="middle" font-size="14" fill="var(--fg)">12p</text>
+          <text x="543" y="100" text-anchor="middle" font-size="14" fill="var(--fg)">6p</text>
+          <text x="714" y="100" text-anchor="end"    font-size="14" fill="var(--fg)">12a</text>
+        </svg>
+      </div>
+      <table class="sr-only">
+        <caption>Today's hourly temperature, May 31</caption>
+        <thead><tr><th scope="col">Time</th><th scope="col">°F</th><th scope="col">Type</th></tr></thead>
+        <tbody>
+          <tr><td>12 AM</td><td>64</td><td>Actual</td></tr>
+          <tr><td>5 AM</td><td>59</td><td>Actual (overnight low)</td></tr>
+          <tr><td>1 PM</td><td>72</td><td>Actual (now)</td></tr>
+          <tr><td>3 PM</td><td>78</td><td>Forecast (high)</td></tr>
+          <tr><td>12 AM</td><td>63</td><td>Forecast</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+</div>
+
+</body>
+</html>
