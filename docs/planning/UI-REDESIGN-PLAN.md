@@ -183,15 +183,35 @@ remain global gates run once.
 **Scope = every page, not just the "now"/home page** — forecast page, almanac, radar, earthquakes, alerts,
 records, etc. each have cards. Track C opens with a page inventory, then walks components page by page.
 
+**LOAD-BEARING — the locked layout/footprint sources (read EVERY component, steps 0/2/3).**
+The card's **size and grid placement are already decided** in the A4 grid mockups — they are NOT a fresh
+decision and must NOT be theorized from ADR-051 prose or from a teammate's summary:
+- [docs/design/mockups/A4-card-grid.html](../design/mockups/A4-card-grid.html) — the 4-column grid + every
+  card's footprint (col-span × row-span) at desktop/tablet/phone.
+- [docs/design/mockups/A4-page-anatomy.html](../design/mockups/A4-page-anatomy.html) — the hero/page-header
+  + controls-strip + the **half-row track** grid (`grid-auto-rows: var(--card-half-row)` = 5.5rem; strip = 1
+  track, data card = 2, 2×2/tall = 4).
+The Now-page grid is **`repeat(4, 1fr)`, `gap: 1rem`, `grid-auto-rows: 5.5rem`, container 80rem.** A card's
+footprint (e.g. Current Conditions = **2×2** = 2 cols × 4 half-row tracks ≈ 22rem) is a **fixed given** —
+content fits the box (`overflow:hidden`), the box does not grow to the content.
+
 **Per-component workflow (each component is a self-contained mini-cycle):**
-0. **Prior-decision check** — surface any existing decision for this surface (ADRs, current site, Phase-2 work);
-   re-affirm or consciously depart (don't silently redo).
+0. **Prior-decision check** — surface every existing decision for this surface (ADRs, current site, Phase-2
+   work) AND **pull the card's LOCKED FOOTPRINT (col-span × row-span) verbatim from the A4 grid mockups above
+   + the C0 inventory.** Record it explicitly (e.g. "Current Conditions = 2×2 per A4-card-grid"). Re-affirm or
+   consciously depart; never theorize the size.
 1. **Data inventory (B1 slice)** — "here is everything the providers / weewx give us for this card."
    Read our own authored artifacts (API `/current` + `/archive` contract → provider `CAPABILITY` decls →
    captured api-docs / contracts → weewx column reference), in that order. Do NOT rediscover from live wire
    responses; a live endpoint hit is an optional conditional-field spot-check only, flagged to the lead first.
-2. **Composition** — what's grouped on one card vs. split into separate cards.
-3. **Mockup** — quick artifact mockup(s) to react to (see Mockups below).
+2. **Composition** — what's grouped on the card vs. split out, **WITHIN the locked footprint from step 0**.
+   The footprint is a constraint, not a variable; if the content can't fit the locked box, that is a
+   composition problem to solve (shrink/re-group), surfaced to the lead — NOT a license to resize the card.
+3. **Mockup** — **MUST be built on the actual Now-page grid: reuse the A4 grid CSS** (`grid-4col` +
+   `grid-auto-rows: 5.5rem` + the col/row-span helpers) and place the card at its **locked footprint** inside
+   that grid (other cells may be empty or ghosted for scale). **NEVER** render the card as a standalone,
+   full-width, or free/fixed-pixel-height box — that hides the true size and is exactly what produced
+   throw-away mockups. Verify the card renders at its footprint size with content clipped to the box.
 4. **ADR** — lock composition + what's shown + treatment → Proposed → Accepted.
 5. **Execution plan → code.**
 
