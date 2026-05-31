@@ -1,7 +1,8 @@
 # UI-REDESIGN-PLAN — Clear Skies dashboard UI redesign (the "plan for the plan")
 
-**Status:** DRAFT for user review (2026-05-28). Not binding until approved. This is a roadmap/index,
-not a decision record — decisions live in ADRs.
+**Status:** Active. This is a roadmap/index, not a decision record — decisions live in ADRs.
+**Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31)** — on-device
+visual/a11y/keyboard testing is the only open Track-A item (see Next action). Tracks B2/B3 + C downstream.
 
 **Purpose:** Sequence the UI redesign as a series of **decision points**, each resolved into an
 ADR, each ADR operationalized into a **granular, prescriptive execution plan** that drives coding
@@ -115,19 +116,21 @@ the user reviews before it's binding.
   chart palette is 5-step neutral (revisit at first multi-series chart), EPA AQI palette not tokenized
   (add with C6). No code change. 
 - **A2. Background system** (condition × theme, layered, photographic, operator-replaceable) → ADR.
-  🔵 **ADR drafted + prototype accepted (2026-05-30).** Approach validated in a browser prototype the
+  ✅ **CODE-COMPLETE + deployed (2026-05-31).** Approach validated in a browser prototype the
   operator accepted ([mockups/background-prototype.html](../design/mockups/background-prototype.html)):
   static **blurred scene photo + real on-glass rain/snow overlay** (screen blend, 3px blur, 75% day /
   25% night opacity). Decisions in **[ADR-047](../decisions/ADR-047-background-system.md) (Accepted
-  2026-05-30)**; build tasks in **[briefs/A2-background-system.md](briefs/A2-background-system.md)** (ready
-  to dispatch — not yet executed);
+  2026-05-30)**; build tasks in **[briefs/A2-background-system.md](briefs/A2-background-system.md)**
+  (**D1 realtime scene builder + precip linger** = realtime `c2d7f57`; **D2 dashboard background layer +
+  D3 8 compressed WebP assets ≤300 KB** = dashboard `4e8c896`/`846fc6c`). Live on weather-dev: `/current`
+  emits `scene={sky,daytime,overlay}`;
   exact recipe + preserved code in
   [background-system-implementation-notes.md](../design/background-system-implementation-notes.md).
   Snow/storm scenes driven by **provider current conditions** (PWS can't gauge snow); day/night from
   **almanac sun** (not the theme toggle); scene computed server-side with a 15-min precip-linger.
   Operator upload/storage mechanism = **separate config ADR (deferred)**. Lightning-assisted storm
   detection parked in the [main plan backlog](CLEAR-SKIES-PLAN.md).
-- **A3. Icon system** — two families, **BOTH DONE.** **HERO family** → **[ADR-049](../decisions/ADR-049-hero-weather-icons.md)
+- **A3. Icon system** — two families, **BOTH CODE-COMPLETE + deployed (2026-05-31).** **HERO family** → **[ADR-049](../decisions/ADR-049-hero-weather-icons.md)
   (Accepted 2026-05-30):** hero weather glyphs = **Material Symbols (filled), recolored Meteocons-style**
   (gold sun, grey volumetric clouds, gold lightning, periwinkle moon) as inline SVG with gradient fills.
   Weather Icons (too thin), Meteocons-direct (weak/animated-broken precip), and emoji sets (cartoony) all
@@ -136,16 +139,24 @@ the user reviews before it's binding.
   (Accepted 2026-05-30):** **Phosphor (regular) base** + curated cross-pack exceptions (Tabler `uv-index`;
   Material `flood`; Carbon `tsunami`); 13 weather-alert glyphs; text-only stats (feels-like, dew-point);
   wind icons excluded (→ C2 compass). Astro/AQI/earthquake glyphs **deferred** to C5/C6/seismic. Locked
-  render: [mockups/A3-final-icons.html](../design/mockups/A3-final-icons.html).
+  render: [mockups/A3-final-icons.html](../design/mockups/A3-final-icons.html). **Code:** hero rewrite =
+  dashboard `0140e2f` (inline Material-Symbols SVG, 5 gradient defs, all 29 WMO codes); utility/alert =
+  dashboard `8143377`/`90ed053` (`@phosphor-icons/react` 2.1.10 + 3 inline cross-pack glyphs + 13-type
+  alert map). Deferred glyph sub-families (astro→C5, AQI→C6, earthquake→seismic) **intentionally left on
+  Lucide and flagged in source** with `// TODO(ADR-050 deferred: …)`.
 - **A4. Card model & grid-compatible sizing** → **[ADR-051](../decisions/ADR-051-card-footprint-model.md)
-  (Accepted 2026-05-30).** ✅ **DONE.** 4-col footprints (`tile`/`wide`/`panel`/`full` + row-span);
+  (Accepted 2026-05-30).** ✅ **CODE-COMPLETE + deployed (2026-05-31).** 4-col footprints (`tile`/`wide`/`panel`/`full` + row-span);
   **min-footprint per card** (webcam/wind/radar/current-conditions = 2×2); **half-row grid track** (5.5rem)
   with **zero-waste packing** (strips span 1, data cards 2, tall 4); **universal card discipline** — every
   page is cards (page-header/hero card + controls strip; no free-floating text/buttons; no generic prose on
   data pages); tokens `--gap-grid` 1rem / `--container-max` 80rem / `--card-row` 11rem / `--card-half-row`
   5.5rem; 4→2→1 collapse; translucent glass (opacity at B3). Foundation for the **future operator
   drag-and-drop grid**. Renders: [A4-card-grid.html](../design/mockups/A4-card-grid.html) +
-  [A4-page-anatomy.html](../design/mockups/A4-page-anatomy.html).
+  [A4-page-anatomy.html](../design/mockups/A4-page-anatomy.html). **Code (PRIMITIVES only — not applied to
+  pages; that's Track C):** dashboard `1e6c7db`/`d632bba`/`3fd072a`/`cbdb24d`/`82e67e6` — tokens,
+  `Card.footprint` prop, `Grid`, `PageHeaderCard`, `ControlsStrip`. Card-glass values are **provisional
+  pending B3** (flagged in `index.css`); row-span is documented-only (columns enforced, heights
+  content-driven) per ADR-051 "column rule now vs. later."
   **Tracked follow-ons:** restore the Now hero (logo + station name) → **C1**; build an **operator manual**
   (setup/use of the customizable dashboard) → its own deliverable; visitor-facing help destination → open.
 
@@ -220,18 +231,28 @@ Quick, self-contained **HTML mockups** saved to `docs/design/mockups/`, openable
 Mockups are throwaway exploration artifacts, NOT the React implementation.
 
 ## Next action
-**C0 (page inventory) is DONE** → [docs/design/C0-PAGE-INVENTORY.md](../design/C0-PAGE-INVENTORY.md)
-(the full Track C work list + the as-built reconciliation surface). **A0 (ADR reconciliation gate) is DONE**
-— 2026-05-29 (reconciled, user re-approved, deployed). **A1 (theme & color system) is DONE** —
-[ADR-048](../decisions/ADR-048-theme-color-tokens.md) Accepted 2026-05-30. Next, in this order/parallelism:
-- **A2 (background system)** — ADR-047 Accepted; build brief ready at
-  [briefs/A2-background-system.md](briefs/A2-background-system.md) (3 deliverables, not yet executed).
-- **A3 (icon system)** — ✅ **DONE.** Hero family (ADR-049) + utility/stat/nav/alert family (ADR-050,
-  Phosphor base). Deferred glyph sub-families tracked to their components (astro→C5, AQI→C6, earthquake→seismic).
-- **A4 (card model & grid-compatible sizing)** — ✅ **DONE** — [ADR-051](../decisions/ADR-051-card-footprint-model.md)
-  Accepted 2026-05-30. **Track A foundations are now complete (A0–A4).**
+**Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31).** Design ✅ +
+code ✅ for every foundation item:
+- **A0** (ADR reconciliation gate) — DONE 2026-05-29 (reconciled, re-approved, deployed).
+- **A1** (theme & color tokens) — [ADR-048](../decisions/ADR-048-theme-color-tokens.md), as-built verified
+  (no code change).
+- **A2** (background system) — [ADR-047](../decisions/ADR-047-background-system.md); realtime `c2d7f57` +
+  dashboard `4e8c896`/`846fc6c`; live `/current` emits `scene`.
+- **A3** (icon system) — [ADR-049](../decisions/ADR-049-hero-weather-icons.md) hero `0140e2f` +
+  [ADR-050](../decisions/ADR-050-utility-stat-nav-icons.md) utility/alert `8143377`/`90ed053`.
+- **A4** (card model & grid-compatible sizing) — [ADR-051](../decisions/ADR-051-card-footprint-model.md);
+  dashboard `1e6c7db`/`d632bba`/`3fd072a`/`cbdb24d`/`82e67e6` (primitives only; page application = Track C).
+
+Build session record + per-deliverable verification evidence: execution briefs in
+[briefs/](briefs/); scratchpad `c:\tmp\track-a-impl-scratch.md`.
+
+**The single open Track-A item is on-device TESTING** (the kickoff "definition of done" visual bar — needs
+a browser): visual check vs. mockups in both themes, `@axe-core/playwright` on the hydrated SPA,
+keyboard-only walkthrough, color-blindness pass, and the **B3 card-glass contrast measurement** (sets the
+final `--card-glass` opacity; provisional values shipped). Ready-to-paste prompt:
+**[briefs/TRACK-A-TESTING-CONTINUATION.md](briefs/TRACK-A-TESTING-CONTINUATION.md)**.
 - **B2 + B3 global research gates** — Recharts background support + a11y-contrast/perf budget (B3 also sets
-  the final card-glass opacity for ADR-051). Can run in parallel; **A2 build brief + B2/B3 are the open
+  the final card-glass opacity for ADR-051). Can run in parallel; **B2/B3 + on-device testing are the open
   Track-A/B items** before Track C.
 
 Then walk Track C component by component (C1…C6, plus any additional cards from the full C0 work list) using the per-component workflow
