@@ -130,7 +130,7 @@ the user reviews before it's binding.
   **almanac sun** (not the theme toggle); scene computed server-side with a 15-min precip-linger.
   Operator upload/storage mechanism = **separate config ADR (deferred)**. Lightning-assisted storm
   detection parked in the [main plan backlog](CLEAR-SKIES-PLAN.md).
-- **A3. Icon system** — two families, **BOTH CODE-COMPLETE + deployed (2026-05-31).** **HERO family** → **[ADR-049](../decisions/ADR-049-hero-weather-icons.md)
+- **A3. Icon system** — ✅ **CODE-COMPLETE + deployed (2026-05-31)** (both families). **HERO family** → **[ADR-049](../decisions/ADR-049-hero-weather-icons.md)
   (Accepted 2026-05-30):** hero weather glyphs = **Material Symbols (filled), recolored Meteocons-style**
   (gold sun, grey volumetric clouds, gold lightning, periwinkle moon) as inline SVG with gradient fills.
   Weather Icons (too thin), Meteocons-direct (weak/animated-broken precip), and emoji sets (cartoony) all
