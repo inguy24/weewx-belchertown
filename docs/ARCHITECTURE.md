@@ -152,8 +152,8 @@ Wizard step 7 (apply)
 
 | Path | Method | Purpose |
 |------|--------|---------|
-| `/api/v1/station` | GET | Station metadata (singleton) |
-| `/api/v1/current` | GET | Most recent observation |
+| `/api/v1/station` | GET | Station metadata (singleton). The `name` field is the operator's configured display location, read from `weewx.conf [Station] location` at startup. |
+| `/api/v1/current` | GET | Most recent observation. The `weatherText` field is always null in the API response; the BFF enrichment pipeline (`enrich_weather_text`) injects the composed conditions string before serving the dashboard (ADR-041, ADR-044). |
 | `/api/v1/archive` | GET | Historical archive records with pagination/filtering |
 | `/api/v1/records` | GET | Section-grouped highs and lows |
 | `/api/v1/forecast` | GET | Forecast bundle (hourly + daily + discussion) |
@@ -226,6 +226,27 @@ All errors returned as RFC 9457 `application/problem+json`.
 | 8082 (lo) | `/health/ready` | Readiness probe (checks adapter connection + upstream API connectivity) |
 
 OpenAPI disabled on realtime (no docs/redoc endpoints).
+
+### Conditions text engine (ADR-044)
+
+The realtime service hosts a multi-module, stateful conditions-text engine that produces the `weatherText` field on every `GET /api/v1/current` response.
+
+| Module | Role |
+|--------|------|
+| `weewx_clearskies_realtime/conditions_text.py` | Stateless composer — assembles the `weatherText` string from per-component labels |
+| `weewx_clearskies_realtime/sky_condition.py` | Stateful classifier — 30-min rolling kc-buffer, produces the sky label |
+| `weewx_clearskies_realtime/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
+| `weewx_clearskies_realtime/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict |
+
+**Inputs:** smoothed loop-packet fields via `enrichment/input_smoother.py` — `rainRate` (2 min), `windSpeed`/`windGust` (5 min), `appTemp`/`dewpoint`/`outTemp`/`heatindex`/`windchill` (10 min), `radiation`+`maxSolarRad` (30 min kc rolling window). No database access.
+
+**Output:** `data["data"]["weatherText"]` on the `/current` JSON response — a composed natural-language string (e.g., `"Warm and Humid, Partly Cloudy, with Light Rain"`) or `null` when no components are available.
+
+**Transport:** REST only. `weatherText` is NOT included in the SSE loop-packet field map (`WEEWX_TO_OBSERVATION`) and is NOT updated via SSE. The conditions sentence updates at the REST poll interval, not at loop-packet frequency.
+
+**Registration:** `__main__.py` registers `enrich_weather_text` against the `"current"` endpoint key. Every `GET /api/v1/current` response is enriched before being returned to the browser.
+
+**Startup behavior:** The solar kc-buffer requires approximately 3 minutes of loop packets before the sky classifier can produce a result. During this warm-up window, `weatherText` may be `null`. Once data accumulates, the engine produces output continuously. When solar analysis is unavailable (night, twilight, no pyranometer), the engine is *intended* to fall back to provider cloud cover / weather text for sky classification — but that fallback is currently **not wired** (see Known gaps #8), so at night the sentence omits its sky component.
 
 ## Realtime modes (ADR-005)
 
@@ -457,6 +478,7 @@ weewx-clearskies-stack/
 | 5 | No stack.conf example | ADR-027 references `stack.conf` | Does not exist | Deferred — CLI flags sufficient for v0.1. | Low |
 | 6 | ADR-034 container table incomplete | ADR-027 adds config service | ADR-034 lists only 4 containers | Amend ADR-034 to add config UI row after gap #1 is implemented. | ADR consistency |
 | 7 | Config UI imports API code directly | ADR-038a: wizard talks to API via HTTP | `wizard/schema.py` and `wizard/routes.py` import `STOCK_COLUMN_MAP` from `weewx_clearskies_api.db.reflection` — forces API source into config UI Docker build | Eliminate after first-run UX ships. Get stock column map from `/setup/schema` endpoint instead. | Code coupling |
+| 8 | Conditions text: night-sky fallback not wired | ADR-044 §1b specifies provider cloud cover as the intended fallback when solar analysis is unavailable at night | `compose_weather_text()` in realtime `enrichment/weather_text.py` does not pass `provider_sky` to `build_weather_text()`, so the conditions sentence omits its sky component at night even when a forecast provider is configured. `build_weather_text()` accepts `provider_sky: str \| None = None` but the argument is never supplied. | Tracked code gap, not an ADR contradiction. | Conditions text |
 
 ### Resolved gaps (2026-05-23)
 
