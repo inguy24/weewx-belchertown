@@ -73,12 +73,9 @@ TESTING TASKS (the primary ask):
    WCAG AA, that sets the final opacity — surface the measured numbers to me before changing the token.
 
 DEFERRED CLEANUPS (small; do after testing or in parallel via a Sonnet agent):
-A. Remove the dead `weather-icons` dependency now that A3-hero replaced the CSS font. Three sites:
-   dashboard src/index.css (the `@import "weather-icons/css/weather-icons.css";` + its comment),
-   package.json (the "weather-icons" dependency), and the stale "left in place" comment block at the
-   top of src/components/weather-icon.tsx. Then `npm install --legacy-peer-deps` to update the lock,
-   build/lint/test, commit. (The prior session deferred this because of a tool-output rendering glitch,
-   not because it's hard.)
+A. [DONE this session — commit 2f1e8a4] Dead `weather-icons` dependency removed (index.css @import,
+   package.json dep, weather-icon.tsx stale comment); 14 transitive packages dropped; build + 282 tests
+   green; redeployed. No action needed.
 B. Close the OpenAPI contract gap: `scene` is emitted by realtime but is NOT in the dashboard's
    src/api/openapi-v1.yaml, so SceneDescriptor is hand-maintained in src/api/types.ts and can drift.
    Add `scene` to the contract and regenerate types (npm run generate:types), reconcile.
@@ -86,11 +83,14 @@ C. (Optional simplification) The dashboard re-derives the scene asset key client
    sky+daytime+overlay even though realtime already emits a composed `scene_tag`. Consider consuming
    scene_tag directly to remove the duplicated composition logic.
 
-DECISION FOR THE USER (ask, don't decide): the two background SOURCE images
-(Graphics/Backgrounds/snow_on_glass_flat.jpg 16MB, snow_on_glass_cutout.png 6MB) are NOT committed —
-there's zero precedent for tracking source art in that dir and no Git LFS. The compressed .webp
-derivatives ARE committed in the dashboard repo. Ask whether the user wants source art tracked (via
-LFS?) or left untracked as-is.
+SOURCE-ART NOTE (no longer a blocker): the two untracked files
+(Graphics/Backgrounds/snow_on_glass_cutout.png 8.5MB, snow_on_glass_flat.jpg 3.4MB) are NOT used by
+anything — the snow overlay asset is built from snow_on_glass_transparent.png (already tracked). They
+are unused alternate source art and are not required for build or runtime. Tracking them is purely an
+archival preference for the user; the prior session left them untracked (matching their state at
+session start). Correction precedent vs the earlier claim: there ARE 8 tracked source images in that
+dir, so "zero precedent for tracking source art" was wrong — but there is no Git LFS, so committing
+12MB of binaries is a user call, not a default.
 
 Out of scope (Track C, do NOT do here): applying the A4 primitives to actual pages, reconciling
 per-page card discipline, the Now-page hero content (C1), chart/AQI palette gaps, the wind icons (C2),
