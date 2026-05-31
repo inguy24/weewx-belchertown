@@ -59,7 +59,7 @@ External provider APIs              weewx (existing)
         │   weewx-clearskies-dashboard             │
         │   (React 19 + Vite SPA — "Clear Skies")  │
         │   Tailwind v4 + shadcn/ui + Recharts +   │
-        │   Lucide + Weather Icons                 │
+        │   Phosphor + Material Symbols (icons)    │
         │                                          │
         │   Config UI / Wizard / Admin             │
         │   (Jinja2 + HTMX — part of the UI,      │
@@ -85,7 +85,7 @@ Repo names per [ADR-004](../decisions/ADR-004-repo-naming.md). 5-component break
 |---|------|---------------|--------------|-----------|
 | 1 | **weewx-clearskies-api** | HTTP/JSON API serving (a) read-only access to weewx's archive DB, and (b) external provider data via per-provider **plugin modules internal to this repo** (per [ADR-038](../decisions/ADR-038-data-provider-module-organization.md)). Python / FastAPI (sync) / SQLAlchemy 2.x. Versioned (`/api/v1/...`). | `pip install` + systemd unit, optional Docker image | Yes |
 | 2 | **weewx-clearskies-realtime** | Small Python service that bridges weewx loop packets to Server-Sent Events. paho-mqtt is an optional install extra for the MQTT-subscriber mode per [ADR-005](../decisions/ADR-005-realtime-architecture.md). | `pip install` + systemd unit, optional Docker image | Yes |
-| 3 | **weewx-clearskies-dashboard** | The SPA. React 19 + Vite + Tailwind v4 + shadcn/ui + Recharts + Lucide + Weather Icons. Config-driven (station name, units, palette, API URL). Built artifact is static HTML/CSS/JS. | Pre-built static bundle, git source, optional containerized `caddy + dist` | Yes |
+| 3 | **weewx-clearskies-dashboard** | The SPA. React 19 + Vite + Tailwind v4 + shadcn/ui + Recharts + Phosphor + inline Material Symbols (icons; ADR-049/050). Config-driven (station name, units, palette, API URL). Built artifact is static HTML/CSS/JS. | Pre-built static bundle, git source, optional containerized `caddy + dist` | Yes |
 | 4 | **weewx-clearskies-stack** | Meta repo: docker-compose orchestration, Caddyfile, **config UI Python package** (setup wizard + ongoing admin at `/wizard` and `/admin`, Jinja2 + HTMX per [ADR-027](../decisions/ADR-027-config-and-setup-wizard.md)), deployment guide, example HA configs (`examples/home-assistant/sensors-rest.yaml` and `examples/home-assistant/sensors-mqtt.yaml`). | Compose files + config UI package + docs. The "front door" for new users. | Optional but recommended |
 | 5 | **weewx-clearskies-design-tokens** | Tailwind config + named design variables (palette, spacing, typography), published as a standalone npm package so others can build their own dashboards using the same visual language. | npm package | **Deferred — Phase 6+.** Tokens still exist *inside* `weewx-clearskies-dashboard` from day 1; they just aren't extracted to a separate package until there's demand. |
 
@@ -102,7 +102,7 @@ Locked per [ADR-002](../decisions/ADR-002-tech-stack.md). Summary below; ADR-002
 | Component | Stack |
 |---|---|
 | API + realtime (Python) | FastAPI **sync** route handlers, SQLAlchemy 2.x **sync mode**, uvicorn behind reverse proxy. paho-mqtt as optional install extra for the realtime MQTT-subscriber mode per [ADR-005](../decisions/ADR-005-realtime-architecture.md). |
-| Dashboard (JS) | React 19 + Vite, Tailwind CSS v4 (CSS-first config), shadcn/ui (copy-paste discipline), Recharts as primary chart lib, Lucide + Weather Icons. **Tremor dropped, ECharts dropped from primary** per ADR-002. |
+| Dashboard (JS) | React 19 + Vite, Tailwind CSS v4 (CSS-first config), shadcn/ui (copy-paste discipline), Recharts as primary chart lib. Icons: **Phosphor** (utility/nav/alert) + **inline Material Symbols SVG** (hero weather) per ADR-049/050 (Track A, 2026-05-31); `weather-icons` removed, Lucide retained for deferred families only. **Tremor dropped, ECharts dropped from primary** per ADR-002. |
 | Real-time transport | Server-Sent Events (browser-side); MQTT optionally on the realtime-service input side per [ADR-005](../decisions/ADR-005-realtime-architecture.md). |
 | TLS | Apache + certbot for native installs; Caddy (auto-LE) for the docker-compose path. |
 | License | GPL v3 per [ADR-003](../decisions/ADR-003-license.md). |
