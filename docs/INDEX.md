@@ -19,6 +19,10 @@ This repo started as a Belchertown skin evaluation and pivoted to the Clear Skie
 - **[decisions/INDEX.md](decisions/INDEX.md)** — table of all ADRs with status (40 Accepted, 0 Proposed, 0 Pinned as of 2026-05-05).
 - [decisions/_TEMPLATE.md](decisions/_TEMPLATE.md) — copy this for new ADRs.
 
+## Design
+
+- **[design/design-tokens-typography.md](design/design-tokens-typography.md)** — Typography token spec (LOCKED 2026-05-31): font role assignments (Manrope body/labels, Outfit display-role stat numerals, Lexend chart SVG text), weight map, and role-named rem type scale. Sibling to ADR-048. Visual specimen: [design/mockups/C2pre-type-system.html](design/mockups/C2pre-type-system.html).
+
 ## Contracts
 
 All three Phase 1 contracts committed; co-authoritative with the source ADRs.

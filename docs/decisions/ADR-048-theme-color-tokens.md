@@ -80,6 +80,9 @@ curated, AA-verified options** (default **blue**); no free-form picker. Semantic
 - Related ADRs: ADR-009 (design direction — defers value definition here), ADR-022 (branding mechanism),
   ADR-023 (light/dark mechanism), ADR-026 (accessibility/contrast), ADR-047 (background system — scrims
   must preserve token contrast over photos)
+- **Typography sibling:** [../design/design-tokens-typography.md](../design/design-tokens-typography.md)
+  (LOCKED 2026-05-31) — font role assignments and type scale that complement this color token set; Track C
+  components consume both.
 - Code: dashboard `src/index.css`, `src/lib/branding.ts`, `src/lib/theme-provider.tsx`, `components.json`
 - Visual reference: `docs/design/mockups/A1-theme-tokens.html`
 - Plan: `docs/planning/UI-REDESIGN-PLAN.md` Track A1

@@ -114,6 +114,10 @@ the user reviews before it's binding.
   [mockups/A1-theme-tokens.html](../design/mockups/A1-theme-tokens.html). Tracked gaps (not blockers):
   chart palette is 5-step neutral (revisit at first multi-series chart), EPA AQI palette not tokenized
   (add with C6). No code change. 
+- **Typography tokens** (font roles + type scale) → **[design-tokens-typography.md](../design/design-tokens-typography.md)**
+  (LOCKED 2026-05-31) — Manrope body / Outfit display-role / Lexend chart labels; card titles 600 semibold;
+  role-named rem scale. Sibling to ADR-048. Visual proof:
+  [mockups/C2pre-type-system.html](../design/mockups/C2pre-type-system.html).
 - **A2. Background system** (condition × theme, layered, photographic, operator-replaceable) → ADR.
   ✅ **CODE-COMPLETE + deployed (2026-05-31).** Approach validated in a browser prototype the
   operator accepted ([mockups/background-prototype.html](../design/mockups/background-prototype.html)):
@@ -191,6 +195,16 @@ decision and must NOT be theorized from ADR-051 prose or from a teammate's summa
 - [docs/design/mockups/A4-page-anatomy.html](../design/mockups/A4-page-anatomy.html) — the hero/page-header
   + controls-strip + the **half-row track** grid (`grid-auto-rows: var(--card-half-row)` = 5.5rem; strip = 1
   track, data card = 2, 2×2/tall = 4).
+
+**LOAD-BEARING — the locked type source (read EVERY component, steps 0/2/3).**
+The card's **font families, sizes, and weights are already decided** in
+[docs/design/design-tokens-typography.md](../design/design-tokens-typography.md) (LOCKED 2026-05-31).
+They are NOT a fresh decision and must NOT be invented per-card. Card mockups and all component code
+MUST consume these type tokens (`--font-display`, `--font-sans`, `--font-chart`, `--text-*`,
+`--font-semibold`, etc.) — they must NOT invent their own font sizes, font families, or font weights.
+This constraint is parallel to the footprint constraint: just as a card's footprint must not be
+re-theorized from ADR-051 prose, a card's typography must not be re-theorized outside this token spec.
+
 The Now-page grid is **`repeat(4, 1fr)`, `gap: 1rem`, `grid-auto-rows: 5.5rem`, container 80rem.** A card's
 footprint (e.g. Current Conditions = **2×2** = 2 cols × 4 half-row tracks ≈ 22rem) is a **fixed given** —
 content fits the box (`overflow:hidden`), the box does not grow to the content.
@@ -207,10 +221,19 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
 2. **Composition** — what's grouped on the card vs. split out, **WITHIN the locked footprint from step 0**.
    The footprint is a constraint, not a variable; if the content can't fit the locked box, that is a
    composition problem to solve (shrink/re-group), surfaced to the lead — NOT a license to resize the card.
+   Typography is equally constrained: use the locked type tokens from
+   [design-tokens-typography.md](../design/design-tokens-typography.md) — `--font-display` (Outfit) for
+   the large stat numeral, `--font-sans` (Manrope) for body/labels/card title, `--font-chart` (Lexend)
+   for chart SVG text, card title at `--font-semibold` (600). Do NOT introduce new font sizes or families.
 3. **Mockup** — **MUST be built on the actual Now-page grid: reuse the A4 grid CSS** (`grid-4col` +
    `grid-auto-rows: 5.5rem` + explicit, conflict-free col/row-span classes) and place the card at its
    **locked footprint** inside that grid. **NEVER** render the card as a standalone, full-width, or
    free/fixed-pixel-height box — that hides the true size and produced throw-away mockups.
+   The mockup **must also use the locked type tokens** from
+   [design-tokens-typography.md](../design/design-tokens-typography.md): `--font-display` (Outfit) for
+   the large stat numeral, `--font-sans` (Manrope) for body/labels/card title at `--font-semibold` (600),
+   `--font-chart` (Lexend) for any chart SVG text. Using the real fonts in the mockup is the only way
+   the lead can verify typography at the composition stage.
    **Render it and LOOK before sending** (per [rules/coding.md](../../rules/coding.md) "Render and LOOK"):
    screenshot the HTML headless, open the PNG, inspect it; reading markup or an `axe` pass is NOT
    verification. The lead inspects the render, not the markup. **Keep the mockup minimal** — only the
