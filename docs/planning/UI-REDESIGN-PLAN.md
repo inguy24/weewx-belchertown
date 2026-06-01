@@ -187,6 +187,20 @@ remain global gates run once.
 **Scope = every page, not just the "now"/home page** — forecast page, almanac, radar, earthquakes, alerts,
 records, etc. each have cards. Track C opens with a page inventory, then walks components page by page.
 
+**LOAD-BEARING — the INSPIRATION source (READ AND *LOOK* before designing ANY card — steps 0/2/3).**
+The look of every card is grounded in the inspiration walk — it is NOT invented, NOT derived from the data
+inventory, and NOT taken from a teammate's or doc's one-line summary. Before designing a card you **MUST open
+the actual files and load the pixels**:
+- [docs/design/inspiration/NOTES.md](../design/inspiration/NOTES.md) — the locked design direction + per-image
+  notes (which image models which card, what was loved, what to steal/skip).
+- [docs/design/inspiration/raw/img-NN.png](../design/inspiration/raw/) — **the specific inspiration image(s)
+  the card is modeled on, opened AS IMAGES** (Wind = **img-17**, today's temp curve = img-23, GRID model =
+  img-21, etc.). Reading the NOTES *line* is NOT enough — you must **LOOK at the image**.
+A card built from a data inventory or a generic mental model instead of its inspiration image is **wrong by
+construction** — the loved concept lives in the pixels. **(2026-05-31: the C2 Wind card was built twice as a
+generic compass-rose-with-needle because the inspiration was skipped; img-17 is actually a tick-rim
+*information container* with degree/cardinal/speed/gust all stacked INSIDE the circle. Do not repeat this.)**
+
 **LOAD-BEARING — the locked layout/footprint sources (read EVERY component, steps 0/2/3).**
 The card's **size and grid placement are already decided** in the A4 grid mockups — they are NOT a fresh
 decision and must NOT be theorized from ADR-051 prose or from a teammate's summary:
@@ -210,10 +224,15 @@ footprint (e.g. Current Conditions = **2×2** = 2 cols × 4 half-row tracks ≈ 
 content fits the box (`overflow:hidden`), the box does not grow to the content.
 
 **Per-component workflow (each component is a self-contained mini-cycle):**
-0. **Prior-decision check** — surface every existing decision for this surface (ADRs, current site, Phase-2
-   work) AND **pull the card's LOCKED FOOTPRINT (col-span × row-span) verbatim from the A4 grid mockups above
-   + the C0 inventory.** Record it explicitly (e.g. "Current Conditions = 2×2 per A4-card-grid"). Re-affirm or
-   consciously depart; never theorize the size.
+0. **Read-and-LOOK at the INSPIRATION first (MANDATORY GATE — before any other step).** Open
+   [docs/design/inspiration/NOTES.md](../design/inspiration/NOTES.md) **and the card's specific
+   `raw/img-NN.png` as an IMAGE** (per the LOAD-BEARING inspiration source above). The loved concept lives in
+   the pixels — a NOTES line, an ADR summary, or a teammate's description is NOT a substitute. Identify the
+   modeling image(s) for this card and state what is loved about it. **Do not design, compose, or mock up
+   anything until this is done.** THEN do the **prior-decision check** — surface every existing decision for
+   this surface (ADRs, current site, Phase-2 work) AND **pull the card's LOCKED FOOTPRINT (col-span × row-span)
+   verbatim from the A4 grid mockups above + the C0 inventory.** Record it explicitly (e.g. "Current
+   Conditions = 2×2 per A4-card-grid"). Re-affirm or consciously depart; never theorize the size.
 1. **Data inventory (B1 slice)** — "here is everything the providers / weewx give us for this card."
    Read our own authored artifacts (API `/current` + `/archive` contract → provider `CAPABILITY` decls →
    captured api-docs / contracts → weewx column reference), in that order. Do NOT rediscover from live wire
