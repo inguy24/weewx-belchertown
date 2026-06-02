@@ -91,6 +91,32 @@ What it does, in order (each step aborts on failure — `set -euo pipefail`):
 
 ---
 
+## Deploying API changes to the weewx container
+
+**The API does NOT run on weather-dev.** It runs on the `weewx` LXD container (see [ARCHITECTURE.md](../ARCHITECTURE.md) §Services, §Container inventory). The redeploy script above only deploys frontend code (dashboard, BFF, config UI) to weather-dev.
+
+When you change code in `weewx-clearskies-api`, you must deploy it to the weewx container separately:
+
+```bash
+# 1. Pull the latest code on the weewx container
+ssh ratbert "lxc exec weewx -- sudo -u ubuntu bash -lc 'cd /home/ubuntu/repos/weewx-clearskies-api && git pull --ff-only'"
+
+# 2. Restart the API service
+ssh ratbert "lxc exec weewx -- systemctl restart weewx-clearskies-api"
+
+# 3. Verify it started correctly (should NOT say "setup mode")
+ssh ratbert "lxc exec weewx -- journalctl -u weewx-clearskies-api --since '10 sec ago' --no-pager | head -5"
+
+# 4. Verify the API responds through the BFF on weather-dev
+ssh ratbert "lxc exec weather-dev -- curl -s -o /dev/null -w '%{http_code}\n' http://localhost/api/v1/current"
+```
+
+**Common mistake:** The `redeploy-weather-dev.sh` script restarts `weewx-clearskies-api.service` on weather-dev, but that is NOT the production API instance. The production API runs on the `weewx` container. Restarting the weather-dev copy does nothing useful and may start in "setup mode" (no config file on that host).
+
+**Cache note:** The API uses an in-memory cache (30-min TTL for forecast, 5-min for AQI). Restarting the API service clears the cache. The first request after restart will fetch fresh data from the upstream provider (Aeris, OWM, etc.).
+
+---
+
 ## Verify the deploy succeeded
 
 ```bash

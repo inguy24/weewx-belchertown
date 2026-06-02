@@ -41,9 +41,11 @@ DIST_DIR="${DASHBOARD_PATH}/dist"
 WEB_ROOT="/var/www/clearskies"
 SERVICES=(
     "weewx-clearskies-realtime"
-    "weewx-clearskies-api"
     "weewx-clearskies-config"
 )
+# NOTE: weewx-clearskies-api is NOT restarted here — the API runs on the
+# weewx LXD container, not on weather-dev. See docs/procedures/deploy-clearskies.md
+# "Deploying API changes to the weewx container" for the correct procedure.
 # CRITICAL: the read-only webcam bind-mount lives directly under the web root.
 # rsync must NEVER delete or write into it.
 WEBCAM_EXCLUDE="webcam/"
