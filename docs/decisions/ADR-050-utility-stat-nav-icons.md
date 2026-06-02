@@ -1,5 +1,5 @@
 ---
-status: Accepted
+status: Proposed
 date: 2026-05-30
 deciders: shane
 supersedes:
@@ -73,12 +73,22 @@ Locked render (faithful worksheet): [mockups/A3-final-icons.html](../design/mock
 - **Rendering mechanism is a build-phase choice** (e.g. `@phosphor-icons/react` for the base + inline SVG
   for the 3 cross-pack glyphs, OR Iconify at runtime). Not decided here. The mockups use Iconify only as a
   preview tool.
-- Wind speed/direction/gust are intentionally **absent** — any attempt to add a utility wind icon is a scope
-  violation against C2.
-- **Three sub-families are explicitly deferred** to the component ADRs where the operator can judge them in
-  context: **astro/almanac** glyphs → C5 (Sun & Moon arcs); **AQI / air-quality** set → C6 (AQI card);
-  **earthquake/seismic** glyph → seismic component (operator rejected the EKG-style `activity` look; a real
-  seismograph/waveform glyph is TBD). Shipping any of these under this ADR is out of scope.
+- Wind speed/direction/gust stats remain **text-only** (no utility icon on individual stat readouts).
+  **Exception:** `ph:wind` is used on the **C2 Wind Compass card title** and as a readout-block icon inside the
+  dial — operator-authorized 2026-05-31.
+- **Three sub-families — RESOLVED by C4 (2026-06-01).** All three deferred sub-families were resolved during
+  the C4 stat-tile mockup, operator-approved 2026-06-01:
+  - **AQI:** `ph:leaf` (Phosphor leaf, regular weight) as the content-area icon next to the AQI value. Not
+    deferred to C6 — resolved here.
+  - **Astro/almanac:** SVG arc position markers (sun glyph on gold arc, moon crescent on silver arc). These are
+    graphical elements on the arc visualization, not icon-family glyphs. No Phosphor astro icon needed.
+  - **Earthquake/seismic:** magnitude color badge (48×48 square, "M" + value, background color by magnitude
+    class). Not an icon-family glyph — the badge IS the visual identity.
+  - **UV Index (content-area):** custom inline SVG (Phosphor sun shape with "UV" text knocked out of the center
+    circle). Replaces `tabler:uv-index` for the C4 tile content area; `tabler:uv-index` remains available for
+    other stat-label contexts.
+  - **C4 stat tiles use NO title icons** (P9 pattern). Card titles are text-only (Manrope 600). Visual identity
+    comes from content-area elements: icons next to values, gauges, charts, badges, or arc markers.
 - Licensing: Phosphor **MIT**, Tabler **MIT**, Material Symbols **Apache-2.0**, Carbon **Apache-2.0** — all
   GPL-v3 compatible.
 
@@ -90,8 +100,10 @@ Locked render (faithful worksheet): [mockups/A3-final-icons.html](../design/mock
 - [ ] All 13 alert types map to their named glyph; flood (`material-symbols:flood-outline-rounded`) and
       tsunami (`carbon:tsunami`) render correctly as cross-pack glyphs.
 - [ ] Feels-like and dew-point render with **no icon** (text only).
-- [ ] No utility wind icon exists (speed/direction/gust deferred to C2).
-- [ ] No astro, AQI, or earthquake utility glyph ships under this ADR (deferred to C5 / C6 / seismic).
+- [ ] No utility wind icon on individual stat readouts (speed/direction/gust are text-only), **except** `ph:wind` on the C2 Wind Compass card title and readout block (operator-authorized 2026-05-31).
+- [ ] C4 content-area icons render per the resolution table: `ph:leaf` (AQI), `ph:drop` (Precip), `ph:sun`
+      (Solar Rad), custom sun+UV (UV Index), `ph:lightning` (Lightning), SVG arc markers (Sun & Moon),
+      magnitude badge (Earthquake). No title icons on any C4 tile (P9).
 - [ ] Icons legible in both themes and over photo backgrounds (shared with the **B3 contrast/perf gate**).
 
 ## Implementation guidance

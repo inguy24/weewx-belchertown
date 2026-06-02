@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C2 — Wind Card mockup</title>
+<style>
+/* ─── Fonts ──────────────────────────────────────────────────────── */
+@font-face { font-family:'Manrope'; font-weight:400; font-style:normal;
+  src: url('fonts/manrope-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family:'Manrope'; font-weight:600; font-style:normal;
+  src: url('fonts/manrope-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family:'Manrope'; font-weight:700; font-style:normal;
+  src: url('fonts/manrope-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family:'Outfit'; font-weight:400; font-style:normal;
+  src: url('fonts/outfit-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family:'Outfit'; font-weight:600; font-style:normal;
+  src: url('fonts/outfit-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family:'Outfit'; font-weight:700; font-style:normal;
+  src: url('fonts/outfit-latin-700-normal.woff2') format('woff2'); }
+
+:root {
+  --gap-grid:   1rem;
+  --card-row:   11rem;
+  --card-radius:0.875rem;
+  --glass-bg:   rgba(255,255,255,0.72);
+  --glass-border:rgba(0,0,0,0.10);
+  --glass-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.08);
+  --page-bg:    #f4f4f5;
+  --page-fg:    #18181b;
+  --font-sans:  'Manrope',system-ui,sans-serif;
+  --font-display:'Outfit',system-ui,sans-serif;
+}
+
+*,*::before,*::after { box-sizing:border-box; }
+body {
+  font-family:var(--font-sans);
+  margin:0;
+  padding:2rem 1.5rem 4rem;
+  background:var(--page-bg);
+  color:var(--page-fg);
+  line-height:1.5;
+}
+
+#font-stamp {
+  margin:0 0 1.2rem;
+  font-size:.78rem;
+  font-family:ui-monospace,monospace;
+  color:#52525b;
+  background:rgba(255,255,255,.80);
+  display:inline-block;
+  padding:.3rem .7rem;
+  border-radius:.5rem;
+  border:1px solid rgba(0,0,0,.10);
+}
+
+.frame-scroll { overflow-x:auto; padding-bottom:.5rem; }
+.frame {
+  width:1200px;
+  background:
+    linear-gradient(170deg,rgba(30,26,80,.88) 0%,rgba(60,50,120,.80) 28%,
+      rgba(130,80,60,.78) 56%,rgba(200,110,40,.82) 74%,
+      rgba(220,140,60,.80) 88%,rgba(180,100,40,.75) 100%),
+    linear-gradient(180deg,#1e1a50 0%,#c86e28 100%);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:1rem;
+  padding:1rem;
+}
+
+.grid-4col {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:var(--gap-grid);
+  grid-auto-rows:var(--card-row);
+}
+
+.card {
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-radius:var(--card-radius);
+  box-shadow:var(--glass-shadow);
+  backdrop-filter:blur(8px) saturate(1.1);
+  -webkit-backdrop-filter:blur(8px) saturate(1.1);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  overflow:hidden;
+  min-height:6rem;
+}
+
+/* ── Wind card: col×2, row×2 ──────────────────────────────────
+   card width  = 576px,  half-width  = 288
+   card height = 368px,  half-height = 184
+   Dial R = 200px: bleeds ±16px top/bottom (desired immersive bleed)
+   Horizontally the dial occupies 288±200 = 88..488, stays inside 576
+─────────────────────────────────────────────────────────────── */
+.card-wind {
+  grid-column:span 2;
+  grid-row:   span 2;
+  /* img-17 dark navy tone */
+  background:rgba(12,20,48,.90);
+  border-color:rgba(80,110,200,.22);
+  box-shadow:0 4px 36px rgba(0,0,0,.55),0 1px 8px rgba(0,0,0,.35),
+             inset 0 0 0 1px rgba(255,255,255,.05);
+  padding:0;
+  overflow:hidden;
+  position:relative;
+}
+
+/* SVG fills the card fully */
+.wind-svg {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* Text centred over the SVG */
+.wind-text {
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  pointer-events:none;
+  user-select:none;
+  /* width constrained to fit inside the tick rim
+     rim inner edge = R - max_tick_len = 200 - 24 = 176px from centre
+     inner diameter ≈ 352px; 60% of 576 = 346px (just fits, safe) */
+  width:60%;
+  gap:0;
+}
+
+.wl-label {      /* "CURRENT WIND" */
+  font-family:var(--font-sans);
+  font-size:.60rem;
+  font-weight:600;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:rgba(175,202,248,.62);
+  margin-bottom:.24rem;
+  line-height:1;
+}
+.wl-dir {        /* "305° NW" */
+  font-family:var(--font-sans);
+  font-size:1.05rem;
+  font-weight:400;
+  color:rgba(215,230,255,.90);
+  letter-spacing:.04em;
+  margin-bottom:.04rem;
+  line-height:1.15;
+}
+.wl-speed-row {  /* number + unit baseline-aligned */
+  display:flex;
+  align-items:baseline;
+  gap:.2rem;
+  line-height:1;
+  margin-bottom:.22rem;
+}
+.wl-num {        /* HERO: the big speed number — dominant like img-17 */
+  font-family:var(--font-display);
+  font-size:10rem;  /* ~160px — massive, fills most of the inner dial */
+  font-weight:700;
+  color:#fff;
+  letter-spacing:-.03em;
+  line-height:.90;
+}
+.wl-unit {       /* "mph" */
+  font-family:var(--font-display);
+  font-size:2.6rem;
+  font-weight:400;
+  color:rgba(205,220,255,.68);
+  line-height:1;
+  align-self:flex-end;
+  margin-bottom:.2rem;
+}
+.wl-gust {       /* "Wind Gust 18 mph" */
+  display:flex;
+  align-items:center;
+  gap:.26rem;
+  font-family:var(--font-sans);
+  font-size:.75rem;
+  font-weight:400;
+  color:rgba(180,203,242,.64);
+  margin-top:.05rem;
+  line-height:1;
+}
+.gust-svg { width:13px; height:13px; flex-shrink:0; opacity:.78; }
+</style>
+</head>
+<body>
+
+<div id="font-stamp">Checking fonts…</div>
+
+<div class="frame-scroll">
+  <div class="frame">
+    <div class="grid-4col">
+
+      <div class="card card-wind">
+
+        <!--
+          viewBox 576×368 = exact card dimensions (at 16px base).
+          cx=288 cy=184 (card centre). R=200 → bleeds ±16px top/bottom.
+          Cardinal labels placed at R+22=222 from centre; N and S will be clipped
+          by overflow:hidden (desired — matches img-17's off-screen N at top).
+          W and E labels at x = 288±222 = 66 and 510 — inside the 576px width, visible.
+        -->
+        <svg class="wind-svg"
+             viewBox="0 0 576 368"
+             preserveAspectRatio="xMidYMid meet"
+             aria-hidden="true" focusable="false">
+          <defs>
+            <radialGradient id="dg" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="rgba(70,105,210,.22)"/>
+              <stop offset="65%"  stop-color="rgba(35,60,145,.10)"/>
+              <stop offset="100%" stop-color="rgba(10,25,70,.0)"/>
+            </radialGradient>
+            <!-- Glow for accent marker -->
+            <filter id="ag" x="-120%" y="-120%" width="340%" height="340%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- Faint interior fill -->
+          <circle cx="288" cy="184" r="188" fill="url(#dg)"/>
+          <!-- Outer rim ring — visible bezel edge -->
+          <circle cx="288" cy="184" r="200" fill="none"
+                  stroke="rgba(140,170,245,.38)" stroke-width="1.5"/>
+          <!-- Inner bezel ring — subtle tick inset separator -->
+          <circle cx="288" cy="184" r="176" fill="none"
+                  stroke="rgba(100,140,225,.20)" stroke-width="1"/>
+
+          <!-- All ticks, labels, marker built by JS below -->
+          <g id="ticks" stroke-linecap="round"/>
+          <g id="cardinals"/>
+          <g id="marker"/>
+        </svg>
+
+        <!-- Centred text stack -->
+        <div class="wind-text">
+          <div class="wl-label">Current Wind</div>
+          <div class="wl-dir">305° NW</div>
+          <div class="wl-speed-row">
+            <span class="wl-num">12</span>
+            <span class="wl-unit">mph</span>
+          </div>
+          <div class="wl-gust">
+            <svg class="gust-svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/>
+              <path d="M9.6 4.6A2 2 0 1 1 11 8H2"/>
+              <path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
+            </svg>
+            Wind Gust 18 mph
+          </div>
+        </div>
+
+      </div>
+
+      <!-- empty cells (per spec) -->
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* Font check */
+(async () => {
+  const s = document.getElementById('font-stamp');
+  const pairs = [['Manrope 400','400 1em Manrope'],['Manrope 600','600 1em Manrope'],
+                 ['Outfit 400','400 1em Outfit'],['Outfit 700','700 1em Outfit']];
+  const out = [];
+  for (const [n,spec] of pairs) {
+    try { await document.fonts.load(spec); } catch(_) {}
+    out.push((document.fonts.check(spec)?'✓':'✗')+' '+n);
+  }
+  s.textContent = 'Fonts: ' + out.join(' | ');
+})();
+
+/* Dial */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const CX=288, CY=184, R=200;
+
+  /* Ticks: 72 @ every 5°; 0°=N=SVG-up (-90° SVG angle) */
+  const tG = document.getElementById('ticks');
+  for(let i=0;i<72;i++){
+    const deg = i*5;
+    const rad = (deg-90)*Math.PI/180;
+    const isC = deg%90===0;           // cardinal: N E S W
+    const isI = deg%45===0 && !isC;  // intercardinal: NE SE SW NW
+    const is30= deg%30===0 && !isC && !isI; // every-30 minor major
+    const len = isC ? 24 : isI ? 16 : is30 ? 10 : 7;
+    const sw  = isC ? 2.8 : isI ? 2.0 : is30 ? 1.4 : 1.0;
+    const a   = isC ? .90 : isI ? .65 : is30 ? .42 : .28;
+    const col = `rgba(195,218,255,${a})`;
+    const x1=CX+R*Math.cos(rad), y1=CY+R*Math.sin(rad);
+    const x2=CX+(R-len)*Math.cos(rad), y2=CY+(R-len)*Math.sin(rad);
+    const ln=document.createElementNS(NS,'line');
+    ln.setAttribute('x1',x1.toFixed(2)); ln.setAttribute('y1',y1.toFixed(2));
+    ln.setAttribute('x2',x2.toFixed(2)); ln.setAttribute('y2',y2.toFixed(2));
+    ln.setAttribute('stroke',col); ln.setAttribute('stroke-width',sw);
+    tG.appendChild(ln);
+  }
+
+  /* Cardinal labels — only W and E are guaranteed visible
+     N is at top (y = 184-222 = -38, clipped by card edge — like img-17)
+     S is at bottom (y = 184+222 = 406, clipped)
+     W is at x = 288-222 = 66 (visible)
+     E is at x = 288+222 = 510 (visible)
+  */
+  const cG=document.getElementById('cardinals');
+  for(const [label,deg] of [['N',0],['E',90],['S',180],['W',270]]){
+    const rad=(deg-90)*Math.PI/180;
+    const LR=R+22;
+    const lx=CX+LR*Math.cos(rad), ly=CY+LR*Math.sin(rad);
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',lx.toFixed(1)); t.setAttribute('y',ly.toFixed(1));
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('dominant-baseline','central');
+    t.setAttribute('font-family','Manrope,system-ui,sans-serif');
+    t.setAttribute('font-size','14');
+    t.setAttribute('font-weight','700');
+    t.setAttribute('fill','rgba(200,220,255,.58)');
+    t.textContent=label;
+    cG.appendChild(t);
+  }
+
+  /* Bearing marker @ 305° */
+  const mG=document.getElementById('marker');
+  const mRad=(305-90)*Math.PI/180;
+  const cos=Math.cos(mRad), sin=Math.sin(mRad);
+  const ox=CX+(R+5)*cos, oy=CY+(R+5)*sin;
+  const ix=CX+(R-30)*cos, iy=CY+(R-30)*sin;
+
+  /* glow */
+  const hl=document.createElementNS(NS,'line');
+  hl.setAttribute('x1',ox.toFixed(2)); hl.setAttribute('y1',oy.toFixed(2));
+  hl.setAttribute('x2',ix.toFixed(2)); hl.setAttribute('y2',iy.toFixed(2));
+  hl.setAttribute('stroke','rgba(248,204,58,.55)');
+  hl.setAttribute('stroke-width','12');
+  hl.setAttribute('stroke-linecap','round');
+  hl.setAttribute('filter','url(#ag)');
+  mG.appendChild(hl);
+
+  /* accent bar */
+  const bar=document.createElementNS(NS,'line');
+  bar.setAttribute('x1',ox.toFixed(2)); bar.setAttribute('y1',oy.toFixed(2));
+  bar.setAttribute('x2',ix.toFixed(2)); bar.setAttribute('y2',iy.toFixed(2));
+  bar.setAttribute('stroke','#f4cc3c');
+  bar.setAttribute('stroke-width','5');
+  bar.setAttribute('stroke-linecap','round');
+  mG.appendChild(bar);
+
+  /* dot at rim */
+  const dot=document.createElementNS(NS,'circle');
+  dot.setAttribute('cx',(CX+R*cos).toFixed(2));
+  dot.setAttribute('cy',(CY+R*sin).toFixed(2));
+  dot.setAttribute('r','5.5');
+  dot.setAttribute('fill','#f4cc3c');
+  mG.appendChild(dot);
+})();
+</script>
+</body>
+</html>

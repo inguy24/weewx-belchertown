@@ -78,7 +78,7 @@ color tokens from ADR-048) when Track C coding begins.
   --font-bold:     700;
 
   /* ── Type size scale (role-named, rem) ──────────────────────────────────── */
-  --text-stat-hero:  4.75rem; /* dominant card numeral (the "72") — uses --font-display, weight 700 */
+  --text-stat-hero:  4.75rem; /* C1 Current-Conditions temperature ONLY — uses --font-display, weight 700. Other cards use card-appropriate sizes (e.g. wind speed ≈ 3rem). Operator-authorized 2026-05-31. */
   --text-stat-unit:  1.9rem;  /* unit beside it (°F)              — --font-display */
   --text-hero-name:  1.35rem; /* station name                      — --font-sans, weight 700 */
   --text-section:    0.95rem; /* section heading                   — --font-sans */
@@ -97,7 +97,7 @@ color tokens from ADR-048) when Track C coding begins.
 
 | UI element | Size token | Family token | Weight token | Notes |
 |---|---|---|---|---|
-| Large stat numeral ("72") | `--text-stat-hero` | `--font-display` (Outfit) | `--font-bold` (700) | Primary number on every data card |
+| Large stat numeral ("72") | `--text-stat-hero` | `--font-display` (Outfit) | `--font-bold` (700) | **C1 Current-Conditions temperature only.** Other cards use card-appropriate sizes (e.g. wind speed ≈ 3rem Outfit 400). Operator-authorized 2026-05-31. |
 | Stat unit ("°F") | `--text-stat-unit` | `--font-display` (Outfit) | `--font-normal` (400) | Sits beside the numeral, muted color |
 | Station name | `--text-hero-name` | `--font-sans` (Manrope) | `--font-bold` (700) | Hero bar only |
 | Section heading | `--text-section` | `--font-sans` (Manrope) | `--font-semibold` (600) | — |

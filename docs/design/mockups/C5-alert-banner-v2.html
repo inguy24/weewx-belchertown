@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C5 — Alert Banner v2 — National Systems</title>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+
+/* ─── Locked fonts: Manrope (body/labels) + Outfit (stat values) ─────────── */
+@font-face { font-family: 'Manrope'; font-weight: 400; font-style: normal;
+  src: url('fonts/manrope-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 600; font-style: normal;
+  src: url('fonts/manrope-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 700; font-style: normal;
+  src: url('fonts/manrope-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal;
+  src: url('fonts/outfit-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal;
+  src: url('fonts/outfit-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 700; font-style: normal;
+  src: url('fonts/outfit-latin-700-normal.woff2') format('woff2'); }
+
+/* ─── Design Tokens (mirrored from A4-card-grid) ─────────────────────────── */
+:root {
+  color-scheme: light dark;
+
+  /* Spacing / layout */
+  --gap-grid: 1rem;
+  --container-max: 80rem;
+  --card-radius: 0.875rem;
+  --card-pad: 1rem;
+
+  /* Light surface */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  --glass-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+
+  /* Light text */
+  --fg: #18181b;
+  --fg-muted: #71717a;
+  --fg-dim: #a1a1aa;
+  --title-rule: rgba(0, 0, 0, 0.12);
+
+  /* Page chrome */
+  --page-bg: #f4f4f5;
+  --page-fg: #18181b;
+  --frame-bg: rgba(255,255,255,0.35);
+  --frame-border: rgba(0,0,0,0.15);
+  --badge-bg: rgba(0,0,0,0.08);
+  --badge-fg: #52525b;
+
+  /* ── National alert system colors (light theme) ───────────────────────────
+     Each system's OFFICIAL colors — NOT generic.
+     Source: §6 cross-mapping table in GLOBAL-ALERT-SYSTEMS-RESEARCH.md
+  ───────────────────────────────────────────────────────────────────────── */
+
+  /* NWS (US) — classic VTEC tier colors */
+  --nws-warning-bg:    #CC0000;   /* Warning — red */
+  --nws-warning-text:  #ffffff;
+  --nws-warning-tint:  rgba(204, 0, 0, 0.12);
+  --nws-watch-bg:      #E07B00;   /* Watch — orange (amber) */
+  --nws-watch-text:    #ffffff;
+  --nws-watch-tint:    rgba(224, 123, 0, 0.12);
+  --nws-advisory-bg:   #C8A400;   /* Advisory — golden yellow */
+  --nws-advisory-text: #3d2800;
+  --nws-advisory-tint: rgba(200, 164, 0, 0.12);
+  --nws-statement-bg:  #7B8CAD;   /* Statement — steel blue-gray */
+  --nws-statement-text:#ffffff;
+  --nws-statement-tint:rgba(123, 140, 173, 0.10);
+
+  /* MeteoAlarm (EU) — awareness colors per EUMETNET spec */
+  --meteo-red-bg:    #CC0000;
+  --meteo-red-text:  #ffffff;
+  --meteo-red-tint:  rgba(204, 0, 0, 0.12);
+  --meteo-orange-bg: #E06000;     /* MeteoAlarm Orange */
+  --meteo-orange-text:#ffffff;
+  --meteo-orange-tint:rgba(224, 96, 0, 0.12);
+  --meteo-yellow-bg: #F5C000;     /* MeteoAlarm Yellow */
+  --meteo-yellow-text:#3d2800;
+  --meteo-yellow-tint:rgba(245, 192, 0, 0.12);
+  --meteo-green-bg:  #2e7d32;     /* MeteoAlarm Green */
+  --meteo-green-text:#ffffff;
+  --meteo-green-tint:rgba(46, 125, 50, 0.10);
+
+  /* UK Met Office — official Met Office color codes */
+  --ukmet-red-bg:    #D4000A;     /* Met Office Red */
+  --ukmet-red-text:  #ffffff;
+  --ukmet-red-tint:  rgba(212, 0, 10, 0.12);
+  --ukmet-amber-bg:  #E06400;     /* Met Office Amber */
+  --ukmet-amber-text:#ffffff;
+  --ukmet-amber-tint:rgba(224, 100, 0, 0.12);
+  --ukmet-yellow-bg: #E8C000;     /* Met Office Yellow */
+  --ukmet-yellow-text:#3d2800;
+  --ukmet-yellow-tint:rgba(232, 192, 0, 0.12);
+
+  /* JMA (Japan) — 5-level system (post-May 2026 overhaul) */
+  --jma-l5-bg:     #4A0070;       /* Level 5 — Kurohon (Black) — rendered as deep purple */
+  --jma-l5-text:   #ffffff;
+  --jma-l5-tint:   rgba(74, 0, 112, 0.15);
+  --jma-l4-bg:     #9400C8;       /* Level 4 — Purple (Urgent Warning — Evacuate) */
+  --jma-l4-text:   #ffffff;
+  --jma-l4-tint:   rgba(148, 0, 200, 0.14);
+  --jma-l3-bg:     #CC0000;       /* Level 3 — Red (Warning — 警報) */
+  --jma-l3-text:   #ffffff;
+  --jma-l3-tint:   rgba(204, 0, 0, 0.12);
+  --jma-l2-bg:     #C8A400;       /* Level 2 — Yellow (Advisory) */
+  --jma-l2-text:   #3d2800;
+  --jma-l2-tint:   rgba(200, 164, 0, 0.12);
+  --jma-l1-bg:     #2e7d32;       /* Level 1 — Advisory (注意報) */
+  --jma-l1-text:   #ffffff;
+  --jma-l1-tint:   rgba(46, 125, 50, 0.10);
+
+  /* BoM (Australia) */
+  --bom-severe-bg:   #CC0000;     /* Severe Warning — red */
+  --bom-severe-text: #ffffff;
+  --bom-severe-tint: rgba(204, 0, 0, 0.12);
+  --bom-warning-bg:  #E06000;     /* Warning — orange */
+  --bom-warning-text:#ffffff;
+  --bom-warning-tint:rgba(224, 96, 0, 0.12);
+  --bom-watch-bg:    #C8A400;     /* Watch — yellow */
+  --bom-watch-text:  #3d2800;
+  --bom-watch-tint:  rgba(200, 164, 0, 0.12);
+  --bom-advice-bg:   #2e7d32;     /* Advice — green */
+  --bom-advice-text: #ffffff;
+  --bom-advice-tint: rgba(46, 125, 50, 0.10);
+
+  /* IMD (India) */
+  --imd-red-bg:    #CC0000;
+  --imd-red-text:  #ffffff;
+  --imd-red-tint:  rgba(204, 0, 0, 0.12);
+  --imd-orange-bg: #E06000;
+  --imd-orange-text:#ffffff;
+  --imd-orange-tint:rgba(224, 96, 0, 0.12);
+  --imd-yellow-bg: #C8A400;
+  --imd-yellow-text:#3d2800;
+  --imd-yellow-tint:rgba(200, 164, 0, 0.12);
+  --imd-green-bg:  #2e7d32;
+  --imd-green-text:#ffffff;
+  --imd-green-tint:rgba(46, 125, 50, 0.10);
+
+  /* OWM passthrough — treated as level 2 (advisory-equivalent) per operator direction */
+  /* Using advisory golden yellow — event exists, so it warrants a level-2 color signal */
+  --owm-bg:    #C8A400;           /* Advisory yellow — level-2 equivalent */
+  --owm-text:  #3d2800;
+  --owm-tint:  rgba(200, 164, 0, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: rgba(30, 35, 55, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --glass-shadow: 0 4px 28px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.30);
+    --fg: #e7e7ea;
+    --fg-muted: #a1a1aa;
+    --fg-dim: #71717a;
+    --title-rule: rgba(255,255,255,0.12);
+    --page-bg: #0d0f18;
+    --page-fg: #e7e7ea;
+    --frame-bg: rgba(20,24,40,0.60);
+    --frame-border: rgba(255,255,255,0.10);
+    --badge-bg: rgba(255,255,255,0.10);
+    --badge-fg: #a1a1aa;
+  }
+}
+
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 2rem 1.5rem 5rem;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  line-height: 1.5;
+}
+
+/* ─── Page header ──────────────────────────────────────────────────────────── */
+.page-header { max-width: 72rem; margin: 0 auto 2rem; }
+.page-header h1 {
+  font-size: 1.25rem; font-weight: 700; margin: 0 0 .35rem;
+  letter-spacing: -.01em;
+}
+.page-header p {
+  font-size: .88rem; color: var(--fg-muted); margin: 0 0 1.25rem; max-width: 72ch;
+}
+
+/* ─── Section heading ──────────────────────────────────────────────────────── */
+.section-block {
+  max-width: 72rem;
+  margin: 0 auto 3rem;
+}
+h2.section-heading {
+  font-size: .95rem; font-weight: 700; margin: 0 0 .75rem;
+  color: var(--page-fg); display: flex; align-items: baseline; gap: .5rem;
+  text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid var(--title-rule); padding-bottom: .5rem;
+}
+h2.section-heading .sub {
+  font-size: .78rem; font-weight: 400; color: var(--fg-muted);
+  text-transform: none; letter-spacing: 0;
+}
+
+/* ─── Device frame ─────────────────────────────────────────────────────────── */
+.frame-scroll { overflow-x: auto; padding-bottom: .5rem; }
+.frame {
+  background:
+    linear-gradient(170deg,
+      rgba(30,26,80,0.88)   0%,
+      rgba(60,50,120,0.80) 28%,
+      rgba(130,80,60,0.78) 56%,
+      rgba(200,110,40,0.82) 74%,
+      rgba(220,140,60,0.80) 88%,
+      rgba(180,100,40,0.75) 100%),
+    linear-gradient(180deg, #1e1a50 0%, #c86e28 100%);
+  border: 1px solid var(--frame-border);
+  border-radius: 1rem;
+  padding: 1rem;
+  width: 900px;
+}
+.frame.dark-frame {
+  background:
+    linear-gradient(170deg,
+      rgba(10, 8, 35, 0.95)   0%,
+      rgba(20,14,55,0.92)    28%,
+      rgba(55,30,16,0.90)    56%,
+      rgba(90,45,10,0.92)    74%,
+      rgba(105,55,12,0.90)   88%,
+      rgba(70,35,8,0.90)    100%),
+    linear-gradient(180deg, #080618 0%, #4a1a04 100%);
+}
+
+.frame-label {
+  font-size: .75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--fg-muted); margin: 0 0 .75rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.frame-label .badge {
+  background: var(--badge-bg); color: var(--badge-fg);
+  border-radius: 999px; padding: .15rem .6rem; font-size: .68rem; font-weight: 600;
+  text-transform: none; letter-spacing: 0;
+}
+
+/* Alert banner stack inside frame */
+.alert-stack { display: flex; flex-direction: column; gap: .75rem; }
+
+/* ─── Alert Banner — Core Structure ───────────────────────────────────────── */
+/*
+  Layout:
+  ┌──────────────────────────────────────────────────────────────┐
+  │ [ICON-BLOCK] │ [TEXT-BLOCK .............] │ [CHEVRON] │
+  └──────────────────────────────────────────────────────────────┘
+  Icon block: colored background, large icon
+  Text block: white/glass background — event name, area+time, summary
+  Chevron: expand toggle
+*/
+.alert-banner {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  border-width: 2px;
+  border-style: solid;
+  box-shadow: var(--glass-shadow);
+  /* default border — overridden per severity */
+  border-color: rgba(0,0,0,0.20);
+}
+
+/* Collapsed row */
+.alert-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 4rem;
+  cursor: pointer;
+  /* actual expansion handled by JS in this mockup */
+}
+.alert-row:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Icon block — severity-colored panel */
+.alert-icon-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  flex-shrink: 0;
+  padding: .75rem .9rem;
+}
+.alert-icon-block iconify-icon {
+  font-size: 2.25rem;   /* 36px — prominent, immediately recognizable */
+  color: #ffffff;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.30));
+  flex-shrink: 0;
+}
+
+/* Text block — glass/neutral background */
+.alert-text-block {
+  flex: 1;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  padding: .65rem .85rem .65rem .8rem;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;  /* allow truncation */
+}
+
+/* Chevron column */
+.alert-chevron {
+  background: var(--glass-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .75rem;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  color: var(--fg-muted);
+  font-size: 1rem;
+  transition: color 0.15s;
+}
+.alert-chevron iconify-icon { font-size: 1.1rem; }
+
+/* Text elements inside text block */
+.alert-event-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.alert-event-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alert-system-badge {
+  font-family: 'Manrope', sans-serif;
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-radius: .25rem;
+  padding: .15rem .45rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.alert-meta {
+  font-family: 'Manrope', sans-serif;
+  font-size: .78rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.alert-meta .sep { opacity: .5; }
+.alert-summary {
+  font-family: 'Manrope', sans-serif;
+  font-size: .78rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
+/* ─── Expanded panel ───────────────────────────────────────────────────────── */
+.alert-expanded {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px) saturate(1.15);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  border-top: 1px solid rgba(0,0,0,0.08);
+  padding: 1rem 1.1rem;
+  display: none;  /* shown via class .is-expanded */
+}
+.alert-banner.is-expanded .alert-expanded { display: block; }
+.alert-banner.is-expanded .alert-chevron iconify-icon {
+  transform: rotate(180deg);
+}
+
+.expanded-body {
+  font-family: 'Manrope', sans-serif;
+  font-size: .82rem;
+  color: var(--fg);
+  line-height: 1.55;
+  margin-bottom: .85rem;
+}
+.expanded-instructions {
+  background: rgba(0,0,0,0.04);
+  border-left: 3px solid currentColor;
+  border-radius: 0 .4rem .4rem 0;
+  padding: .6rem .8rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: .80rem;
+  color: var(--fg);
+  margin-bottom: .85rem;
+}
+.expanded-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: .5rem .75rem;
+}
+.expanded-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+}
+.expanded-meta-label {
+  font-family: 'Manrope', sans-serif;
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--fg-dim);
+}
+.expanded-meta-value {
+  font-family: 'Manrope', sans-serif;
+  font-size: .80rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* ─── Per-severity color application helpers ──────────────────────────────── */
+/* Applied inline via style="" on .alert-banner and .alert-icon-block
+   for full flexibility in the mockup */
+
+/* ─── System color legend ─────────────────────────────────────────────────── */
+.system-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .75rem;
+  font-family: 'Manrope', sans-serif;
+  color: var(--fg-muted);
+}
+.legend-swatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: .25rem;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+/* ─── Color key table ─────────────────────────────────────────────────────── */
+.color-key-section {
+  max-width: 72rem;
+  margin: 0 auto 3rem;
+}
+.color-key-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+  font-family: 'Manrope', sans-serif;
+}
+.color-key-table th {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--title-rule);
+  padding: .4rem .6rem;
+  text-align: left;
+}
+.color-key-table td {
+  padding: .45rem .6rem;
+  border-bottom: 1px solid var(--title-rule);
+  vertical-align: middle;
+  color: var(--fg);
+}
+.swatch-cell {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.swatch {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: .25rem;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.color-hex {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: .70rem;
+  color: var(--fg-muted);
+}
+
+/* ─── Annotation labels ──────────────────────────────────────────────────── */
+.annotation {
+  font-size: .72rem;
+  font-family: 'Manrope', sans-serif;
+  color: var(--fg-muted);
+  font-style: italic;
+  margin: .4rem 0 .2rem;
+}
+
+/* micro note */
+.micro-note {
+  font-size: .72rem;
+  color: var(--fg-muted);
+  margin-top: .75rem;
+  font-style: italic;
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PAGE HEADER
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>C5 — Alert Banner v2 — National System Colors</h1>
+  <p>
+    Redesigned alert banner component for the Clear Skies Now page. Each banner adapts its
+    color treatment to the <strong>source national alert system</strong> — not a generic palette.
+    JMA, MeteoAlarm, UK Met Office, NWS, IMD, BoM each have their own official color schemes.
+    OWM passthrough alerts receive neutral treatment (no severity data available).
+    Shows collapsed state, expanded state, multi-alert stack, light theme, and dark theme.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     COLOR KEY — National Systems Reference
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="color-key-section">
+  <h2 class="section-heading">National System Color Key <span class="sub">Source: §5–§6, GLOBAL-ALERT-SYSTEMS-RESEARCH.md</span></h2>
+
+  <table class="color-key-table" aria-label="National alert system colors">
+    <thead>
+      <tr>
+        <th>System</th>
+        <th>Level</th>
+        <th>Native Label</th>
+        <th>Aeris Suffix</th>
+        <th>Color</th>
+        <th>Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- NWS -->
+      <tr>
+        <td><strong>NWS (US)</strong></td>
+        <td>4</td>
+        <td>Warning</td>
+        <td><code>.W</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#CC0000"></div><span class="color-hex">#CC0000</span></div></td>
+        <td>Hazardous weather occurring or imminent — take action</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>3</td>
+        <td>Watch</td>
+        <td><code>.A</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#E07B00"></div><span class="color-hex">#E07B00</span></div></td>
+        <td>Conditions favorable for hazardous weather — be prepared</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>2</td>
+        <td>Advisory</td>
+        <td><code>.Y</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#C8A400"></div><span class="color-hex">#C8A400</span></div></td>
+        <td>Inconvenience but not life-threatening — take precautions</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>1</td>
+        <td>Statement</td>
+        <td><code>.S</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#7B8CAD"></div><span class="color-hex">#7B8CAD</span></div></td>
+        <td>Informational / follow-up</td>
+      </tr>
+      <!-- MeteoAlarm -->
+      <tr>
+        <td><strong>MeteoAlarm (EU)</strong></td>
+        <td>4</td>
+        <td>Red</td>
+        <td><code>.EX</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#CC0000"></div><span class="color-hex">#CC0000</span></div></td>
+        <td>Very dangerous phenomena — major damage, threat to life</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>3</td>
+        <td>Orange</td>
+        <td><code>.SV</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#E06000"></div><span class="color-hex">#E06000</span></div></td>
+        <td>Dangerous — unusual phenomena, damage and casualties likely</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>2</td>
+        <td>Yellow ✓ live verified</td>
+        <td><code>.MD</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#F5C000"></div><span class="color-hex">#F5C000</span></div></td>
+        <td>Potentially dangerous — be aware, check forecasts</td>
+      </tr>
+      <!-- UK Met Office -->
+      <tr>
+        <td><strong>UK Met Office</strong></td>
+        <td>3</td>
+        <td>Red</td>
+        <td><code>.EX</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#D4000A"></div><span class="color-hex">#D4000A</span></div></td>
+        <td>Danger to life — significant disruption, extreme conditions</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>2</td>
+        <td>Amber</td>
+        <td><code>.SV</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#E06400"></div><span class="color-hex">#E06400</span></div></td>
+        <td>Increased likelihood of significant impacts — adjust plans</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>1</td>
+        <td>Yellow</td>
+        <td><code>.MD</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#E8C000"></div><span class="color-hex">#E8C000</span></div></td>
+        <td>Low-level impacts possible — be aware, check details</td>
+      </tr>
+      <!-- JMA -->
+      <tr>
+        <td><strong>JMA (Japan)</strong></td>
+        <td>5</td>
+        <td>特別警報 Emergency Warning</td>
+        <td><code>.EX</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#4A0070"></div><span class="color-hex">#4A0070</span></div></td>
+        <td>Kurohon (black) — disaster occurring/imminent</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>4</td>
+        <td>Urgent Warning (Purple)</td>
+        <td><code>.EX</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#9400C8"></div><span class="color-hex">#9400C8</span></div></td>
+        <td>Evacuate immediately (post-May 2026 level)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>3</td>
+        <td>警報 Warning (Red)</td>
+        <td><code>.SV</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#CC0000"></div><span class="color-hex">#CC0000</span></div></td>
+        <td>Elderly evacuate; others prepare</td>
+      </tr>
+      <!-- BoM -->
+      <tr>
+        <td><strong>BoM (Australia)</strong></td>
+        <td>4</td>
+        <td>Severe Warning</td>
+        <td><code>.EX</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#CC0000"></div><span class="color-hex">#CC0000</span></div></td>
+        <td>Take immediate emergency action — SEWS triggered</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>3</td>
+        <td>Warning</td>
+        <td><code>.SV</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#E06000"></div><span class="color-hex">#E06000</span></div></td>
+        <td>Take precautions, shelter</td>
+      </tr>
+      <!-- IMD -->
+      <tr>
+        <td><strong>IMD (India)</strong></td>
+        <td>4</td>
+        <td>Red — Take Action</td>
+        <td><code>.EX</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#CC0000"></div><span class="color-hex">#CC0000</span></div></td>
+        <td>Extremely bad weather — significant risk to life</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>3</td>
+        <td>Orange — Be Prepared</td>
+        <td><code>.SV</code></td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#E06000"></div><span class="color-hex">#E06000</span></div></td>
+        <td>Extremely bad weather expected — disruption likely</td>
+      </tr>
+      <!-- OWM -->
+      <tr>
+        <td><strong>OWM (passthrough)</strong></td>
+        <td>2 (assumed)</td>
+        <td>No severity data</td>
+        <td>n/a</td>
+        <td><div class="swatch-cell"><div class="swatch" style="background:#C8A400"></div><span class="color-hex">#C8A400</span></div></td>
+        <td>Advisory-equivalent yellow — alert exists so it warrants a level-2 signal; severity unknown (operator direction)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 1 — Light theme · All alert systems · Collapsed state
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:sun" style="opacity:.7"></iconify-icon>
+    Light Theme — All Systems · Collapsed State
+    <span class="sub">Severity-colored icon block + neutral glass text area</span>
+  </h2>
+
+  <div class="frame-label">
+    <iconify-icon icon="ph:desktop" style="font-size:1rem; opacity:.7"></iconify-icon>
+    Now page · desktop 900 px · 4 banners stacked (highest severity on top)
+    <span class="badge">full-width strip · 4×1 footprint</span>
+  </div>
+
+  <div class="frame-scroll">
+    <div class="frame">
+      <div class="alert-stack">
+
+        <!-- ── 1. JMA Typhoon — Level 4 (Purple, Urgent Warning) ───────────── -->
+        <p class="annotation">JMA (Japan) · Level 4 Purple — Urgent Warning (台風警報) — "Evacuate Immediately"</p>
+        <div class="alert-banner is-accessible"
+             style="border-color: #9400C8;"
+             role="alert"
+             aria-label="JMA Urgent Warning: Typhoon Nanmadol">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)" aria-controls="expanded-jma-typhoon">
+            <!-- Severity icon block — JMA purple -->
+            <div class="alert-icon-block" style="background: #9400C8;" aria-hidden="true">
+              <iconify-icon icon="ph:hurricane"></iconify-icon>
+            </div>
+            <!-- Text block -->
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Typhoon Nanmadol — Urgent Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(148,0,200,0.15); color: #7b00a8;">
+                  JMA · Level 4
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Kyushu Region, Nagasaki Prefecture
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 11 PM Sunday
+              </div>
+              <div class="alert-summary">Maximum sustained winds 130 kt; storm surge of 4–6 m expected on coastal areas. Evacuate immediately...</div>
+            </div>
+            <!-- Expand chevron -->
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+          <!-- Expanded panel (hidden by default) -->
+          <div class="alert-expanded" id="expanded-jma-typhoon" role="region"
+               style="border-left: 4px solid #9400C8;">
+            <div class="expanded-body">
+              Maximum sustained winds near 130 knots with gusts to 155 knots. Typhoon Nanmadol is
+              expected to make landfall near Nagasaki between 3 AM and 6 AM Monday. Life-threatening
+              storm surge of 4–6 meters is possible along coastal areas of Kyushu. Rainfall totals
+              of 400–600 mm are possible in the mountains.
+            </div>
+            <div class="expanded-instructions" style="color: #7b00a8; border-left-color: #9400C8;">
+              <strong>Instructions:</strong> Do not remain in dangerous locations. Move to higher ground
+              immediately. Follow evacuation orders from local authorities. Stay indoors until all-clear
+              is issued.
+            </div>
+            <div class="expanded-meta-grid">
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Issued by</span>
+                <span class="expanded-meta-value">Japan Meteorological Agency</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Urgency</span>
+                <span class="expanded-meta-value">Immediate</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Certainty</span>
+                <span class="expanded-meta-value">Observed</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Effective</span>
+                <span class="expanded-meta-value">Sat 14 Sep, 6 PM JST</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Expires</span>
+                <span class="expanded-meta-value">Sun 15 Sep, 11 PM JST</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Alert System</span>
+                <span class="expanded-meta-value">JMA Level 4 · 台風警報</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 2. MeteoAlarm Orange — Thunderstorm (EU, France) ──────────── -->
+        <p class="annotation">MeteoAlarm (EU · France) · Orange Level 3 — Thunderstorm Warning · Aeris AW.TS.SV</p>
+        <div class="alert-banner"
+             style="border-color: #E06000;"
+             role="alert"
+             aria-label="MeteoAlarm Orange: Severe Thunderstorm — Île-de-France">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E06000;" aria-hidden="true">
+              <iconify-icon icon="ph:lightning"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Severe Thunderstorm Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,96,0,0.14); color: #a04000;">
+                  MeteoAlarm · Orange
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Île-de-France, Seine-et-Marne
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9 PM Sunday
+              </div>
+              <div class="alert-summary">Vigilance orange orages — Moderate to severe thunderstorms with large hail and damaging gusts expected...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 3. UK Met Office Amber — Wind Warning ────────────────────── -->
+        <p class="annotation">UK Met Office · Amber Level 2 — Wind Warning · Aeris AW.WI.SV, dataSource: ukmet</p>
+        <div class="alert-banner"
+             style="border-color: #E06400;"
+             role="alert"
+             aria-label="UK Met Office Amber: Wind Warning — Southwest England">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E06400;" aria-hidden="true">
+              <iconify-icon icon="ph:wind"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Amber Warning for Wind</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,100,0,0.14); color: #a04800;">
+                  UK Met Office · Amber
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Southwest England and Wales
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 6 AM Monday
+              </div>
+              <div class="alert-summary">Gusts of 70–80 mph likely in exposed areas; disruption to travel and power outages expected...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 4. NWS Tornado Warning (US) ───────────────────────────────── -->
+        <p class="annotation">NWS (US) · Warning Level 4 — Tornado Warning · VTEC .W suffix · Aeris dataSource: noaa_nws</p>
+        <div class="alert-banner"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="NWS Tornado Warning — Central Oklahoma">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #CC0000;" aria-hidden="true">
+              <iconify-icon icon="ph:tornado"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Tornado Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.12); color: #8b0000;">
+                  NWS · Warning
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Central Oklahoma — Canadian County
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 7:30 PM CDT
+              </div>
+              <div class="alert-summary">At 6:42 PM a severe thunderstorm capable of producing a tornado was located near Yukon, moving northeast...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 5. IMD Red Alert — Cyclone (India) ─────────────────────────── -->
+        <p class="annotation">IMD (India) · Red Level 4 — "Take Action" — Cyclone Warning · Aeris .EX suffix</p>
+        <div class="alert-banner"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="IMD Red Alert: Cyclone Biparjoy — Odisha Coast">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #CC0000;" aria-hidden="true">
+              <iconify-icon icon="ph:hurricane"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Cyclone Warning — Take Action</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.12); color: #8b0000;">
+                  IMD · Red
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Odisha and Andhra Pradesh Coast
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 8 AM Tuesday
+              </div>
+              <div class="alert-summary">Very severe cyclonic storm Biparjoy — extremely bad weather with significant risk to life. Landfall expected...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 6. BoM Moderate Wind Watch (Australia) ────────────────────── -->
+        <p class="annotation">BoM (Australia) · Watch Level 2 — Moderate Wind · Aeris AW.WI.MD (live API verified: Sydney)</p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="BoM Wind Watch — New South Wales">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #C8A400;" aria-hidden="true">
+              <iconify-icon icon="ph:wind"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Moderate Wind — Watch</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.14); color: #7a5000;">
+                  BoM · Watch
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                New South Wales — Greater Sydney
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 2 PM Saturday
+              </div>
+              <div class="alert-summary">Moderate to fresh winds 25–35 kt with occasional gusts to 45 kt expected along coast and ranges...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 7. OWM Passthrough — Level 2 advisory treatment (operator direction) ── -->
+        <p class="annotation">OWM (passthrough) · No structured severity data — shown as level-2 advisory yellow per operator direction · generic ph:warning icon · "Severity Unknown" label</p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="Weather alert: Heavy Rain Warning">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #C8A400;" aria-hidden="true">
+              <iconify-icon icon="ph:warning" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Heavy Rain Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.14); color: #7a5000;">
+                  OWM · Severity Unknown
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                São Paulo, Brazil
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 10 PM Sunday
+              </div>
+              <div class="alert-summary">Heavy rainfall expected with totals of 50–80mm in 24 hours. Issued by INMET...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 8. NWS Advisory (lower severity contrast) ──────────────────── -->
+        <p class="annotation">NWS (US) · Advisory Level 2 — Dense Fog Advisory · VTEC .Y suffix · lower severity contrast vs. above</p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="NWS Dense Fog Advisory — Western Kansas">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #C8A400;" aria-hidden="true">
+              <iconify-icon icon="ph:cloud-fog" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Dense Fog Advisory</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.14); color: #7a5000;">
+                  NWS · Advisory
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Western Kansas — Ford and Gray Counties
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9 AM MDT
+              </div>
+              <div class="alert-summary">Visibility one quarter mile or less expected. Patchy dense fog developing overnight into early morning hours...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /alert-stack -->
+    </div><!-- /frame -->
+  </div><!-- /frame-scroll -->
+  <p class="micro-note">Light theme: severity-colored icon block is the dominant color signal. Text area stays glass/neutral for maximum readability. Highest severity stacks first.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 2 — EXPANDED STATE demonstration
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:arrow-down" style="opacity:.7"></iconify-icon>
+    Expanded State
+    <span class="sub">Click toggles in-place expansion — full description, instructions, metadata</span>
+  </h2>
+
+  <div class="frame-scroll">
+    <div class="frame">
+      <div class="alert-stack">
+
+        <!-- NWS Tornado Warning — EXPANDED -->
+        <p class="annotation">NWS Tornado Warning (Warning .W) — expanded state — showing full description + instructions + metadata grid</p>
+        <div class="alert-banner is-expanded"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="NWS Tornado Warning — Cleveland County">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="true"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #CC0000; min-height: 3.5rem;" aria-hidden="true">
+              <iconify-icon icon="ph:tornado"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Tornado Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.12); color: #8b0000;">
+                  NWS · Warning
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Central Oklahoma — Cleveland County
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 8:15 PM CDT
+              </div>
+              <div class="alert-summary">At 7:28 PM a confirmed tornado was located near Norman, moving northeast at 35 mph...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+          <!-- Expanded panel — VISIBLE in this example -->
+          <div class="alert-expanded" style="display: block; border-left: 4px solid #CC0000;">
+            <div class="expanded-body">
+              At 7:28 PM CDT, a confirmed tornado was located near Norman, moving northeast at
+              35 mph. This dangerous tornado will be near Moore and South Oklahoma City between
+              7:45 PM and 8:00 PM CDT. South Midwest City and Del City between 8:00 PM and 8:15 PM CDT.
+              Rainfall of 1 to 2 inches is also possible with this storm.
+            </div>
+            <div class="expanded-instructions" style="color: #8b0000; border-left-color: #CC0000;">
+              <strong>Instructions:</strong> Take cover now! Move to a basement or an interior room on the
+              lowest floor of a sturdy building. Avoid windows. If you are outdoors, in a mobile home,
+              or in a vehicle, move to the closest substantial shelter and protect yourself from flying debris.
+            </div>
+            <div class="expanded-meta-grid">
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Issued by</span>
+                <span class="expanded-meta-value">NWS Norman OK</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Urgency</span>
+                <span class="expanded-meta-value">Immediate</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Certainty</span>
+                <span class="expanded-meta-value">Observed</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">CAP Severity</span>
+                <span class="expanded-meta-value">Extreme</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Effective</span>
+                <span class="expanded-meta-value">Mon 10 Jun, 7:28 PM CDT</span>
+              </div>
+              <div class="expanded-meta-item">
+                <span class="expanded-meta-label">Expires</span>
+                <span class="expanded-meta-value">Mon 10 Jun, 8:15 PM CDT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MeteoAlarm Yellow collapsed — second item, not expanded -->
+        <p class="annotation">MeteoAlarm Yellow Level 2 — collapsed (for contrast with expanded banner above)</p>
+        <div class="alert-banner"
+             style="border-color: #F5C000;"
+             role="status"
+             aria-label="MeteoAlarm Yellow: Thunderstorm Advisory — Île-de-France">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #F5C000;" aria-hidden="true">
+              <iconify-icon icon="ph:lightning" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Moderate Thunderstorm Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(245,192,0,0.18); color: #7a5000;">
+                  MeteoAlarm · Yellow
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Ain, Rhône, Loire
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 10 PM Sunday
+              </div>
+              <div class="alert-summary">Vigilance jaune orages — localised dangerous phenomena, moderate damages may occur in exposed areas...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <p class="micro-note">Expanded state: full description + NWS instructions + metadata grid (issuing office, urgency, certainty, times). Collapse/expand is in-place — pushes page content down.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 3 — Multi-alert stack (3 banners, different systems)
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:stack" style="opacity:.7"></iconify-icon>
+    Multi-Alert Stack
+    <span class="sub">3 simultaneous alerts — highest severity on top — each independently expandable</span>
+  </h2>
+
+  <div class="frame-scroll">
+    <div class="frame">
+      <div class="alert-stack">
+
+        <!-- 1. BoM Severe Warning (highest — red) -->
+        <p class="annotation">Stack position 1 — BoM Severe Warning (level 4, red) — highest severity, shown first</p>
+        <div class="alert-banner"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="BoM Severe Weather Warning — Queensland">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #CC0000;" aria-hidden="true">
+              <iconify-icon icon="ph:lightning"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Severe Thunderstorm Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.12); color: #8b0000;">
+                  BoM · Severe Warning
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Southeast Queensland — Brisbane LGA
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 5 PM AEST
+              </div>
+              <div class="alert-summary">Severe thunderstorm with large hail (up to 5 cm), destructive wind gusts over 125 km/h, heavy rainfall and flash flooding...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. NWS Watch (mid — orange) -->
+        <p class="annotation">Stack position 2 — NWS Flash Flood Watch (level 3, orange) — mid severity</p>
+        <div class="alert-banner"
+             style="border-color: #E07B00;"
+             role="alert"
+             aria-label="NWS Flash Flood Watch — Northern Illinois">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E07B00;" aria-hidden="true">
+              <iconify-icon icon="material-symbols:flood-outline-rounded"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Flash Flood Watch</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,123,0,0.14); color: #804000;">
+                  NWS · Watch
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Northern Illinois — Cook and DuPage Counties
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                through Monday morning
+              </div>
+              <div class="alert-summary">Conditions favorable for flash flooding. 2–4 inches of rainfall possible with locally higher amounts in storms...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. UK Met Yellow (lowest of stack — yellow) -->
+        <p class="annotation">Stack position 3 — UK Met Yellow Warning (level 1, yellow) — lowest severity in this stack</p>
+        <div class="alert-banner"
+             style="border-color: #E8C000;"
+             role="status"
+             aria-label="UK Met Yellow: Rain Warning — Northern England">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E8C000;" aria-hidden="true">
+              <iconify-icon icon="ph:cloud-rain" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Yellow Warning for Rain</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(232,192,0,0.18); color: #7a5000;">
+                  UK Met Office · Yellow
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Northern England — Yorkshire and Humber
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until noon Monday
+              </div>
+              <div class="alert-summary">40–60 mm rain possible, potentially 80 mm on high ground. Some disruption to travel likely...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /alert-stack -->
+    </div>
+  </div>
+  <p class="micro-note">Multi-alert: BoM Severe (red) > NWS Watch (orange) > UK Met Yellow — sorted highest severity first. Three different national systems active simultaneously. Each independently expandable.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 4 — Dark theme
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:moon" style="opacity:.7"></iconify-icon>
+    Dark Theme — Same Systems
+    <span class="sub">Severity colors are the same; glass tint adapts; text area uses dark glass token</span>
+  </h2>
+
+  <div class="frame-scroll">
+    <div class="frame dark-frame">
+      <div class="alert-stack">
+
+        <!-- Dark glass overrides for text area -->
+        <style>
+          /* Dark-frame scoped overrides — simulating prefers-color-scheme: dark */
+          .dark-frame .alert-text-block {
+            background: rgba(30, 35, 55, 0.72);
+            color: #e7e7ea;
+          }
+          .dark-frame .alert-event-name { color: #e7e7ea; }
+          .dark-frame .alert-meta { color: #a1a1aa; }
+          .dark-frame .alert-summary { color: #a1a1aa; }
+          .dark-frame .alert-chevron {
+            background: rgba(30, 35, 55, 0.72);
+            border-left-color: rgba(255,255,255,0.10);
+            color: #a1a1aa;
+          }
+          .dark-frame .expanded-body { color: #e7e7ea; }
+          .dark-frame .expanded-meta-label { color: #71717a; }
+          .dark-frame .expanded-meta-value { color: #e7e7ea; }
+          .dark-frame .annotation { color: #71717a; }
+          .dark-frame .expanded-instructions {
+            background: rgba(255,255,255,0.06);
+            color: #e7e7ea;
+          }
+          .dark-frame .alert-expanded {
+            background: rgba(20, 24, 40, 0.85);
+            border-top-color: rgba(255,255,255,0.10);
+          }
+        </style>
+
+        <!-- 1. JMA Level 4 Purple — dark -->
+        <p class="annotation">JMA Level 4 Purple — dark theme: severity-colored icon block unchanged; dark glass text area</p>
+        <div class="alert-banner"
+             style="border-color: #9400C8;"
+             role="alert"
+             aria-label="JMA Urgent Warning: Typhoon — dark theme demo">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #9400C8;" aria-hidden="true">
+              <iconify-icon icon="ph:hurricane"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Typhoon Warning — Urgent</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(148,0,200,0.30); color: #d580ff;">
+                  JMA · Level 4
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Okinawa, Kyushu
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until midnight Sunday
+              </div>
+              <div class="alert-summary">Category 4 equivalent — sustained winds 115 kt, gusts to 140 kt. Storm surge 3–5 m coastal areas...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. MeteoAlarm Orange — dark -->
+        <p class="annotation">MeteoAlarm Orange Level 3 — dark theme</p>
+        <div class="alert-banner"
+             style="border-color: #E06000;"
+             role="alert"
+             aria-label="MeteoAlarm Orange — dark theme demo">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E06000;" aria-hidden="true">
+              <iconify-icon icon="ph:lightning"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Severe Thunderstorm Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,96,0,0.30); color: #ffaa60;">
+                  MeteoAlarm · Orange
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Bavaria, Germany
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 8 PM CET
+              </div>
+              <div class="alert-summary">DWD: Strenge Unwetterwarnung — Gewitter mit großem Hagel und Sturmböen...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. NWS Tornado Warning — dark -->
+        <p class="annotation">NWS Warning (red) — dark theme: icon block red, dark glass text, red badge tinted for dark bg</p>
+        <div class="alert-banner"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="NWS Tornado Warning — dark theme">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #CC0000;" aria-hidden="true">
+              <iconify-icon icon="ph:tornado"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Tornado Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.30); color: #ff8080;">
+                  NWS · Warning
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Grady County, Oklahoma
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9:45 PM CDT
+              </div>
+              <div class="alert-summary">Confirmed tornado near Chickasha moving northeast at 40 mph. THIS IS A LIFE THREATENING SITUATION...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. UK Met Amber — dark -->
+        <p class="annotation">UK Met Office Amber — dark theme</p>
+        <div class="alert-banner"
+             style="border-color: #E06400;"
+             role="alert"
+             aria-label="UK Met Amber Wind — dark theme">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E06400;" aria-hidden="true">
+              <iconify-icon icon="ph:wind"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Amber Warning for Wind</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,100,0,0.30); color: #ffaa70;">
+                  UK Met Office · Amber
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Wales and Northwest England
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 3 AM Tuesday
+              </div>
+              <div class="alert-summary">Gusts of 65–75 mph possible inland; 80–90 mph over hills and exposed coasts. Power outages and transport disruption likely...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. IMD Yellow — dark (lower severity) -->
+        <p class="annotation">IMD Yellow Level 2 — "Be Aware" — dark theme, lower severity for contrast</p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="IMD Yellow: Be Aware — dark theme">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #C8A400;" aria-hidden="true">
+              <iconify-icon icon="ph:cloud-rain" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Heavy Rain Alert — Be Aware</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.28); color: #ffe060;">
+                  IMD · Yellow
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Uttarakhand, Himachal Pradesh
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until Tuesday evening
+              </div>
+              <div class="alert-summary">Severely bad weather over several days — heavy to very heavy rainfall expected in isolated areas...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. OWM passthrough — dark — level 2 advisory yellow (operator direction) -->
+        <p class="annotation">OWM passthrough — dark theme: advisory yellow icon block (level-2 per operator direction), "Severity Unknown" badge</p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="Weather alert passthrough — dark theme">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #C8A400;" aria-hidden="true">
+              <iconify-icon icon="ph:warning" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Coastal Flood Advisory</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.28); color: #ffe060;">
+                  OWM · Severity Unknown
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Cape Town, South Africa
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 6 PM SAST
+              </div>
+              <div class="alert-summary">Issued by SAWS — Minor coastal flooding possible during high tide periods. Avoid low-lying coastal roads...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /alert-stack -->
+    </div><!-- /dark-frame -->
+  </div><!-- /frame-scroll -->
+  <p class="micro-note">Dark theme: severity-colored icon blocks are identical to light — colors don't change. Text area uses dark glass token. Badge tints are higher opacity to maintain contrast on dark surface.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 5 — Mobile (1-col) at 380px
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:device-mobile" style="opacity:.7"></iconify-icon>
+    Mobile — 380px
+    <span class="sub">Same banner structure, narrower viewport — text truncates gracefully</span>
+  </h2>
+
+  <div class="frame-scroll">
+    <div class="frame" style="width: 380px;">
+      <div class="alert-stack">
+
+        <p class="annotation">NWS Tornado Warning — mobile</p>
+        <div class="alert-banner"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="NWS Tornado Warning — mobile view">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #CC0000; min-width: 3.5rem;" aria-hidden="true">
+              <iconify-icon icon="ph:tornado" style="font-size: 1.875rem;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Tornado Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.12); color: #8b0000;">
+                  NWS · Warning
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 7:30 PM CDT
+              </div>
+              <div class="alert-summary">Near Yukon, moving northeast — take cover immediately...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <p class="annotation">MeteoAlarm Orange — mobile</p>
+        <div class="alert-banner"
+             style="border-color: #E06000;"
+             role="alert"
+             aria-label="MeteoAlarm Orange — mobile">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #E06000; min-width: 3.5rem;" aria-hidden="true">
+              <iconify-icon icon="ph:lightning" style="font-size: 1.875rem;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name" style="font-size:.82rem;">Severe Thunderstorm</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,96,0,0.14); color: #a04000;">
+                  MeteoAlarm · Orange
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9 PM Sunday
+              </div>
+              <div class="alert-summary">Hail and damaging gusts expected...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <p class="annotation">BoM Watch (yellow) — mobile — lower severity for contrast</p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="BoM Wind Watch — mobile">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <div class="alert-icon-block" style="background: #C8A400; min-width: 3.5rem;" aria-hidden="true">
+              <iconify-icon icon="ph:wind" style="font-size: 1.875rem; color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name" style="font-size:.82rem;">Moderate Wind Watch</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.14); color: #7a5000;">
+                  BoM · Watch
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 2 PM Saturday
+              </div>
+              <div class="alert-summary">Gusts to 45 kt along coast...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <p class="micro-note">Mobile: location field may be omitted at narrow widths; time remaining + summary still present. Icon block narrows slightly (3.5rem vs 4.5rem). Text truncates with ellipsis.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     DESIGN NOTES
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block" style="max-width:72rem; margin: 0 auto 3rem;">
+  <h2 class="section-heading">Design Notes &amp; Decisions</h2>
+  <div style="font-size:.82rem; font-family:'Manrope',sans-serif; color:var(--fg-muted); line-height:1.65; columns:2; column-gap:2rem;">
+    <p><strong style="color:var(--fg)">Color signal:</strong> The severity-colored icon block is the primary color anchor. The card border matches it at 2px. The glass text area stays neutral (never tinted with the severity color) so text contrast is always predictable.</p>
+    <p><strong style="color:var(--fg)">National system specificity:</strong> JMA uses purple (level 4) and deep purple/black (level 5) — distinct from MeteoAlarm red. UK Met amber is a warmer orange than MeteoAlarm orange. These are NOT interchangeable.</p>
+    <p><strong style="color:var(--fg)">OWM passthrough:</strong> Advisory yellow (#C8A400), generic ph:warning icon, "Severity Unknown" badge label, role="status". Treated as level-2 per operator direction — an alert that exists is important enough for a visible color signal. Note: the research doc (§7) recommended neutral treatment to avoid misrepresenting unknown severity; this design decision departs from that recommendation.</p>
+    <p><strong style="color:var(--fg)">ARIA semantics:</strong> Level 4–3 alerts use role="alert" (live region, announced immediately). Level 2 and lower use role="status" (polite). OWM passthrough always role="status". This matches the urgency signal.</p>
+    <p><strong style="color:var(--fg)">Expand button:</strong> The entire collapsed row is a button (tabindex="0", role="button", aria-expanded). The expanded panel has role="region" and an id referenced by aria-controls. Keyboard accessible — Enter/Space to toggle.</p>
+    <p><strong style="color:var(--fg)">Icon sizing:</strong> 2.25rem (36px) desktop, 1.875rem (30px) mobile. Much larger than the 20px mentioned in previous banners — must be immediately recognizable, especially for emergency-level events.</p>
+    <p><strong style="color:var(--fg)">Yellow text on icon:</strong> Yellow-background icon blocks (advisory/yellow/watch levels) use dark text (#3d2800) on the icon for WCAG AA contrast, not white.</p>
+    <p><strong style="color:var(--fg)">Badge contrast — dark theme:</strong> Dark-theme badge backgrounds are higher opacity (0.30 vs 0.14 light) and badge foreground uses lighter hue variants so the text-on-dark-glass badge meets AA contrast.</p>
+  </div>
+</div>
+
+<!-- ── JavaScript: toggle expand/collapse ──────────────────────────────── -->
+<script>
+function toggleAlert(rowEl) {
+  const banner = rowEl.closest('.alert-banner');
+  const isExpanded = banner.classList.toggle('is-expanded');
+  rowEl.setAttribute('aria-expanded', String(isExpanded));
+}
+// Also support keyboard Enter/Space
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const t = e.target;
+    if (t.matches('[role="button"]')) {
+      e.preventDefault();
+      toggleAlert(t);
+    }
+  }
+});
+</script>
+
+</body>
+</html>

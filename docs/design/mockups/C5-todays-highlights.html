@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C5 — Today's Highlights · 2×1 card mockup</title>
+<style>
+
+/* ─── Self-hosted fonts ────────────────────────────────────────────────── */
+@font-face { font-family: 'Manrope'; font-weight: 400; font-style: normal;
+  src: url('fonts/manrope-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 600; font-style: normal;
+  src: url('fonts/manrope-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 700; font-style: normal;
+  src: url('fonts/manrope-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal;
+  src: url('fonts/outfit-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal;
+  src: url('fonts/outfit-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 700; font-style: normal;
+  src: url('fonts/outfit-latin-700-normal.woff2') format('woff2'); }
+
+/* ─── Design tokens — light (default) ─────────────────────────────────── */
+:root {
+  --gap-grid:     1rem;
+  --card-row:     5.5rem;
+  --card-radius:  0.875rem;
+
+  /* Glass — light */
+  --glass-bg:     rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  --glass-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+
+  /* Text — light */
+  --fg:           #18181b;
+  --fg-muted:     #71717a;
+  --fg-dim:       #a1a1aa;
+  --title-rule:   rgba(0, 0, 0, 0.12);
+
+  /* Page chrome — light (label on #e8e8ec bg needs ≥4.5:1) */
+  --page-bg:        #e8e8ec;
+  --page-fg:        #18181b;
+  /* #3f3f46 on #e8e8ec = ~7.2:1 ✓ */
+  --page-label-fg:  #3f3f46;
+  /* #52525b on #e8e8ec = ~5.5:1 ✓ */
+  --page-desc-fg:   #52525b;
+  --badge-bg:       rgba(0,0,0,0.09);
+  --badge-fg:       #3f3f46;
+
+  /* Typography */
+  --font-sans:       'Manrope', system-ui, sans-serif;
+  --font-display:    'Outfit', system-ui, sans-serif;
+  --text-card-title: 0.82rem;
+  --text-micro:      0.7rem;
+}
+
+/* ─── Design tokens — dark ─────────────────────────────────────────────── */
+.theme-dark {
+  --glass-bg:     rgba(30, 35, 55, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-shadow: 0 4px 28px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.30);
+  --fg:           #e7e7ea;
+  --fg-muted:     #a1a1aa;
+  --fg-dim:       #71717a;
+  --title-rule:   rgba(255,255,255,0.12);
+
+  /* Dark page chrome — label on #0d0f18 bg */
+  --page-bg:        #0d0f18;
+  --page-fg:        #e7e7ea;
+  /* #c4c4c9 on #0d0f18 = ~10:1 ✓ */
+  --page-label-fg:  #c4c4c9;
+  /* #a1a1aa on #0d0f18 = ~6.3:1 ✓ */
+  --page-desc-fg:   #a1a1aa;
+  --badge-bg:       rgba(255,255,255,0.12);
+  /* #c4c4c9 on rgba(255,255,255,0.12) over #0d0f18 ≈ effective bg ~#1e2030 → #c4c4c9 = ~7:1 ✓ */
+  --badge-fg:       #c4c4c9;
+}
+
+/* ─── Reset & base ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  padding: 2rem 1.5rem 4rem;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  line-height: 1.5;
+}
+
+/* ─── Page header ──────────────────────────────────────────────────────── */
+.page-header {
+  max-width: 72rem;
+  margin: 0 auto 2rem;
+}
+.page-header h1 {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: .25rem;
+  color: var(--page-fg);
+}
+.page-header p {
+  font-family: var(--font-sans);
+  font-size: .82rem;
+  color: var(--page-desc-fg);
+}
+
+/* ─── Theme section ────────────────────────────────────────────────────── */
+.theme-section {
+  margin-bottom: 3rem;
+}
+/* Dark section gets its own background so contrast is computed correctly */
+.theme-dark {
+  background: var(--page-bg);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  margin-bottom: 3rem;
+}
+/* Suppress double margin from theme-section */
+.theme-section.theme-dark {
+  margin-bottom: 0;
+}
+.theme-label {
+  font-family: var(--font-sans);
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  /* Use --page-label-fg which is verified ≥4.5:1 in both themes */
+  color: var(--page-label-fg);
+  margin-bottom: .6rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.badge {
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+  border-radius: 999px;
+  padding: .15rem .6rem;
+  font-size: .65rem;
+  font-weight: 600;
+}
+
+/* ─── Device frame ─────────────────────────────────────────────────────── */
+.frame-scroll {
+  overflow-x: auto;
+  padding-bottom: .5rem;
+  /* tabindex="0" is set in HTML to make this keyboard-focusable per WCAG */
+}
+.frame {
+  width: 1200px;
+  padding: 1rem;
+  border-radius: 1rem;
+}
+.frame-light {
+  background:
+    linear-gradient(170deg,
+      rgba(30,26,80,0.88)    0%,
+      rgba(60,50,120,0.80)  28%,
+      rgba(130,80,60,0.78)  56%,
+      rgba(200,110,40,0.82) 74%,
+      rgba(220,140,60,0.80) 88%,
+      rgba(180,100,40,0.75) 100%),
+    linear-gradient(180deg, #1e1a50 0%, #c86e28 100%);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+.frame-dark {
+  background:
+    linear-gradient(170deg,
+      rgba(10,8,35,0.93)    0%,
+      rgba(25,18,60,0.90)  28%,
+      rgba(70,35,20,0.88)  56%,
+      rgba(110,55,10,0.90) 74%,
+      rgba(130,70,15,0.88) 88%,
+      rgba(90,45,10,0.88) 100%),
+    linear-gradient(180deg, #0a0823 0%, #6e3208 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+/* ─── Grid ─────────────────────────────────────────────────────────────── */
+.grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gap-grid);
+  grid-auto-rows: var(--card-row);
+}
+.col-span-2 { grid-column: span 2; }
+
+/* ─── Glass card ───────────────────────────────────────────────────────── */
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: 0.5rem 0.75rem;
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Card title ───────────────────────────────────────────────────────── */
+.card-title {
+  font-family: var(--font-sans);
+  font-size: var(--text-card-title);
+  font-weight: 600;
+  color: var(--fg);
+  padding-bottom: 0.28rem;
+  border-bottom: 1px solid var(--title-rule);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+.card-title svg { flex-shrink: 0; opacity: 0.7; }
+
+/* ─── Placeholder card body ────────────────────────────────────────────── */
+.card-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: .75rem;
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+/* ─── Footprint badge ──────────────────────────────────────────────────── */
+.fp-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.45rem;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+  border-radius: .25rem;
+  font-size: .6rem;
+  font-weight: 700;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  padding: .06rem .28rem;
+  letter-spacing: .02em;
+}
+
+/* ─── Highlights strip ──────────────────────────────────────────────────── */
+/*
+ * Stat strip: ul > li structure.
+ * Each li = vertical flex column: icon (aria-hidden) · value · micro-label.
+ * ul is a horizontal flex row with items spaced evenly.
+ */
+ul.highlights-strip {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  list-style: none;
+  flex: 1;
+  margin-top: 0.3rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+ul.highlights-strip > li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--title-rule);
+  padding: 0 0.25rem;
+}
+
+ul.highlights-strip > li:first-child {
+  border-left: none;
+}
+
+/* Icon */
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg);
+  opacity: 0.72;
+  line-height: 1;
+}
+.stat-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Value — Outfit 600, tabular numerals */
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Micro-label — Manrope 400, uppercase */
+.stat-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: 400;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+</style>
+</head>
+<body>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PAGE HEADER
+════════════════════════════════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>C5 — Today's Highlights · 2×1 card</h1>
+  <p>
+    Six-stat strip at the <code>wide</code> footprint (2 cols × 1 row = 5.5 rem) in the 4-col grid,
+    paired with the placeholder "Today's Forecast" card. Light and dark themes.
+  </p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     LIGHT THEME
+════════════════════════════════════════════════════════════════════════ -->
+<section class="theme-section" aria-label="Light theme preview">
+  <p class="theme-label" aria-hidden="true">
+    Light theme
+    <span class="badge">4 columns · 1200 px · row = 5.5 rem</span>
+  </p>
+
+  <div class="frame-scroll" tabindex="0" aria-label="Light theme grid preview — scroll horizontally if needed">
+    <div class="frame frame-light">
+      <div class="grid-4col">
+
+        <!-- Placeholder: Today's Forecast 2×1 -->
+        <div class="card col-span-2">
+          <div class="fp-badge" aria-hidden="true">2×1</div>
+          <div class="card-title">
+            <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Today's Forecast
+          </div>
+          <div class="card-placeholder">[ hourly forecast strip — C3 ]</div>
+        </div>
+
+        <!-- TODAY'S HIGHLIGHTS 2×1 -->
+        <div class="card col-span-2">
+          <div class="fp-badge" aria-hidden="true">2×1</div>
+          <div class="card-title">
+            <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            Today's Highlights
+          </div>
+
+          <!--
+            Stat strip: ul > li
+            Each li announces as "[label]: [value]" to screen readers
+            via the li's text content (label above value, both visible).
+            Icons are aria-hidden.
+          -->
+          <ul class="highlights-strip" aria-label="Today's weather highlights">
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <!-- Thermometer (hot — line inside bulb indicates reading) -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                </svg>
+              </span>
+              <span class="stat-value">87°F</span>
+              <span class="stat-label">High</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <!-- Thermometer (cold — crossbar ticks on stem) -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                  <line x1="9" y1="6" x2="15" y2="6"/>
+                  <line x1="9" y1="10" x2="15" y2="10"/>
+                </svg>
+              </span>
+              <span class="stat-value">62°F</span>
+              <span class="stat-label">Low</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <!-- Wind -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+                </svg>
+              </span>
+              <span class="stat-value">23 mph</span>
+              <span class="stat-label">Gust</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <!-- Water drop -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                </svg>
+              </span>
+              <span class="stat-value">0.12 in</span>
+              <span class="stat-label">Rain</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <!-- Leaf (AQI / air quality) -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M17 8C8 10 5.9 16.17 3.82 19.82a2 2 0 0 0 .82 2.7 2 2 0 0 0 2.7-.82C9.18 18.41 13 15 22 12c0 0-3-4-5-4z"/>
+                  <path d="M9 15c0 0 2-4 5-5"/>
+                </svg>
+              </span>
+              <span class="stat-value">42</span>
+              <span class="stat-label">AQI</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <!-- Trophy (records) -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                  <path d="M4 22h16"/>
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
+                </svg>
+              </span>
+              <span class="stat-value">Hi Temp</span>
+              <span class="stat-label">Records</span>
+            </li>
+
+          </ul>
+        </div><!-- /highlights light -->
+
+      </div><!-- /grid-4col -->
+    </div><!-- /frame-light -->
+  </div>
+</section><!-- /light theme -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DARK THEME
+════════════════════════════════════════════════════════════════════════ -->
+<section class="theme-section theme-dark" aria-label="Dark theme preview">
+  <p class="theme-label" aria-hidden="true">
+    Dark theme
+    <span class="badge">4 columns · 1200 px · row = 5.5 rem</span>
+  </p>
+
+  <div class="frame-scroll" tabindex="0" aria-label="Dark theme grid preview — scroll horizontally if needed">
+    <div class="frame frame-dark">
+      <div class="grid-4col">
+
+        <!-- Placeholder: Today's Forecast 2×1 -->
+        <div class="card col-span-2">
+          <div class="fp-badge" aria-hidden="true">2×1</div>
+          <div class="card-title">
+            <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Today's Forecast
+          </div>
+          <div class="card-placeholder">[ hourly forecast strip — C3 ]</div>
+        </div>
+
+        <!-- TODAY'S HIGHLIGHTS 2×1 — dark -->
+        <div class="card col-span-2">
+          <div class="fp-badge" aria-hidden="true">2×1</div>
+          <div class="card-title">
+            <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            Today's Highlights
+          </div>
+
+          <ul class="highlights-strip" aria-label="Today's weather highlights">
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                </svg>
+              </span>
+              <span class="stat-value">87°F</span>
+              <span class="stat-label">High</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                  <line x1="9" y1="6" x2="15" y2="6"/>
+                  <line x1="9" y1="10" x2="15" y2="10"/>
+                </svg>
+              </span>
+              <span class="stat-value">62°F</span>
+              <span class="stat-label">Low</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+                </svg>
+              </span>
+              <span class="stat-value">23 mph</span>
+              <span class="stat-label">Gust</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                </svg>
+              </span>
+              <span class="stat-value">0.12 in</span>
+              <span class="stat-label">Rain</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M17 8C8 10 5.9 16.17 3.82 19.82a2 2 0 0 0 .82 2.7 2 2 0 0 0 2.7-.82C9.18 18.41 13 15 22 12c0 0-3-4-5-4z"/>
+                  <path d="M9 15c0 0 2-4 5-5"/>
+                </svg>
+              </span>
+              <span class="stat-value">42</span>
+              <span class="stat-label">AQI</span>
+            </li>
+
+            <li>
+              <span class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                  <path d="M4 22h16"/>
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
+                </svg>
+              </span>
+              <span class="stat-value">Hi Temp</span>
+              <span class="stat-label">Records</span>
+            </li>
+
+          </ul>
+        </div><!-- /highlights dark -->
+
+      </div>
+    </div>
+  </div>
+</section><!-- /dark theme -->
+
+</main>
+</body>
+</html>

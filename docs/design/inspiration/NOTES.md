@@ -1,7 +1,8 @@
 # UI Inspiration — Notes & Analysis
 
-Source: Pinterest board `burkhardt0989/current-conditions` (28 pins, pulled 2026-05-28).
-Raw images live in [raw/](raw/) as `img-00.jpg` … `img-27.*`.
+Source: Pinterest board `burkhardt0989/current-conditions` (28 pins, pulled 2026-05-28) +
+operator-added references.
+Raw images live in [raw/](raw/) as `img-00.jpg` … `img-28.*`.
 
 ## How this doc works
 
@@ -434,3 +435,18 @@ _What you like:_ The possibility of **adding backgrounds (scenic images) behind 
 Questioned whether our chart app supports it.
 _Steal / skip:_ Steal (pending verify): image backgrounds behind charts. Charts = Recharts;
 likely supported — verify (deferred #3b).
+### img-28 ☑
+_What it is:_ Lightning detection time-vs-distance scatter chart (from a Backyard Station lightning
+detector page). X-axis = time (station local), Y-axis = distance (mi), blue rectangles = detected
+strikes plotted as semi-transparent blocks. Shows the classic **approach/recede V-shape** — storm
+distance decreases as it approaches, hits a minimum, then increases as it moves away. Scrollbar for
+time navigation, zoom +/− controls, "now" marker (orange vertical line), legend.
+_What you like:_ The **time-vs-distance lightning scatter concept** — it tells the storm story
+(approaching? receding? how close did it get?) in a way raw strike counts can't. The V-shape is
+immediately readable. Operator wants this general concept for the Lightning tile, improved with
+our design system (better typography, glass surface, cleaner rendering).
+_Steal / skip:_ Steal: **time-vs-distance strike scatter/heatmap** for the Lightning card (C4
+surface E). The current Lightning tile shows only count + nearest distance text — this adds the
+visual dimension. Improvement opportunities over img-28: use Recharts (not a raw canvas), apply
+our type tokens, make it compact enough for a 1×1 tile (simplified — fewer gridlines, tighter
+axes, maybe last-3h window instead of the full scrollable range).

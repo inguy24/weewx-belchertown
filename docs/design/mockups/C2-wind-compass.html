@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C2 — Wind Compass card</title>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+/* ─── Local fonts (Manrope + Outfit) ──────────────────────────────────── */
+@font-face { font-family: 'Manrope'; font-weight: 400; font-style: normal;
+  src: url('fonts/manrope-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 600; font-style: normal;
+  src: url('fonts/manrope-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 700; font-style: normal;
+  src: url('fonts/manrope-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal;
+  src: url('fonts/outfit-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal;
+  src: url('fonts/outfit-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 700; font-style: normal;
+  src: url('fonts/outfit-latin-700-normal.woff2') format('woff2'); }
+
+/* ─── Design Tokens (verbatim from A4) ────────────────────────────────── */
+:root {
+  color-scheme: light dark;
+
+  /* Spacing / layout */
+  --gap-grid: 1rem;
+  --container-max: 80rem;
+  --card-row: 11rem;
+  --card-radius: 0.875rem;
+  --card-pad: 1rem;
+
+  /* Light surface */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  --glass-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+
+  /* Light text */
+  --fg: #18181b;
+  --fg-muted: #71717a;
+  --fg-dim: #a1a1aa;
+  --title-rule: rgba(0, 0, 0, 0.12);
+
+  /* Page chrome */
+  --page-bg: #f4f4f5;
+  --page-fg: #18181b;
+  --frame-bg: rgba(255,255,255,0.35);
+  --frame-border: rgba(0,0,0,0.15);
+  --badge-bg: rgba(0,0,0,0.08);
+  --badge-fg: #52525b;
+
+  /* Typography tokens */
+  --font-sans:    'Manrope', system-ui, sans-serif;
+  --font-display: 'Outfit',  system-ui, sans-serif;
+  --font-normal:   400;
+  --font-semibold: 600;
+  --font-bold:     700;
+  --text-card-title: 0.82rem;
+  --text-label:      0.75rem;
+  --text-micro:      0.7rem;
+  --text-secondary:  0.85rem;
+
+  /* Wind card accent */
+  --wind-accent: #3b82f6;          /* blue-500 */
+  --wind-accent-gust: rgba(251, 191, 36, 0.85); /* amber-400, semi-transparent */
+  --wind-needle: #3b82f6;
+  --wind-dial-ring: rgba(0,0,0,0.18);
+  --wind-tick-major: rgba(0,0,0,0.55);
+  --wind-tick-minor: rgba(0,0,0,0.28);
+  --wind-dial-bg: rgba(255,255,255,0.30);
+}
+
+/* ─── Reset & Base ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 2rem 1.5rem 4rem;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  line-height: 1.5;
+}
+
+/* ─── Page header ──────────────────────────────────────────────────────── */
+.page-header { max-width: 72rem; margin: 0 auto 1.5rem; }
+.page-header h1 {
+  font-family: var(--font-sans);
+  font-size: 1.1rem; font-weight: 700; margin: 0 0 .3rem;
+  letter-spacing: -.01em; color: var(--page-fg);
+}
+.page-header p {
+  font-size: .82rem; color: var(--fg-muted); margin: 0;
+}
+
+/* ─── Font-load stamp ──────────────────────────────────────────────────── */
+#font-stamp {
+  display: inline-flex; gap: .75rem; align-items: center;
+  background: rgba(0,0,0,0.07);
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: .4rem;
+  padding: .3rem .7rem;
+  font-size: .75rem;
+  font-family: ui-monospace, monospace;
+  margin: .75rem 0 1.5rem;
+  color: var(--fg-muted);
+}
+#font-stamp .ok  { color: #16a34a; font-weight: 700; }
+#font-stamp .fail { color: #dc2626; font-weight: 700; }
+
+/* ─── Frame wrapper (verbatim A4 frame--4col style) ──────────────────── */
+.frame-scroll { overflow-x: auto; padding-bottom: .5rem; }
+.frame {
+  backdrop-filter: blur(6px) saturate(1.05);
+  -webkit-backdrop-filter: blur(6px) saturate(1.05);
+  background: var(--frame-bg);
+  border: 1px solid var(--frame-border);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.frame--4col {
+  width: 1200px;
+  background:
+    linear-gradient(170deg,
+      rgba(30,26,80,0.88)   0%,
+      rgba(60,50,120,0.80) 28%,
+      rgba(130,80,60,0.78) 56%,
+      rgba(200,110,40,0.82) 74%,
+      rgba(220,140,60,0.80) 88%,
+      rgba(180,100,40,0.75) 100%),
+    linear-gradient(180deg, #1e1a50 0%, #c86e28 100%);
+  border: 1px solid var(--frame-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ─── Grid (verbatim A4) ───────────────────────────────────────────────── */
+.grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gap-grid);
+  grid-auto-rows: var(--card-row);
+}
+
+/* ─── Span helpers (verbatim A4 class names) ───────────────────────────── */
+.col-span-1 { grid-column: span 1; }
+.col-span-2 { grid-column: span 2; }
+.col-span-3 { grid-column: span 3; }
+.col-span-4 { grid-column: span 4; }
+.row-span-1 { grid-row: span 1; }
+.row-span-2 { grid-row: span 2; }
+
+/* ─── Glass Card (verbatim A4) ─────────────────────────────────────────── */
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  padding: var(--card-pad);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  min-height: 6rem;
+}
+
+/* Card title (verbatim A4, updated to Manrope 600) */
+.card-title {
+  font-family: var(--font-sans);
+  font-size: var(--text-card-title);
+  font-weight: var(--font-semibold);
+  color: var(--fg);
+  margin: 0 0 .5rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--title-rule);
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  flex-shrink: 0;
+}
+.card-title iconify-icon {
+  font-size: 1rem;
+  opacity: .75;
+  flex-shrink: 0;
+}
+
+/* Placeholder cards (filler, non-wind) */
+.card-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  color: var(--fg-dim);
+  font-style: italic;
+  font-family: var(--font-sans);
+}
+
+/* ─── Wind Card Body ───────────────────────────────────────────────────── */
+.wind-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 0;
+  padding: .1rem 0 .1rem;
+}
+
+/* ─── Compass Dial Area ────────────────────────────────────────────────── */
+.dial-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dial-wrap svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ─── Right-side secondary readouts ───────────────────────────────────── */
+.wind-stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .9rem;
+  min-width: 0;
+  padding-left: .25rem;
+}
+
+.wind-stat-row {
+  display: flex;
+  flex-direction: column;
+  gap: .12rem;
+}
+
+.wind-stat-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--fg-muted);
+  line-height: 1.2;
+}
+
+.wind-stat-value {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: var(--font-semibold);
+  color: var(--fg);
+  line-height: 1.3;
+}
+
+.wind-stat-value .accent {
+  color: var(--wind-accent);
+}
+
+.wind-stat-sub {
+  font-family: var(--font-sans);
+  font-size: var(--text-label);
+  font-weight: var(--font-normal);
+  color: var(--fg-muted);
+  line-height: 1.3;
+}
+
+/* Beaufort row */
+.beaufort-row {
+  display: flex;
+  flex-direction: column;
+  gap: .06rem;
+}
+.beaufort-pips {
+  display: flex;
+  gap: 3px;
+  margin-top: .3rem;
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+.beaufort-pips span {
+  display: inline-block;
+  width: 9px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--fg-dim);
+  flex-shrink: 0;
+}
+.beaufort-pips span.lit {
+  background: var(--wind-accent);
+}
+
+/* Divider between stat rows */
+.wind-stat-divider {
+  height: 1px;
+  background: var(--title-rule);
+  margin: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>C2 — Wind Compass card</h1>
+  <p>
+    Wind Compass signature card (C2) on the real A4 4-column grid.
+    Footprint: <strong>col-span-2 row-span-2</strong> (2×2). Grid: repeat(4,1fr) · gap:1rem · grid-auto-rows:11rem.
+    Fonts: Manrope (sans) + Outfit (display/numeral).
+  </p>
+  <div id="font-stamp">
+    <span id="fs-manrope">Manrope: checking…</span>
+    <span id="fs-outfit">Outfit: checking…</span>
+  </div>
+</div>
+
+<div class="frame-scroll">
+  <div class="frame frame--4col">
+    <div class="grid-4col">
+
+      <!-- ── WIND COMPASS — col-span-2 row-span-2 ── -->
+      <div class="card col-span-2 row-span-2" id="wind-card">
+        <div class="card-title">
+          <iconify-icon icon="ph:wind" aria-hidden="true"></iconify-icon>
+          Wind
+        </div>
+
+        <div class="wind-body">
+
+          <!-- Compass dial (SVG) -->
+          <div class="dial-wrap" aria-label="Wind compass showing wind from NW at 305 degrees">
+            <svg id="compass-svg" width="270" height="270" viewBox="0 0 210 210"
+                 role="img" aria-label="Compass dial">
+
+              <!-- ── Dial background circle ── -->
+              <circle cx="105" cy="105" r="100"
+                fill="rgba(255,255,255,0.22)"
+                stroke="rgba(0,0,0,0.15)"
+                stroke-width="1"/>
+
+              <!-- ── Outer ring ── -->
+              <circle cx="105" cy="105" r="98"
+                fill="none"
+                stroke="rgba(0,0,0,0.18)"
+                stroke-width="2.5"/>
+
+              <!-- ── Inner background fill ── -->
+              <circle cx="105" cy="105" r="85"
+                fill="rgba(255,255,255,0.18)"
+                stroke="none"/>
+
+              <!-- ── Cardinal & intercardinal tick marks ──
+                   Ticks are drawn top-center (12 o'clock = North) and rotated.
+                   Major tick (cardinal): length 12px, stroke-width 2.5
+                   Minor tick (intercardinal): length 7px, stroke-width 1.5
+                   Both inset from outer ring edge (r=98). -->
+              <!-- N 0° -->
+              <line x1="105" y1="7" x2="105" y2="19"
+                stroke="rgba(0,0,0,0.60)" stroke-width="3" stroke-linecap="round"/>
+              <!-- NE 45° -->
+              <line x1="105" y1="7" x2="105" y2="14"
+                stroke="rgba(0,0,0,0.32)" stroke-width="2" stroke-linecap="round"
+                transform="rotate(45 105 105)"/>
+              <!-- E 90° -->
+              <line x1="105" y1="7" x2="105" y2="19"
+                stroke="rgba(0,0,0,0.60)" stroke-width="3" stroke-linecap="round"
+                transform="rotate(90 105 105)"/>
+              <!-- SE 135° -->
+              <line x1="105" y1="7" x2="105" y2="14"
+                stroke="rgba(0,0,0,0.32)" stroke-width="2" stroke-linecap="round"
+                transform="rotate(135 105 105)"/>
+              <!-- S 180° -->
+              <line x1="105" y1="7" x2="105" y2="19"
+                stroke="rgba(0,0,0,0.60)" stroke-width="3" stroke-linecap="round"
+                transform="rotate(180 105 105)"/>
+              <!-- SW 225° -->
+              <line x1="105" y1="7" x2="105" y2="14"
+                stroke="rgba(0,0,0,0.32)" stroke-width="2" stroke-linecap="round"
+                transform="rotate(225 105 105)"/>
+              <!-- W 270° -->
+              <line x1="105" y1="7" x2="105" y2="19"
+                stroke="rgba(0,0,0,0.60)" stroke-width="3" stroke-linecap="round"
+                transform="rotate(270 105 105)"/>
+              <!-- NW 315° -->
+              <line x1="105" y1="7" x2="105" y2="14"
+                stroke="rgba(0,0,0,0.32)" stroke-width="2" stroke-linecap="round"
+                transform="rotate(315 105 105)"/>
+
+              <!-- ── Eighth-interval minor ticks (22.5° spacing) ── -->
+              <!-- SSE 157.5, SSW 202.5, ESE 112.5, WSW 247.5, NNE 22.5, NNW 337.5, ENE 67.5, WNW 292.5 -->
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(22.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(67.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(112.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(157.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(202.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(247.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(292.5 105 105)"/>
+              <line x1="105" y1="7" x2="105" y2="12"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1.5" stroke-linecap="round"
+                transform="rotate(337.5 105 105)"/>
+
+              <!-- ── Cardinal labels (N/E/S/W) ── -->
+              <!-- Positioned just inside tick marks, r≈80 from center -->
+              <text x="105" y="30"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="13" font-weight="700"
+                fill="rgba(0,0,0,0.72)">N</text>
+              <text x="180" y="105"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="13" font-weight="700"
+                fill="rgba(0,0,0,0.72)">E</text>
+              <text x="105" y="182"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="13" font-weight="700"
+                fill="rgba(0,0,0,0.72)">S</text>
+              <text x="30" y="105"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="13" font-weight="700"
+                fill="rgba(0,0,0,0.72)">W</text>
+
+              <!-- Intercardinal labels (smaller) -->
+              <!-- NE at 45°: x=105+80*sin(45)=161.6, y=105-80*cos(45)=48.4 -->
+              <text x="162" y="48"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="9" font-weight="600"
+                fill="rgba(0,0,0,0.45)">NE</text>
+              <!-- SE at 135°: x=105+80*sin(135)=161.6, y=105-80*cos(135)=161.6 -->
+              <text x="162" y="162"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="9" font-weight="600"
+                fill="rgba(0,0,0,0.45)">SE</text>
+              <!-- SW at 225°: x=105+80*sin(225)=48.4, y=105-80*cos(225)=161.6 -->
+              <text x="48" y="162"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="9" font-weight="600"
+                fill="rgba(0,0,0,0.45)">SW</text>
+              <!-- NW at 315°: x=105+80*sin(315)=48.4, y=105-80*cos(315)=48.4 -->
+              <text x="48" y="48"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="9" font-weight="600"
+                fill="rgba(0,0,0,0.45)">NW</text>
+
+              <!-- ── Gust ghost marker (windGustDir 325°) ──
+                   A softer amber arc-marker on the ring at 325°.
+                   325° from North: place a short arc/pill on the outer ring.
+                   In SVG, 0° = 3 o'clock, so 325° from N = 325-90 = 235° SVG angle.
+                   Point on r=92 ring: x=105+92*cos(235°), y=105+92*sin(235°)
+                   cos(235°)=-0.5736, sin(235°)=-0.8192
+                   x=105-52.77=52.2, y=105-75.37=29.6 -->
+              <circle cx="52.2" cy="29.6" r="6"
+                fill="rgba(251,191,36,0.80)"
+                stroke="rgba(180,130,0,0.50)"
+                stroke-width="1.5"
+                aria-label="Gust direction marker at 325 degrees"/>
+              <!-- Small label near gust marker -->
+              <text x="60" y="18"
+                text-anchor="start" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="8" font-weight="600"
+                fill="rgba(180,130,0,0.90)">G</text>
+
+              <!-- ── Wind needle (windDir 305° FROM) ──
+                   305° from North: SVG angle = 305-90 = 215°
+                   Arrow FROM 305° means it points INTO the center from the NW side.
+                   Needle: base at center, tip toward bearing 305° (NW-ish).
+                   In "from" convention: the arrow tip points AWAY from center
+                   toward the bearing the wind is coming from.
+                   Tip at r=78 in direction 305°:
+                     SVG x = 105 + 78*cos(215°) = 105 + 78*(-0.8192) = 105 - 63.9 = 41.1
+                     SVG y = 105 + 78*sin(215°) = 105 + 78*(-0.5736) = 105 - 44.7 = 60.3
+                   Tail at r=35 in opposite direction (305+180=125°, SVG=35°):
+                     SVG x = 105 + 35*cos(35°) = 105 + 28.67 = 133.7
+                     SVG y = 105 + 35*sin(35°) = 105 + 20.08 = 125.1
+                   Side fins at right angle to needle axis.
+                   Using a polygon for a proper arrowhead. -->
+              <g id="wind-needle" transform="rotate(305, 105, 105)">
+                <!-- Needle body: line from center down (toward S) through center up to tip (toward N) -->
+                <!-- After rotation by 305°, N-pointing = 305° from top = NW quadrant -->
+                <!-- Tail stub going opposite direction (toward S before rotation) -->
+                <line x1="105" y1="105" x2="105" y2="138"
+                  stroke="rgba(59,130,246,0.40)"
+                  stroke-width="3"
+                  stroke-linecap="round"/>
+                <!-- Main needle shaft toward tip -->
+                <line x1="105" y1="105" x2="105" y2="35"
+                  stroke="#3b82f6"
+                  stroke-width="3.5"
+                  stroke-linecap="round"/>
+                <!-- Arrowhead at tip (pointing toward 305° from direction) -->
+                <polygon points="105,22 98,40 112,40"
+                  fill="#3b82f6"
+                  stroke="none"/>
+                <!-- Center dot -->
+                <circle cx="105" cy="105" r="5"
+                  fill="#3b82f6"
+                  stroke="white"
+                  stroke-width="2"/>
+              </g>
+
+              <!-- ── Center info: speed + cardinal ── -->
+              <!-- Speed numeral: Outfit, scaled to fit inside ~r=55 inner area -->
+              <text x="105" y="92"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Outfit', system-ui, sans-serif"
+                font-size="38" font-weight="700"
+                fill="#18181b">12</text>
+              <!-- Unit label -->
+              <text x="105" y="114"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="12" font-weight="600"
+                fill="rgba(0,0,0,0.50)">mph</text>
+              <!-- Cardinal direction -->
+              <text x="105" y="132"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="'Manrope', system-ui, sans-serif"
+                font-size="15" font-weight="700"
+                fill="rgba(59,130,246,1.0)">NW</text>
+
+            </svg>
+          </div><!-- /dial-wrap -->
+
+          <!-- Right-side secondary readouts -->
+          <div class="wind-stats">
+
+            <!-- Gust speed -->
+            <div class="wind-stat-row">
+              <span class="wind-stat-label">Gusts</span>
+              <span class="wind-stat-value"><span class="accent">18</span> mph</span>
+            </div>
+
+            <div class="wind-stat-divider"></div>
+
+            <!-- Beaufort -->
+            <div class="wind-stat-row beaufort-row">
+              <span class="wind-stat-label">Beaufort Scale</span>
+              <span class="wind-stat-value">4 &mdash; Moderate Breeze</span>
+              <div class="beaufort-pips" aria-label="Beaufort 4 of 12">
+                <span class="lit"></span>
+                <span class="lit"></span>
+                <span class="lit"></span>
+                <span class="lit"></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="wind-stat-divider"></div>
+
+            <!-- Direction / bearing -->
+            <div class="wind-stat-row">
+              <span class="wind-stat-label">From</span>
+              <span class="wind-stat-value">NW &middot; 305&deg;</span>
+              <span class="wind-stat-sub">Gust direction 325&deg;</span>
+            </div>
+
+          </div><!-- /wind-stats -->
+
+        </div><!-- /wind-body -->
+      </div><!-- /wind card -->
+
+      <!-- ── Filler cards (other cells, empty) ── -->
+      <div class="card col-span-2 row-span-2">
+        <div class="card-title">
+          <iconify-icon icon="ph:cloud-sun" aria-hidden="true"></iconify-icon>
+          Current Conditions
+        </div>
+        <div class="card-placeholder">[ placeholder ]</div>
+      </div>
+
+      <div class="card col-span-1 row-span-1">
+        <div class="card-title">
+          <iconify-icon icon="ph:drop" aria-hidden="true"></iconify-icon>
+          Precipitation
+        </div>
+        <div class="card-placeholder">[ placeholder ]</div>
+      </div>
+
+      <div class="card col-span-1 row-span-1">
+        <div class="card-title">
+          <iconify-icon icon="ph:sun" aria-hidden="true"></iconify-icon>
+          Solar &amp; UV
+        </div>
+        <div class="card-placeholder">[ placeholder ]</div>
+      </div>
+
+      <div class="card col-span-1 row-span-1">
+        <div class="card-title">
+          <iconify-icon icon="ph:moon-stars" aria-hidden="true"></iconify-icon>
+          Sun &amp; Moon
+        </div>
+        <div class="card-placeholder">[ placeholder ]</div>
+      </div>
+
+      <div class="card col-span-1 row-span-1">
+        <div class="card-title">
+          <iconify-icon icon="ph:lightning" aria-hidden="true"></iconify-icon>
+          Lightning
+        </div>
+        <div class="card-placeholder">[ placeholder ]</div>
+      </div>
+
+    </div><!-- /grid-4col -->
+  </div><!-- /frame--4col -->
+</div><!-- /frame-scroll -->
+
+<script>
+// Font load check — display ✓ or ✗ for Manrope and Outfit
+document.fonts.ready.then(function() {
+  var manropeOk = document.fonts.check('600 1em Manrope');
+  var outfitOk  = document.fonts.check('700 1em Outfit');
+
+  var mEl = document.getElementById('fs-manrope');
+  var oEl = document.getElementById('fs-outfit');
+
+  mEl.textContent = 'Manrope: ' + (manropeOk ? '✓ loaded' : '✗ FAILED');
+  mEl.className   = manropeOk ? 'ok' : 'fail';
+
+  oEl.textContent = 'Outfit: ' + (outfitOk ? '✓ loaded' : '✗ FAILED');
+  oEl.className   = outfitOk ? 'ok' : 'fail';
+});
+</script>
+</body>
+</html>

@@ -258,8 +258,11 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
    verification. The lead inspects the render, not the markup. **Keep the mockup minimal** — only the
    surface requested at its locked size; no unrequested toggles, neighbour/ghost cards, degrade galleries,
    or annotation panels.
-4. **ADR** — lock composition + what's shown + treatment → Proposed → Accepted.
-5. **Execution plan → code.**
+4. **Code** — implement directly from the approved mockup + governing docs (typography tokens, color
+   tokens, grid spec). **No per-card ADR.** Per-card ADRs were rejected (2026-05-31) — agents don't
+   read them and they add process overhead without controlling quality. The governing documents
+   (design-tokens-typography.md, ADR-048, ADR-051, the approved mockup) are the source of truth.
+   Page-level or architectural ADRs still apply where needed.
 
 - **C0. Page inventory** — ✅ **DONE 2026-05-29** (built as a by-product of the A0 ADR-reconciliation gate).
   Full card-level inventory: 11 routes, ~40 candidate cards, ~8 flagged net-new. Authoritative C1–C14 work
@@ -267,15 +270,211 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   below are the signature components within that fuller list; the C0 file is authoritative for the full
   enumeration. No ratification step — per-card drift is caught by the per-component workflow's
   prior-decision check at each component.
-- **C1. Current-conditions card** + **today's temperature curve** along the bottom (model: img-23) +
-  **restore the Now-page hero** (page-header card = station logo + station name; per ADR-051, dropped & never
-  redesigned; ties to ADR-022 branding / ADR-049 logo alt). → ADR + exec plan.
-- **C2. ⭐ Wind compass** (loved; signature; info-inside-the-dial). → ADR + exec plan.
-- **C3. Forecast screen** — icon-rich columns + time-range tabs + (B1-permitting) expandable columns. → ADR + exec plan.
-- **C4. Per-metric stat treatment + detail grid** — the text/dial/gauge/curve table; uniform tiles; per-stat icons;
-  plain-language context line. → ADR + exec plan.
-- **C5. Sun & Moon arcs** (moon gets its own arch) + moon phase → almanac/front page. → ADR + exec plan.
-- **C6. AQI card** (B1-permitting; per-pollutant breakdown) + **radar legend/key**. → ADR + exec plan.
+- **C1. Current-conditions card** + **today's temperature curve** + **Now-page hero.** ✅ **CODE-COMPLETE
+  (2026-05-31).** Approved mockup: [mockups/C1-now-hero-conditions.html](../design/mockups/C1-now-hero-conditions.html).
+  Design docs: [C1-prior-decisions.md](../design/C1-prior-decisions.md), [C1-data-inventory.md](../design/C1-data-inventory.md),
+  [C1-composition.md](../design/C1-composition.md). Three surfaces: **(A)** NowHeroCard — full-width half-row,
+  logo left + station name (`branding.siteTitle`, fallback "My Weather Station") + location right; **(B)**
+  CurrentConditionsCard redesign — icon-left (ADR-049 Material gradient, ~112px) + Outfit 4.75rem temperature +
+  feels-like + condition sentence + Hi/Lo (red/blue with `--temp-hi`/`--temp-lo` theme-aware tokens) + **(C)**
+  integrated Recharts temperature curve (past solid+area, future dashed, Now marker, Y-axis scale).
+  **Now page migrated to A4 Grid primitive** (4-col, half-row tracks); all cards given footprint props.
+  Typography tokens (Manrope/Outfit/Lexend @fontsource) added to `index.css`.
+  **Commits:** dashboard `2fbc741` (full C1 redesign: NowHeroCard + CC card + TempCurve + Grid migration +
+  typography tokens; tsc 0 errors, vite build clean, 282 tests passed / 0 failed).
+- **C2. ⭐ Wind compass** (loved; signature; info-inside-the-dial). ✅ **CODE-COMPLETE (2026-05-31).**
+  Approved mockup: [mockups/C2-current-wind.html](../design/mockups/C2-current-wind.html). Tick-rim
+  info-container dial modeled on img-17; 72 ticks, accent-highlighted direction indicator, bearing+cardinal+
+  speed+10-min-avg+max-gust all inside the circle; `ph:wind` in title and readout block; 1 decimal place on
+  all wind values; Outfit 3rem speed (not 4.75rem — that's C1 temperature only). BFF-derived fields:
+  `windSpeedAvg10m` / `windGustMax10m` (10-min true-wall-clock rolling window, 60s min coverage).
+  **Commits:** realtime `38962a1` (wind_rolling_window.py + registrations + SSE/REST + 19 tests; suite
+  497/0), contract `3770c44`+`d5e37d0` (OpenAPI both copies), dashboard `f86f6f3` (WindCompassCard.tsx +
+  types + now.tsx wiring + i18n; tsc 0 errors, vite build clean, axe 0 new violations). Execution plan:
+  [C2-WIND-COMPASS-PLAN.md](C2-WIND-COMPASS-PLAN.md). ADR-050 amended to allow `ph:wind` on C2.
+  Typography doc corrected to scope `--text-stat-hero` to C1 temperature only.
+- **C3. Forecast screen** — icon-rich columns + time-range tabs + expandable columns. ✅ **CODE-COMPLETE
+  (2026-06-01).** Approved mockups: [mockups/C3-now-forecast-card.html](../design/mockups/C3-now-forecast-card.html),
+  [mockups/C3-forecast-page.html](../design/mockups/C3-forecast-page.html),
+  [mockups/C3-wind-symbol.html](../design/mockups/C3-wind-symbol.html). Four surfaces: **(A)** NowForecastCard —
+  tabbed 2×1 card (Today 3-hour columns + 7-Day daily columns), tabs inline with title right-justified;
+  **(B)** ForecastHourlyCard — 4×2, Today/Tomorrow tabs, 24h scrollable with visible scrollbar, no expandable
+  detail; **(C)** ForecastDailyCard — 4×2, 7 daily columns with img-12-style full-width expandable detail
+  panel (one cohesive shaded block for selected column + detail); **(D)** ForecastDiscussionCard — self-hides
+  when null, AFD prose + issued footer. BBC Weather-style wind symbols (grey circle + directional tail,
+  uniform 20px across all surfaces). Combined "74°/58°" hi/lo temps. Dual trend lines (hi red + lo blue)
+  with generous vertical space. `useForecast` parameterized with `{ hours?: number }`. 13 i18n keys.
+  **Commits:** mockups `3760918` (meta repo); dashboard `c633efe`/`19d7d7d`/`3eba666`/`64889ad`/`efdc746`
+  (5 commits: WindSymbol + TempTrendLine, HourlyStrip + DailyColumns, NowForecastCard + now.tsx wiring,
+  forecast page cards + forecast.tsx rewrite, i18n + useForecast params; tsc 0 errors, vite build clean).
+  **Pending:** push + deploy to weather-dev (batched with C1–C6, see Next action).
+- **C4. Now-page stat tiles** (eight 1×1 tiles — presentation-layer re-skin of existing cards).
+  ✅ **CODE-COMPLETE (2026-06-01).** Brief: [archive/C4-STAT-TILES-PLAN.md](../archive/C4-STAT-TILES-PLAN.md).
+
+  **Grid change (2026-06-01):** Precipitation & Barometer split into two separate tiles; Solar & UV
+  split into two separate tiles. Today's Highlights shrinks from `full` 4×1 to `wide` 2×1 and moves
+  up to pair with Today's Forecast. The eight stat tiles fill two full rows of 4 below.
+
+  | Surface | Footprint | Current code | Inspiration |
+  |---|---|---|---|
+  | A. Precipitation | `tile` 1×1 (A4 line 506) | `precipitation-barometer-card.tsx` (extracted, split) | img-21 (tile grid) |
+  | B. Barometer | `tile` 1×1 (A4 line 515) | `precipitation-barometer-card.tsx` (extracted, split) | img-21, img-19 (pressure gauge) |
+  | C. Solar Radiation | `tile` 1×1 (A4 line 524) | `solar-uv-card.tsx` (extracted, split) | img-21 |
+  | D. UV Index | `tile` 1×1 (A4 line 533) | `solar-uv-card.tsx` (extracted, split) | img-21, img-18 (UV bell-curve — DEFERRED, too dense for 1×1) |
+  | E. AQI | `tile` 1×1 (A4 line 543) | `now.tsx` inline (~lines 393–417, `AqiGauge`) | img-21, img-15 (AQI detail) |
+  | F. Sun & Moon mini | `tile` 1×1 (A4 line 552) | `now.tsx` inline (~lines 418–456) | img-11, img-14 (compact dual arcs: sun + moon, per operator 2026-06-01; full arcs also on C7 Almanac) |
+  | G. Lightning | `tile` 1×1 (A4 line 561) | `now.tsx` inline (~lines 458–489) | img-21, img-28 (time-vs-distance strike scatter — approach/recede V-shape) |
+  | H. Recent Earthquake | `tile` 1×1 (A4 line 570) | `now.tsx` inline (~lines 491–521) | img-21 |
+
+  **Work:** split `precipitation-barometer-card.tsx` into two files; split `solar-uv-card.tsx` into
+  two files; extract 4 inline cards (E/F/G/H) to standalone component files; re-skin all 8 with
+  design-system tokens (typography, colors, Phosphor icons, Card primitive with `footprint` prop).
+  ADR-050 deferred icon sub-families all resolved (see ADR-050 amendment 2026-06-01).
+  **Data layer change (corrects prior claim of "no new BFF fields"):** new `LightningStrikeBuffer`
+  module in the BFF — 24h rolling window of per-strike `(timestamp, distance)` pairs, emitted as
+  `lightningStrikeHistory` on `/current` REST and SSE. Same pattern as the C2 wind rolling window.
+  **Data:** `/current` (rain/barometer/radiation/UV/lightning + `lightningStrikeHistory` NEW),
+  `/aqi/current`, `/almanac` (sun/moon), `/earthquakes` (first TWO records), `/forecast` (UV peak).
+  **Mockup approved 2026-06-01** ([C4-stat-tiles.html](../design/mockups/C4-stat-tiles.html)). Key
+  design decisions from mockup iteration:
+  - Three-tier type hierarchy: 18px primary / 13px secondary / 10px tertiary (all below hero temp).
+  - Sun & Moon: dual nested arcs (Option A) on the Now mini tile — corrects prior "TEXT-ONLY" claim.
+    Gold arcs for sun, silver for moon, with Sunrise/Sunset/Moonrise/Moonset labels.
+  - Solar Radiation: rolling 24h chart (right edge = now), yellow area (theoretical), orange line (actual).
+  - UV Index: fixed daily window 12a–12a, gradient bell curve (img-18 style, NOT deferred — fits 1×1).
+  - AQI: gauge-left + pollutant column right (per-pollutant readings DO fit 1×1). `ph:leaf` icon.
+  - Barometer: dynamic scaling (default 29.32–30.52, 29.92 centered; auto-scale on extremes).
+    Threshold ticks at 29.80 (low boundary) and 30.20 (high boundary). Gauge indicator animates.
+  - Earthquake: shows last TWO events. Time format: min (<1h) / hrs with decimal (>1h) / days (>1d).
+  - All gauges: unfilled ticks grey in both themes, filled ticks colored, animate on data change.
+  **Known gaps/deferrals:** EPA AQI palette not tokenized (ADR-048 gap — continue hardcoded
+  `aqiColor()`). Per-pollutant AQI data availability from API needs verification.
+
+- **C5. Active Alert banner + Today's Highlights strip** (two full-width Now-page elements).
+  Brief: [briefs/C5-FULL-WIDTH-CARDS-PLAN.md](briefs/C5-FULL-WIDTH-CARDS-PLAN.md).
+
+  | Surface | Footprint | Current code | Inspiration |
+  |---|---|---|---|
+  | A. Active Alert banner | `full` 4×1 (A4 line 459) | `alert-banner.tsx` (47 lines, hardcoded amber classes) | img-21 |
+  | B. Today's Highlights | `wide` 2×1 (A4 line 496, moved 2026-06-01) | `now.tsx` inline (~lines 304–369) | img-21, img-10 (per-stat icons) |
+
+  **Work:** apply A4 alert glass tokens (`--alert-glass`/`--alert-border`/`--alert-fg` from
+  A4-card-grid.html lines 46–48, 68–72) replacing hardcoded amber classes; extract highlights to
+  standalone component; apply design-system typography. Reconcile alert banner positioning (inside vs
+  outside Grid per ADR-051 universal card discipline). Decide multi-alert display (currently shows
+  only `alerts[0]`).
+  **Data:** `/alerts` (AlertRecord[]), `useTodayStats()` derived from `/current` + today's `/archive`.
+
+- **C6. Radar + Webcam card revamp** (two 2×2 media cards).
+  Brief: [briefs/C6-MEDIA-CARDS-PLAN.md](briefs/C6-MEDIA-CARDS-PLAN.md).
+
+  | Surface | Footprint | Current code | Inspiration |
+  |---|---|---|---|
+  | A. Radar | `wide` + rowSpan=2, 2×2 (A4 line 570) | `now.tsx:523–541` + `radar-map.tsx` | img-15 (radar with legend) |
+  | B. Webcam | `wide` + rowSpan=2, 2×2 (A4 line 580) | `now.tsx:543–588` inline | — |
+
+  **Work:** wrap Radar in Card primitive with proper footprint (current code toggles between `wide`
+  and `tile` based on webcam presence — violates ADR-051 min-footprint 2×2, fix to always `wide`);
+  add **radar color legend/key** (RainViewer scheme 2 color scale — identified gap in C0 inventory and
+  img-15); extract Webcam to standalone component with Live/Timelapse tabs. Do NOT merge
+  radar+webcam into one tabbed tile (open reconciliation item with ADR-024, not decided yet).
+  **Data:** `/radar/frames`, `/capabilities`, `/webcam.json`.
+  **Known gaps:** radar legend colors are RainViewer-scheme-specific; Radar/Webcam tabbed-vs-split
+  reconciliation with ADR-024 still open.
+
+  **→ After C4 + C5 + C6: the Now page is complete.**
+
+- **C7. Almanac page** (7 existing cards re-skinned + 2 net-new arc visualizations).
+  Brief: [briefs/C7-ALMANAC-PAGE-PLAN.md](briefs/C7-ALMANAC-PAGE-PLAN.md).
+
+  | Surface | Footprint | Build state | Inspiration |
+  |---|---|---|---|
+  | A. PageHeaderCard | `full` 4×1 half-row | Net-new | — |
+  | B. Sun details + Sun arc | `wide` 2×2 | Exists (text) + net-new (arc SVG) | img-11, img-14 |
+  | C. Moon details + Moon arc | `wide` 2×2 | Exists (text) + net-new (arc SVG) | img-11, img-14 |
+  | D. Positional data | `tile` 1×1 | Re-skin | — |
+  | E. Monthly Averages (Recharts) | `full` rowSpan=2 (4×2) | Re-skin | — |
+  | F. Planets visible | `wide` 2×1 | Re-skin | — |
+  | G. Lunar Eclipses | `tile` 1×1 | Re-skin | — |
+  | H. Meteor Showers | `full` 4×1 | Re-skin | — |
+
+  **Work:** migrate `almanac.tsx` to Grid + PageHeaderCard; build Sun arc SVG (sunrise→sunset arc
+  with current-position marker, per img-11) and Moon arc SVG (moonrise→moonset arch + phase glyph,
+  per NOTES item 9 "moon gets its own arch"); re-skin all existing cards with design-system tokens.
+  **Data:** `/almanac`, `/climatology/monthly`, `/almanac/planets`, `/almanac/moon-names`,
+  `/almanac/eclipses`, `/almanac/meteor-showers`.
+  **Deferred:** year-long sunrise/sunset chart, daylight chart, moon-phase calendar (require
+  endpoints not yet built — `/almanac/sun-times`, `/almanac/moon-phases`; not in C7 scope).
+
+- **C8. Seismic page** (2 existing cards re-skinned + map legend net-new + ADR-046 reconciliation).
+  Brief: [briefs/C8-SEISMIC-PAGE-PLAN.md](briefs/C8-SEISMIC-PAGE-PLAN.md).
+
+  | Surface | Footprint | Build state | Inspiration |
+  |---|---|---|---|
+  | A. PageHeaderCard | `full` 4×1 half-row | Net-new | — |
+  | B. Seismic map | `wide` rowSpan=2 (2×2) | Re-skin + add legend | img-15 |
+  | C. Earthquake list | `wide` rowSpan=2 (2×2) | Re-skin | — |
+  | D. Map legend/key | Within map card or separate `tile` | Net-new | img-15 |
+
+  **Work:** migrate `seismic.tsx` to Grid primitive (currently uses raw CSS grid `lg:grid-cols-2`);
+  add map legend (explain age-color encoding + magnitude-size encoding + fault line symbology);
+  apply design-system tokens.
+  **Pre-requisite decision (BLOCKS mockup):** ADR-046 reconciliation — it is **Proposed** but already
+  implemented, and fault popups + slip-type styling exceed its stated scope. Must accept + amend scope,
+  or trim code to match the ADR, before treating faults as locked.
+  **Data:** `/earthquakes`, `/earthquakes/config`, `/earthquakes/faults`, `/station`.
+
+- **C9. Records page** (structural reconciliation + re-skin).
+  Brief: [briefs/C9-RECORDS-PAGE-PLAN.md](briefs/C9-RECORDS-PAGE-PLAN.md).
+
+  | Surface | Footprint | Build state |
+  |---|---|---|
+  | A. PageHeaderCard + period selector | `full` 4×1 half-row | Net-new |
+  | B. Per-section record cards (Temp, Wind, Rain, Humidity, Baro, Sun) | `full` each | Re-skin + structural reconciliation |
+
+  **Work:** reconcile structural mismatch with ADR-024 (ADR wants one sortable YTD|All-Time table +
+  year selector; build has per-section cards, single period, not sortable). Decide "Today" column
+  (keep/drop — beyond ADR-024). Reconcile inside-temp/custom-records removal. Migrate to Grid +
+  design-system tokens.
+  **Pre-requisite decision (BLOCKS mockup):** the structural model must be resolved before any
+  design work begins — operator decides per-section cards (current) vs one unified sortable table
+  (ADR-024).
+  **Data:** `/records`, `/current` (Today column), `/station`.
+
+- **C10. Reports, About, Legal pages** (grid migration batch — three simpler pages sharing a common
+  pattern: wrap existing content in Grid + PageHeaderCard, apply typography tokens).
+  Brief: [briefs/C10-PAGE-MIGRATION-PLAN.md](briefs/C10-PAGE-MIGRATION-PLAN.md).
+
+  **Reports (`/reports`):** migrate selectors into ControlsStrip card; apply design-system tokens.
+  Already richer than Belchertown (parsed sortable tables, download actions). Add provenance
+  disclaimer ("Generated locally; not official NOAA" — C0 inventory, per ADR-024).
+
+  **About (`/about`):** migrate 4 existing cards to Grid; fix markdown rendering (currently
+  plain-text `whitespace-pre-wrap` — switch to ReactMarkdown + remark-gfm like custom pages use;
+  this is C0 finding #8).
+
+  **Legal (`/legal`):** migrate 5 existing cards to Grid; add Weather Data Disclaimer card
+  (Belchertown feature identified as missing in C0 inventory — needs operator decision on format:
+  drop, fold into Privacy, net-new card, or operator markdown).
+
+  **Data:** Reports → `/reports/*`; About → `/station`, `/content/about`; Legal → `/content/legal`.
+
+### Dependency sequencing (C4–C10)
+
+```
+C4 (stat tiles) → C5 (full-width) → C6 (media cards) = NOW PAGE COMPLETE
+                                           │
+C7 (almanac) ──────────────────────────────┤
+C8 (seismic) ──────────────────────────────┤  parallel after Now page done
+C9 (records) ──────────────────────────────┤  blocked on structural decision
+C10 (reports/about/legal) ─────────────────┘  parallel with C7–C9
+```
+
+- **C4** is the immediate next step (6 uniform tiles, highest card count, establishes the tile pattern).
+- **C5** depends on C4 only for resolved icon sub-families; otherwise independent.
+- **C6** depends on C4/C5 so the Now page is holistically testable.
+- **C7–C10** are independent of each other; can be parallelized after C6.
+- **C9** is blocked on a structural reconciliation decision — must happen before mockup work.
 
 ### Out of scope here — separate future plan
 - **Operator drag-and-drop customizable GRID** (operator add/remove/move tiles + layout persistence). The
@@ -290,26 +489,107 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
 
 ---
 
-## Execution-plan template (Layer 3 — per decision point)
-Each Accepted ADR gets one of these in `docs/planning/briefs/` before any agent is dispatched. Required sections
-(per `rules/clearskies-process.md` "Agent prompt requirements" + "Scope binding"):
-1. **ADR reference** — which ADR(s) this implements. (Reference, do not restate decisions.)
-2. **Scope in / out** — exhaustive file list to create/modify; explicit "do NOT touch" exclusions.
-3. **Per-deliverable spec** — each component/endpoint's behavior, states, responsive behavior, edge cases.
-4. **QC gates** — the ADR's acceptance criteria turned into pass/fail checks (tests, axe-core a11y, visual states).
-5. **Definition of done** — what the lead will see in git log; pass thresholds; verification command.
-6. **Agent constraints** — git restrictions block (no pull/push/fetch/rebase/merge); scope-ack required before code.
+## Execution-plan brief template (per C-item)
 
----
+Each C-item gets a brief in `docs/planning/briefs/` **before any agent is dispatched**. Briefs follow the
+standard established by [C2-WIND-COMPASS-PLAN.md](../archive/C2-WIND-COMPASS-PLAN.md) and
+[C3-FORECAST-SCREEN-PLAN.md](briefs/C3-FORECAST-SCREEN-PLAN.md). **No per-card ADRs** (rejected 2026-05-31).
+The governing documents (design-tokens-typography.md, ADR-048, ADR-051, the approved mockup) are the source
+of truth; page-level or architectural ADRs still apply where needed.
 
-## Mockups (artifact format)
-Quick, self-contained **HTML mockups** saved to `docs/design/mockups/`, openable in a browser, durable on disk
-(same principle as the inspiration board — not floating in chat). Fidelity rises in step with Track A:
-- **Low-fidelity first** — grayscale layout/composition wireframe (boxes + labels) to settle "what's on the card."
-  Foundation-independent, so it can start before Track A is done.
-- **Higher-fidelity later** — real Tailwind styling, colors, icons, background — once theme/background/icon
-  foundations (Track A) are decided to style against.
-Mockups are throwaway exploration artifacts, NOT the React implementation.
+**Required sections (10 — every brief, no exceptions):**
+
+0. **Orientation for a fresh session** — project layout, three sub-repos + paths, data flow the card
+   depends on, deploy target, architecture source of truth, git safety block (agents may ONLY
+   `git add`/`commit`/`status`/`log`/`diff` — NO pull/push/fetch/rebase/merge/worktree).
+1. **Context** — what the component does today (with specific file:line refs to existing code), what
+   is changing, why. Explicit statement: re-skin of existing Phase 2 code (or net-new where applicable).
+2. **Locked operator directives** — numbered, non-negotiable decisions from operator chat. Dated.
+3. **Locked constraints** — every token, every CSS value, the headless render command. Cite the
+   source doc and the specific line/section for each constraint.
+4. **The spec** — exact data fields per element (source field → treatment table, like C2 §4.1);
+   composition rules; accessibility requirements (WCAG §5 from `rules/coding.md`); contract field
+   names if new fields are added.
+5. **Granular task list** — every task with: **Owner** (agent type) · **Dep** (prerequisite task) ·
+   **Files** (exact paths to create/modify) · **Do** (what to do) · **Accept** (pass/fail definition
+   of done) · **QC** (a *different* party verifies — never owner self-attest). Grouped into phases:
+   - PHASE 0 — Mockup (design gate; blocks ALL code)
+   - PHASE 1 — Doc corrections (if any ADR amendments or token-doc fixes needed)
+   - PHASE 2 — Implementation (parallel per-repo where field names are fixed; each task lists
+     files to create, modify, and NOT touch)
+   - PHASE 3 — Audit (independent re-run of test suites + ADR/rules/a11y conformance)
+   - PHASE 4 — Deploy + live verify (on operator "push" word only)
+6. **Dependency graph** — ASCII showing what blocks what, which tasks parallelize.
+7. **QC ownership** — who verifies what (coordinator = render-and-LOOK + diff review + push;
+   auditor = independent suite re-runs + conformance; operator = mockup approval + ADR approval + push auth).
+8. **Verification bar** — end-to-end "done" definition: pytest output, tsc/build, axe-core, render-and-LOOK
+   evidence (headless screenshots of BOTH mockup and built card, Read each PNG), live endpoint evidence.
+9. **Implementation reference** — verified **file:line** for every piece of code agents will touch or
+   need to understand, so they don't waste time re-discovering the codebase. Include: existing component
+   locations, data hooks, TS types, CSS tokens, registration points, test patterns.
+10. **Out of scope** — what NOT to do (explicit exclusions).
+
+### Universal document reading list (MUST appear in every brief's §3)
+
+Every brief's "Locked constraints" section must include these paths explicitly. Agents read them
+**in this order** before writing any code or mockup.
+
+**TIER 1 — Locking ADRs / token specs:**
+- [docs/design/design-tokens-typography.md](../design/design-tokens-typography.md) — LOCKED font families, sizes, weights
+- [docs/decisions/ADR-048-theme-color-tokens.md](../decisions/ADR-048-theme-color-tokens.md) — theme colors, accent palette, chart palette
+- [docs/decisions/ADR-049-hero-weather-icons.md](../decisions/ADR-049-hero-weather-icons.md) — hero weather icon system (Material Symbols gradient SVG)
+- [docs/decisions/ADR-050-utility-stat-nav-icons.md](../decisions/ADR-050-utility-stat-nav-icons.md) — Phosphor base + curated cross-pack; deferred sub-families
+- [docs/decisions/ADR-051-card-footprint-model.md](../decisions/ADR-051-card-footprint-model.md) — footprints, min-footprints, half-row packing, universal card discipline, glass surface
+- [docs/decisions/ADR-047-background-system.md](../decisions/ADR-047-background-system.md) — background system (cards sit over it)
+
+**TIER 2 — Process & coding rules:**
+- [rules/clearskies-process.md](../../rules/clearskies-process.md) — ADR lifecycle, scope binding, brief quality
+- [rules/coding.md](../../rules/coding.md) — security, accessibility §5 (WCAG 2.1 AA, load-bearing), "Render and LOOK" mandate
+
+**TIER 3 — Design references:**
+- [docs/design/C0-PAGE-INVENTORY.md](../design/C0-PAGE-INVENTORY.md) — authoritative card inventory per page
+- [docs/design/inspiration/NOTES.md](../design/inspiration/NOTES.md) + specific `docs/design/inspiration/raw/img-NN.*` **opened AS IMAGES**
+- [docs/design/mockups/A4-card-grid.html](../design/mockups/A4-card-grid.html) — locked footprints (col-span × row-span), lines 458–598
+- [docs/design/mockups/A4-page-anatomy.html](../design/mockups/A4-page-anatomy.html) — page structure, half-row track, controls strip, grid CSS to copy
+
+**TIER 4 — Data contracts:**
+- [docs/contracts/openapi-v1.yaml](../contracts/openapi-v1.yaml) — wire format authority
+- [docs/contracts/canonical-data-model.md](../contracts/canonical-data-model.md) — entity catalog, field types, provider mappings
+- `repos/weewx-clearskies-dashboard/src/api/types.ts` — TypeScript type definitions
+- `repos/weewx-clearskies-dashboard/src/hooks/useWeatherData.ts` — data hooks
+
+**TIER 5 — Reference implementations (how a finished card looks):**
+- `repos/weewx-clearskies-dashboard/src/components/WindCompassCard.tsx` — C2 pattern (Card structure, Phosphor icon in header, Outfit numerals, tabular-nums, aria-live, ConvertedValue handling)
+- `repos/weewx-clearskies-dashboard/src/components/forecast/NowForecastCard.tsx` — C3 pattern (tabbed card, footprint prop, CardTitle `as="h2"`)
+- `repos/weewx-clearskies-dashboard/src/routes/now.tsx` — current Now page wiring (where cards are imported + rendered)
+
+Each brief adds **per-component additions** to this list: the specific existing card files being
+re-skinned, relevant page-specific ADRs, and the exact inspiration images for that card.
+
+### QC gates (5 gates, every brief, no exceptions)
+
+| Gate | What | Who |
+|---|---|---|
+| **1. Mockup approval** | Lead renders headless PNG, inspects visually: card within locked footprint, typography matches tokens, glass surface visible, both themes render correctly | Lead (coordinator) + operator sign-off |
+| **2. Type-check + build** | `npx tsc --noEmit` → 0 errors; `npx vite build` → clean build | Code agent self-check, lead verifies |
+| **3. Visual verification** | Live dev server, both light and dark themes, responsive 4→2→1 col collapse | Lead on weather-dev |
+| **4. Accessibility audit** | `@axe-core` 0 new violations, keyboard Tab walkthrough (all interactive elements reachable), screen reader spot-check, ≥3:1 icon contrast both themes | Lead or auditor |
+| **5. Prompt faithfulness** | Walk the original request; every surface delivered; every filed listed in scope-in is accounted for | Lead |
+
+### Headless render command (Windows — used in mockup phase)
+```
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new --disable-gpu `
+  --screenshot="C:\tmp\render.png" --window-size=1400,900 "file:///<absolute-path-to.html>"
+```
+Then Read `C:\tmp\render.png` and **LOOK** — reading markup or an `axe` pass is NOT visual verification.
+
+### Mockups (artifact format)
+Self-contained **HTML mockups** saved to `docs/design/mockups/`, openable in a browser, durable on disk.
+**Track A is complete** — all mockups are high-fidelity: real Tailwind styling, real @fontsource
+woff2 fonts from `docs/design/mockups/fonts/`, real glass surface tokens, real A4 grid CSS copied
+from `A4-page-anatomy.html`. The card sits at its **locked footprint** inside the real grid —
+NEVER rendered standalone, full-width, or at free pixel heights. Mockups are throwaway exploration
+artifacts, NOT the React implementation.
 
 ## Next action
 **Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31).** Design ✅ +
@@ -337,8 +617,35 @@ B2 and B3 are closed (see Track B above). On-device Track-A testing remains open
 (built 2026-05-29 during A0; 11 routes, ~40 candidate cards, authoritative C1–C14 work list). No
 ratification step.
 
-**Next concrete step: C1** — Current-conditions card + today's temperature curve + restore the Now-page
-hero. Execute via the per-component workflow (prior-decision check → B1 data inventory → composition →
-mockup → Proposed ADR → execution brief). The C1 temp curve uses the B2 finding: Recharts
-`usePlotArea()` hook; chart config is file-based à la Belchertown `graphs.conf` (see
-[B2 findings](../design/B2-recharts-background-findings.md)).
+**C1 and C2 are code-complete** (2026-05-31) — see Track C above for commits and verification. Pending
+push + deploy to weather-dev + live verification.
+
+**C3 is code-complete** (2026-06-01) — see Track C above for commits and verification. Pending
+push + deploy to weather-dev + live verification (Gate 3 visual + Gate 4 a11y).
+
+**C4 — Now-page stat tiles: CODE-COMPLETE (2026-06-01).** Execution brief at
+[briefs/C4-STAT-TILES-PLAN.md](briefs/C4-STAT-TILES-PLAN.md). Phase 0 mockup approved, Phase 1 doc
+corrections done, Phase 2 implementation done (BFF lightning strike buffer 497 tests pass; contract
+updated; 8 dashboard tile components created + wired into now.tsx; tsc 0 errors; vite build clean;
+19 i18n keys added). Pending push + deploy + live verification (batched with C1–C3, see below).
+
+**Remaining Track C work (see roadmap above for full detail):**
+- **C5** Active Alert + Today's Highlights (full-width Now-page elements)
+- **C6** Radar + Webcam revamp (2×2 media cards) → **Now page complete after C6**
+- **C7** Almanac page (7 re-skins + sun/moon arcs net-new)
+- **C8** Seismic page (re-skin + map legend + ADR-046 reconciliation)
+- **C9** Records page (structural reconciliation + re-skin — **blocked on operator decision**)
+- **C10** Reports, About, Legal pages (grid migration batch)
+
+**BATCHED DEPLOY + LIVE VERIFICATION (all repos, one pass — after Now page complete).**
+C1, C2, C3, and C4 are all code-complete but unpushed. C5 and C6 will complete the Now page.
+Rather than deploy per-component, all Now-page work (C1–C6) will be pushed + deployed + tested
+in one pass after C6 is done. The verification pass covers:
+- Push all local commits across all 3 repos (realtime, dashboard, meta contracts)
+- Deploy to weather-dev (all services)
+- Gate 3: visual verification both themes + responsive (4→2→1 col) on every Now-page card
+- Gate 4: axe-core on `/` and `/forecast`, keyboard Tab walkthrough, screen reader spot-check
+- Gate 5: live data verification — BFF `/current` carries `lightningStrikeHistory`, all 8 stat
+  tiles render with real data, Solar/UV charts show today's archive, gauges show real pressure/AQI,
+  Sun & Moon arcs show correct station-TZ times
+- Color-blindness simulation pass (protanopia, deuteranopia, tritanopia, achromatopsia)

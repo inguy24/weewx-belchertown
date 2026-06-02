@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C5 — Alert Banner — Multi-Alert Flip-Through</title>
+<!-- Iconify icon bundles — preloaded so icons render offline / in headless -->
+<!-- Format: window.IconifyPreload array is consumed by iconify-icon.min.js at init -->
+<script>
+window.IconifyPreload = [
+  {
+    prefix: "ph",
+    icons: {
+      "hurricane":        { body: '<g fill="currentColor"><path d="M230.1 70.4C217.6 46.7 192 32 164 32A100 100 0 0 0 64 132c0 51.1 24.3 88.6 66.2 102.6C116 249.2 96 270.7 96 296a60 60 0 0 0 120 0c0-25.3-20-46.8-34.2-61.4C223.7 220.6 248 183.1 248 132a99.6 99.6 0 0 0-17.9-61.6zM156 340a36 36 0 0 1-35.9-36 35.6 35.6 0 0 1 12-26.6 88 88 0 0 0 47.8 0A35.6 35.6 0 0 1 192 304a36 36 0 0 1-36 36zm-7.5-101.4a64 64 0 1 1 15 0l-7.5 1.8zm107.4-122.3A75.6 75.6 0 0 1 248 132a96.7 96.7 0 0 1-30.1 69.8 88.6 88.6 0 0 0-23.3-87.6 88.6 88.6 0 0 0-87.6-23.3A96.7 96.7 0 0 1 164 56a75.6 75.6 0 0 1 91.9 60.3z"/></g>' },
+      "lightning":        { body: '<path fill="currentColor" d="M213.9 125.5H142l23.9-88.1A12 12 0 0 0 154.3 24H80a12 12 0 0 0-11.7 9.1l-32 120A12 12 0 0 0 48 168h70l-26.2 90.3a12 12 0 0 0 20.5 11.4l128-144A12 12 0 0 0 213.9 125.5z"/>' },
+      "wind":             { body: '<path fill="currentColor" d="M104 80a32 32 0 0 1 32-32c17.7 0 32 14.3 32 32s-14.3 32-32 32H24a8 8 0 0 1 0-16h112c8.8 0 16-7.2 16-16s-7.2-16-16-16-16 7.2-16 16a8 8 0 0 1-16 0zm120 48H24a8 8 0 0 0 0 16h200a24 24 0 1 1-24 24 8 8 0 0 0-16 0 40 40 0 1 0 40-40zM72 168H24a8 8 0 0 0 0 16h48a24 24 0 1 1-24 24 8 8 0 0 0-16 0 40 40 0 1 0 40-40z"/>' },
+      "tornado":          { body: '<path fill="currentColor" d="M240 56H16a8 8 0 0 0 0 16h224a8 8 0 0 0 0-16zM16 120h160a8 8 0 0 0 0-16H16a8 8 0 0 0 0 16zm104 48H16a8 8 0 0 0 0 16h104a8 8 0 0 0 0-16zm48 48H16a8 8 0 0 0 0 16h152a8 8 0 0 0 0-16zm-48 48H72a8 8 0 0 0 0 16h48a8 8 0 0 0 0-16z"/>' },
+      "cloud-fog":        { body: '<path fill="currentColor" d="M28 152a8 8 0 0 1 8-8h184a8 8 0 0 1 0 16H36a8 8 0 0 1-8-8zm8 40h128a8 8 0 0 0 0-16H36a8 8 0 0 0 0 16zm160-16a8 8 0 0 0 0 16h16a8 8 0 0 0 0-16zM88 216a8 8 0 0 0 0 16h80a8 8 0 0 0 0-16zm-52 0a8 8 0 0 0 0 16h16a8 8 0 0 0 0-16zm168 0a8 8 0 0 0 0 16h16a8 8 0 0 0 0-16zM212.3 80A84 84 0 0 0 48.1 104H48a48 48 0 0 0 0 96 8 8 0 0 0 0-16 32 32 0 0 1 0-64h1.7a8 8 0 0 0 7.9-6.6A68 68 0 0 1 212.3 96 8 8 0 0 0 208 80z"/>' },
+      "caret-left-bold":  { body: '<path fill="currentColor" d="M163.3 222.7 67.3 128l96-96a8 8 0 0 1 11.4 11.3L84.7 128l90 90a8 8 0 0 1-11.4 4.7z"/>' },
+      "caret-right-bold": { body: '<path fill="currentColor" d="M188.7 128 92.7 222.7a8 8 0 0 1-11.4-11.3l90-90-90-90a8 8 0 0 1 11.4-11.3z"/>' },
+      "caret-down":       { body: '<path fill="currentColor" d="m213.7 101.7-80 80a8 8 0 0 1-11.3 0l-80-80A8 8 0 0 1 48 88h160a8 8 0 0 1 5.7 13.7z"/>' },
+      "map-pin":          { body: '<path fill="currentColor" d="M128 16a96 96 0 1 0 96 96A96.1 96.1 0 0 0 128 16zm0 176a80 80 0 1 1 80-80 80.1 80.1 0 0 1-80 80zm0-112a32 32 0 1 0 32 32 32 32 0 0 0-32-32zm0 48a16 16 0 1 1 16-16 16 16 0 0 1-16 16zm0 56a8 8 0 0 1-8-8v-8a8 8 0 0 1 16 0v8a8 8 0 0 1-8 8z"/>' },
+      "clock":            { body: '<path fill="currentColor" d="M128 24a104 104 0 1 0 104 104A104.1 104.1 0 0 0 128 24zm0 192a88 88 0 1 1 88-88 88.1 88.1 0 0 1-88 88zm64-88a8 8 0 0 1-8 8h-56a8 8 0 0 1-8-8V72a8 8 0 0 1 16 0v48h48a8 8 0 0 1 8 8z"/>' },
+      "sun":              { body: '<path fill="currentColor" d="M120 40V16a8 8 0 0 1 16 0v24a8 8 0 0 1-16 0zM232 120h-24a8 8 0 0 0 0 16h24a8 8 0 0 0 0-16zM48 128a8 8 0 0 0-8-8H16a8 8 0 0 0 0 16h24a8 8 0 0 0 8-8zm9.4-73.7A8 8 0 0 0 46 65.7L29.3 82.3A8 8 0 1 0 40.7 93.7l16.6-16.6A8 8 0 0 0 57.4 54.3zm141.2 0a8 8 0 0 0-11.3 11.3l16.6 16.6A8 8 0 1 0 215.3 71zm-10.3 130A8 8 0 1 0 177 195.7l16.6 16.6A8 8 0 0 0 204.9 201zM57.4 201.7a8 8 0 0 0-11.3-11.3L29.4 207A8 8 0 0 0 40.7 218.3zm70.6 15.3a8 8 0 0 0-8 8v24a8 8 0 0 0 16 0v-24a8 8 0 0 0-8-8zM128 80a48 48 0 1 0 48 48 48 48 0 0 0-48-48zm0 80a32 32 0 1 1 32-32 32 32 0 0 1-32 32z"/>' },
+      "moon":             { body: '<path fill="currentColor" d="M233.5 142.2a8 8 0 0 0-8-2A88.1 88.1 0 0 1 113.8 30.5a8 8 0 0 0-10-10 104.1 104.1 0 1 0 139.8 139.8 8 8 0 0 0-10-18zM128 216A88 88 0 0 1 128 40a104 104 0 0 0 12 48.8 104.1 104.1 0 0 0 79.2 55.1A88.1 88.1 0 0 1 128 216z"/>' },
+      "bell":             { body: '<path fill="currentColor" d="M221.8 175.9C216.2 166.4 208 151.3 208 104a80 80 0 1 0-160 0c0 47.3-8.2 62.4-13.8 71.9A16 16 0 0 0 48 200h40.2a40 40 0 0 0 79.6 0H208a16 16 0 0 0 13.8-24.1zM128 216a24 24 0 0 1-24-16h48a24 24 0 0 1-24 16zm-80-32c7.7-13.2 16-33.1 16-80a64 64 0 0 1 128 0c0 47 8.3 66.8 16 80z"/>' },
+      "desktop":          { body: '<path fill="currentColor" d="M232 96v80a32 32 0 0 1-32 32h-72v16h24a8 8 0 0 1 0 16H104a8 8 0 0 1 0-16h24v-16H56a32 32 0 0 1-32-32V96a32 32 0 0 1 32-32h144a32 32 0 0 1 32 32zm-16 0a16 16 0 0 0-16-16H56a16 16 0 0 0-16 16v80a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16z"/>' },
+      "warning":          { body: '<path fill="currentColor" d="M236.8 188.1 149.1 36a24 24 0 0 0-42.2 0L19.2 188.1a23.5 23.5 0 0 0 0 23.8A24.1 24.1 0 0 0 40 224h176a24.1 24.1 0 0 0 20.8-12 23.5 23.5 0 0 0 0-23.9zM120 104a8 8 0 0 1 16 0v40a8 8 0 0 1-16 0zm8 88a12 12 0 1 1 12-12 12 12 0 0 1-12 12z"/>' },
+      "stack":            { body: '<path fill="currentColor" d="M232 104a8 8 0 0 1-5.3 7.5L128 145.7 29.3 111.5A8 8 0 0 1 24 104V56a8 8 0 0 1 5.3-7.5l96-32a8 8 0 0 1 5.4 0l96 32A8 8 0 0 1 232 56zm-104 56L36.9 128 24 132.5A8 8 0 0 0 24 148l96 32a8 8 0 0 0 5.3 0l96-32a8 8 0 0 0 0-15.5l-12.9-4.3zm0 48L36.9 176 24 180.5a8 8 0 0 0 0 15.5l96 32a8 8 0 0 0 5.3 0l96-32a8 8 0 0 0 0-15.5l-12.9-4.3z"/>' },
+      "arrow-down":       { body: '<path fill="currentColor" d="M205.7 149.7 136 219.3V32a8 8 0 0 0-16 0v187.3l-69.7-69.6a8 8 0 0 0-11.3 11.3l84 84a8 8 0 0 0 11.3 0l84-84a8 8 0 0 0-12.6-11.3z"/>' },
+      "device-mobile":    { body: '<path fill="currentColor" d="M176 16H80a24 24 0 0 0-24 24v176a24 24 0 0 0 24 24h96a24 24 0 0 0 24-24V40a24 24 0 0 0-24-24zm8 200a8 8 0 0 1-8 8H80a8 8 0 0 1-8-8V40a8 8 0 0 1 8-8h96a8 8 0 0 1 8 8zm-56 0a8 8 0 1 1-8-8 8 8 0 0 1 8 8z"/>' }
+    },
+    width: 256, height: 256
+  },
+  {
+    prefix: "material-symbols",
+    icons: {
+      "flood-outline-rounded": { body: '<path fill="currentColor" d="M12.6 20q-.45 0-.725-.312-.275-.313-.175-.738L13 13H9.375q-.35 0-.525-.3-.175-.3-.025-.6l3.975-7.875q.15-.3.45-.513Q13.55 4.5 13.9 4.5q.45 0 .725.313.275.312.175.737L13.525 11H17.1q.375 0 .55.3.175.3.025.6l-4 7.6q-.15.3-.438.4-.287.1-.637.1ZM4.5 22v-2h15v2Zm0-4v-2h15v2Z"/>',
+        width: 24, height: 24
+      }
+    }
+  }
+];
+</script>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+
+/* ─── Locked fonts: Manrope (body/labels) + Outfit (stat values) ─────────── */
+@font-face { font-family: 'Manrope'; font-weight: 400; font-style: normal;
+  src: url('fonts/manrope-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 600; font-style: normal;
+  src: url('fonts/manrope-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-weight: 700; font-style: normal;
+  src: url('fonts/manrope-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal;
+  src: url('fonts/outfit-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal;
+  src: url('fonts/outfit-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Outfit'; font-weight: 700; font-style: normal;
+  src: url('fonts/outfit-latin-700-normal.woff2') format('woff2'); }
+
+/* ─── Design Tokens (mirrored from C5-alert-banner-v2) ───────────────────── */
+:root {
+  color-scheme: light dark;
+
+  --gap-grid: 1rem;
+  --container-max: 80rem;
+  --card-radius: 0.875rem;
+  --card-pad: 1rem;
+
+  /* Light surface */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  --glass-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+
+  /* Light text */
+  --fg: #18181b;
+  /* #60606a on #f4f4f5 = 5.4:1 — passes WCAG AA (4.5:1 normal text) */
+  --fg-muted: #60606a;
+  --fg-dim: #8a8a94;
+  --title-rule: rgba(0, 0, 0, 0.12);
+
+  /* Page chrome */
+  --page-bg: #f4f4f5;
+  --page-fg: #18181b;
+  --frame-bg: rgba(255,255,255,0.35);
+  --frame-border: rgba(0,0,0,0.15);
+  --badge-bg: rgba(0,0,0,0.08);
+  --badge-fg: #52525b;
+
+  /* ── Icon color rule ─────────────────────────────────────────────────────
+     DARK backgrounds (red, orange, purple, green, steel-blue): icons WHITE
+     LIGHT backgrounds (yellow, amber): icons DARK (#3d2800)
+     This is enforced via --icon-color on each alert data attribute.
+  ─────────────────────────────────────────────────────────────────────── */
+
+  /* JMA */
+  --jma-l5-bg:    #4A0070; --jma-l5-icon: #ffffff; --jma-l5-text: #ffffff; --jma-l5-tint: rgba(74,0,112,0.15);
+  --jma-l4-bg:    #9400C8; --jma-l4-icon: #ffffff; --jma-l4-text: #ffffff; --jma-l4-tint: rgba(148,0,200,0.14);
+  --jma-l3-bg:    #CC0000; --jma-l3-icon: #ffffff; --jma-l3-text: #ffffff; --jma-l3-tint: rgba(204,0,0,0.12);
+  --jma-l2-bg:    #C8A400; --jma-l2-icon: #3d2800; --jma-l2-text: #3d2800; --jma-l2-tint: rgba(200,164,0,0.12);
+  --jma-l1-bg:    #2e7d32; --jma-l1-icon: #ffffff; --jma-l1-text: #ffffff; --jma-l1-tint: rgba(46,125,50,0.10);
+
+  /* MeteoAlarm */
+  --meteo-red-bg:    #CC0000; --meteo-red-icon: #ffffff;
+  --meteo-orange-bg: #E06000; --meteo-orange-icon: #ffffff;
+  --meteo-yellow-bg: #F5C000; --meteo-yellow-icon: #3d2800;
+  --meteo-green-bg:  #2e7d32; --meteo-green-icon: #ffffff;
+
+  /* NWS */
+  --nws-warning-bg:   #CC0000; --nws-warning-icon: #ffffff;
+  --nws-watch-bg:     #E07B00; --nws-watch-icon:   #ffffff;
+  --nws-advisory-bg:  #C8A400; --nws-advisory-icon: #3d2800;
+  --nws-statement-bg: #7B8CAD; --nws-statement-icon:#ffffff;
+
+  /* BoM */
+  --bom-severe-bg:  #CC0000; --bom-severe-icon: #ffffff;
+  --bom-warning-bg: #E06000; --bom-warning-icon:#ffffff;
+  --bom-watch-bg:   #C8A400; --bom-watch-icon:  #3d2800;
+  --bom-advice-bg:  #2e7d32; --bom-advice-icon: #ffffff;
+
+  /* Nav control */
+  --nav-btn-bg: rgba(0,0,0,0.08);
+  --nav-btn-hover: rgba(0,0,0,0.15);
+  --nav-btn-fg: #3f3f46;
+  --pip-inactive: rgba(0,0,0,0.20);
+  /* #3f3f46 on rgba(255,255,255,0.72) blended = ~4.85:1 on white — AA pass */
+  --counter-fg: #3f3f46;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: rgba(30, 35, 55, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --glass-shadow: 0 4px 28px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.30);
+    --fg: #e7e7ea;
+    --fg-muted: #a1a1aa;
+    --fg-dim: #71717a;
+    --title-rule: rgba(255,255,255,0.12);
+    --page-bg: #0d0f18;
+    --page-fg: #e7e7ea;
+    --frame-bg: rgba(20,24,40,0.60);
+    --frame-border: rgba(255,255,255,0.10);
+    --badge-bg: rgba(255,255,255,0.10);
+    --badge-fg: #a1a1aa;
+    --nav-btn-bg: rgba(255,255,255,0.10);
+    --nav-btn-hover: rgba(255,255,255,0.18);
+    --nav-btn-fg: #d4d4d8;
+    --pip-inactive: rgba(255,255,255,0.25);
+    --counter-fg: #a1a1aa;
+  }
+}
+
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 2rem 1.5rem 5rem;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  line-height: 1.5;
+}
+
+/* ─── Page header ──────────────────────────────────────────────────────────── */
+.page-header { max-width: 72rem; margin: 0 auto 2rem; }
+.page-header h1 {
+  font-size: 1.25rem; font-weight: 700; margin: 0 0 .35rem;
+  letter-spacing: -.01em;
+}
+.page-header p {
+  font-size: .88rem; color: var(--fg-muted); margin: 0 0 1.25rem; max-width: 72ch;
+}
+
+/* ─── Section heading ──────────────────────────────────────────────────────── */
+.section-block {
+  max-width: 72rem;
+  margin: 0 auto 3rem;
+}
+h2.section-heading {
+  font-size: .95rem; font-weight: 700; margin: 0 0 .75rem;
+  color: var(--page-fg); display: flex; align-items: baseline; gap: .5rem;
+  text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid var(--title-rule); padding-bottom: .5rem;
+}
+h2.section-heading .sub {
+  font-size: .78rem; font-weight: 400; color: var(--fg-muted);
+  text-transform: none; letter-spacing: 0;
+}
+
+/* ─── Device frame ─────────────────────────────────────────────────────────── */
+.frame-scroll { overflow-x: auto; padding-bottom: .5rem; }
+.frame {
+  background:
+    linear-gradient(170deg,
+      rgba(30,26,80,0.88)   0%,
+      rgba(60,50,120,0.80) 28%,
+      rgba(130,80,60,0.78) 56%,
+      rgba(200,110,40,0.82) 74%,
+      rgba(220,140,60,0.80) 88%,
+      rgba(180,100,40,0.75) 100%),
+    linear-gradient(180deg, #1e1a50 0%, #c86e28 100%);
+  border: 1px solid var(--frame-border);
+  border-radius: 1rem;
+  padding: 1rem;
+  width: 900px;
+}
+.frame.dark-frame {
+  background:
+    linear-gradient(170deg,
+      rgba(10, 8, 35, 0.95)   0%,
+      rgba(20,14,55,0.92)    28%,
+      rgba(55,30,16,0.90)    56%,
+      rgba(90,45,10,0.92)    74%,
+      rgba(105,55,12,0.90)   88%,
+      rgba(70,35,8,0.90)    100%),
+    linear-gradient(180deg, #080618 0%, #4a1a04 100%);
+}
+
+.frame-label {
+  font-size: .75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--fg-muted); margin: 0 0 .75rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.frame-label .badge {
+  background: var(--badge-bg); color: var(--badge-fg);
+  border-radius: 999px; padding: .15rem .6rem; font-size: .68rem; font-weight: 600;
+  text-transform: none; letter-spacing: 0;
+}
+
+/* Alert banner stack inside frame */
+.alert-stack { display: flex; flex-direction: column; gap: .75rem; }
+
+/* ─── State label — shows "State 1", "State 2", "State 3" ─────────────────── */
+.state-label {
+  font-size: .72rem;
+  font-family: 'Manrope', sans-serif;
+  color: var(--fg-muted);
+  font-style: italic;
+  margin: 0 0 .2rem;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.state-label strong {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--fg);
+}
+/* Separator between state groups */
+.state-sep {
+  height: 1px;
+  background: var(--title-rule);
+  margin: .5rem 0;
+}
+
+/* ─── Alert Banner — Core Structure ───────────────────────────────────────── */
+/*
+  Multi-alert layout:
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │ [ICON-BLOCK] │ [TEXT-BLOCK ...................] │ [FLIP-NAV] │
+  └──────────────────────────────────────────────────────────────────────┘
+  Flip-nav replaces the expand chevron when multiple alerts are present.
+  Single alert: normal chevron, no flip-nav.
+*/
+.alert-banner {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  border-width: 2px;
+  border-style: solid;
+  box-shadow: var(--glass-shadow);
+  border-color: rgba(0,0,0,0.20);
+}
+
+/* Collapsed row */
+.alert-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 4rem;
+}
+
+/* ─── Icon color rule (the fix) ──────────────────────────────────────────────
+   Icon color is set two ways for maximum reliability:
+   1. CSS: .alert-icon-block sets color: #ffffff (dark bg) or #3d2800 (light bg)
+      via data-bg-light attribute. iconify-icon inherits via currentColor.
+   2. Inline: iconify-icon elements on light-bg blocks also carry
+      style="color: #3d2800 !important;" for web-component safety.
+      (iconify renders SVG via custom element; explicit inline beats inheritance.)
+
+   Rule: dark backgrounds (red, purple, orange, green, steel-blue) → white icons.
+         light backgrounds (yellow, amber) → dark brown icons (#3d2800).
+─────────────────────────────────────────────────────────────────────────── */
+
+/* Icon block — severity-colored panel */
+.alert-icon-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  flex-shrink: 0;
+  padding: .75rem .9rem;
+  /* Default: dark bg → white icon via currentColor */
+  color: #ffffff;
+}
+/* Light backgrounds: yellow/amber severity panels get dark icon */
+.alert-icon-block[data-bg-light="true"] {
+  color: #3d2800;
+}
+.alert-icon-block iconify-icon {
+  font-size: 2.25rem;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.30));
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* Text block — glass/neutral background */
+.alert-text-block {
+  flex: 1;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  padding: .65rem .85rem .65rem .8rem;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+
+/* ─── Flip navigation panel (replaces chevron in multi-alert mode) ─────────── */
+.alert-flip-nav {
+  background: var(--glass-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  padding: .5rem .7rem;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  min-width: 5.5rem;
+}
+
+/* Counter: "1 of 3" */
+.flip-counter {
+  font-family: 'Manrope', sans-serif;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--counter-fg);
+  white-space: nowrap;
+  letter-spacing: .02em;
+}
+
+/* Severity pip row */
+.flip-pips {
+  display: flex;
+  gap: .3rem;
+  align-items: center;
+}
+.pip {
+  width: .6rem;
+  height: .6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Active pip: solid color; inactive pip: semi-transparent */
+  opacity: 1;
+}
+.pip.inactive {
+  opacity: 0.35;
+}
+
+/* Arrow buttons row */
+.flip-arrows {
+  display: flex;
+  gap: .25rem;
+  align-items: center;
+}
+.flip-btn {
+  /* Use <button> — keyboard-reachable, no div-onclick */
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: .3rem;
+  background: var(--nav-btn-bg);
+  color: var(--nav-btn-fg);
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: .9rem;
+}
+.flip-btn:hover {
+  background: var(--nav-btn-hover);
+}
+.flip-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+.flip-btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+.flip-btn iconify-icon {
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+/* Single-alert chevron (unchanged from v2) */
+.alert-chevron {
+  background: var(--glass-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .75rem;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  color: var(--fg-muted);
+  font-size: 1rem;
+}
+.alert-chevron iconify-icon { font-size: 1.1rem; }
+
+/* Text elements inside text block */
+.alert-event-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.alert-event-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alert-system-badge {
+  font-family: 'Manrope', sans-serif;
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-radius: .25rem;
+  padding: .15rem .45rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.alert-meta {
+  font-family: 'Manrope', sans-serif;
+  font-size: .78rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.alert-meta .sep { opacity: .5; }
+.alert-summary {
+  font-family: 'Manrope', sans-serif;
+  font-size: .78rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
+/* ─── Annotation labels ──────────────────────────────────────────────────── */
+.annotation {
+  font-size: .72rem;
+  font-family: 'Manrope', sans-serif;
+  color: var(--fg-muted);
+  font-style: italic;
+  margin: .4rem 0 .2rem;
+}
+
+/* micro note */
+.micro-note {
+  font-size: .72rem;
+  color: var(--fg-muted);
+  margin-top: .75rem;
+  font-style: italic;
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ─── Dark frame text overrides (simulating dark theme without JS) ─────────── */
+.dark-frame .alert-text-block {
+  background: rgba(30, 35, 55, 0.72);
+  color: #e7e7ea;
+}
+.dark-frame .alert-event-name { color: #e7e7ea; }
+.dark-frame .alert-meta { color: #a1a1aa; }
+.dark-frame .alert-summary { color: #a1a1aa; }
+.dark-frame .alert-chevron {
+  background: rgba(30, 35, 55, 0.72);
+  border-left-color: rgba(255,255,255,0.10);
+  color: #a1a1aa;
+}
+.dark-frame .alert-flip-nav {
+  background: rgba(30, 35, 55, 0.72);
+  border-left-color: rgba(255,255,255,0.10);
+}
+.dark-frame .flip-counter { color: #a1a1aa; }
+.dark-frame .flip-btn {
+  background: rgba(255,255,255,0.10);
+  color: #d4d4d8;
+}
+.dark-frame .flip-btn:hover { background: rgba(255,255,255,0.18); }
+.dark-frame .annotation { color: #71717a; }
+.dark-frame .state-label { color: #71717a; }
+.dark-frame .state-label strong { color: #e7e7ea; }
+.dark-frame .state-sep { background: rgba(255,255,255,0.12); }
+.dark-frame .flip-pips .pip.inactive { opacity: 0.30; }
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PAGE HEADER
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>C5 — Alert Banner — Multi-Alert Flip-Through</h1>
+  <p>
+    Focused mockup showing: (1) the flip-through navigator for multi-alert scenarios — one banner
+    visible at a time, highest severity first, with pip + counter + arrow navigation;
+    (2) the icon color fix — white icons on dark severity backgrounds (red, purple, orange, green),
+    dark icons (#3d2800) on light backgrounds (yellow, amber). Light theme, dark theme, and
+    single-alert (no controls) states are all shown.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 1 — Light Theme — 3 flip states
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:sun" style="opacity:.7"></iconify-icon>
+    Light Theme — Multi-Alert Flip States
+    <span class="sub">3 alerts active — same banner, 3 positions — highest severity first</span>
+  </h2>
+
+  <div class="frame-label">
+    <iconify-icon icon="ph:desktop" style="font-size:1rem; opacity:.7"></iconify-icon>
+    Now page · desktop 900 px · single banner with flip navigator
+    <span class="badge">full-width strip · 1×1 footprint</span>
+  </div>
+
+  <div class="frame-scroll">
+    <div class="frame">
+      <div class="alert-stack">
+
+        <!-- ── State 1 of 3 — JMA Level 4 Purple (highest severity) ──────── -->
+        <div class="state-label">
+          <strong>State 1</strong> — 1 of 3 &mdash; highest severity alert (JMA Level 4 Purple) displayed
+        </div>
+        <div class="alert-banner"
+             style="border-color: #9400C8;"
+             role="alert"
+             aria-label="1 of 3 alerts: JMA Urgent Warning — Typhoon Nanmadol. Use navigation buttons to browse other alerts.">
+          <div class="alert-row">
+            <!-- Icon block — JMA Level 4 purple — DARK bg → WHITE icon -->
+            <div class="alert-icon-block" style="background: #9400C8;" aria-hidden="true">
+              <iconify-icon icon="ph:hurricane"></iconify-icon>
+            </div>
+            <!-- Text block -->
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Typhoon Nanmadol — Urgent Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(148,0,200,0.15); color: #7b00a8;">
+                  JMA · Level 4
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Kyushu Region, Nagasaki Prefecture
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 11 PM Sunday
+              </div>
+              <div class="alert-summary">Maximum sustained winds 130 kt; storm surge of 4–6 m expected on coastal areas. Evacuate immediately...</div>
+            </div>
+            <!-- Flip navigation (multi-alert; State 1 of 3) -->
+            <div class="alert-flip-nav" aria-label="Alert navigation: 1 of 3">
+              <span class="flip-counter" aria-live="polite">1 of 3</span>
+              <!-- Severity-colored pips: purple (active) · orange · yellow -->
+              <div class="flip-pips" aria-hidden="true">
+                <span class="pip" style="background: #9400C8;" title="JMA Level 4 — active"></span>
+                <span class="pip inactive" style="background: #E06000;" title="MeteoAlarm Orange"></span>
+                <span class="pip inactive" style="background: #F5C000;" title="MeteoAlarm Yellow"></span>
+              </div>
+              <div class="flip-arrows">
+                <button class="flip-btn" disabled aria-label="Previous alert (none — this is the first)">
+                  <iconify-icon icon="ph:caret-left-bold"></iconify-icon>
+                </button>
+                <button class="flip-btn" aria-label="Next alert (2 of 3: MeteoAlarm Orange — Thunderstorm)">
+                  <iconify-icon icon="ph:caret-right-bold"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-sep"></div>
+
+        <!-- ── State 2 of 3 — MeteoAlarm Orange ─────────────────────────── -->
+        <div class="state-label">
+          <strong>State 2</strong> — 2 of 3 &mdash; second alert (MeteoAlarm Orange Level 3) after pressing &rsaquo;
+        </div>
+        <div class="alert-banner"
+             style="border-color: #E06000;"
+             role="alert"
+             aria-label="2 of 3 alerts: MeteoAlarm Orange — Severe Thunderstorm. Use navigation buttons to browse other alerts.">
+          <div class="alert-row">
+            <!-- Icon block — MeteoAlarm Orange — DARK bg → WHITE icon -->
+            <div class="alert-icon-block" style="background: #E06000;" aria-hidden="true">
+              <iconify-icon icon="ph:lightning"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Severe Thunderstorm Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,96,0,0.14); color: #a04000;">
+                  MeteoAlarm · Orange
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Île-de-France, Seine-et-Marne
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9 PM Sunday
+              </div>
+              <div class="alert-summary">Vigilance orange orages — Moderate to severe thunderstorms with large hail and damaging gusts expected...</div>
+            </div>
+            <!-- Flip navigation — State 2 of 3 -->
+            <div class="alert-flip-nav" aria-label="Alert navigation: 2 of 3">
+              <span class="flip-counter" aria-live="polite">2 of 3</span>
+              <!-- Severity-colored pips: purple · orange (active) · yellow -->
+              <div class="flip-pips" aria-hidden="true">
+                <span class="pip inactive" style="background: #9400C8;" title="JMA Level 4"></span>
+                <span class="pip" style="background: #E06000;" title="MeteoAlarm Orange — active"></span>
+                <span class="pip inactive" style="background: #F5C000;" title="MeteoAlarm Yellow"></span>
+              </div>
+              <div class="flip-arrows">
+                <button class="flip-btn" aria-label="Previous alert (1 of 3: JMA Level 4 — Typhoon Nanmadol)">
+                  <iconify-icon icon="ph:caret-left-bold"></iconify-icon>
+                </button>
+                <button class="flip-btn" aria-label="Next alert (3 of 3: MeteoAlarm Yellow — Wind Advisory)">
+                  <iconify-icon icon="ph:caret-right-bold"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-sep"></div>
+
+        <!-- ── State 3 of 3 — MeteoAlarm Yellow ─────────────────────────── -->
+        <div class="state-label">
+          <strong>State 3</strong> — 3 of 3 &mdash; third alert (MeteoAlarm Yellow Level 2) — lowest severity; Next disabled
+        </div>
+        <div class="alert-banner"
+             style="border-color: #F5C000;"
+             role="status"
+             aria-label="3 of 3 alerts: MeteoAlarm Yellow — Wind Advisory. Use navigation buttons to browse other alerts.">
+          <div class="alert-row">
+            <!-- Icon block — MeteoAlarm Yellow — LIGHT bg → DARK icon (#3d2800) -->
+            <div class="alert-icon-block" style="background: #F5C000;" data-bg-light="true" aria-hidden="true">
+              <iconify-icon icon="ph:wind" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Wind Advisory</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(245,192,0,0.18); color: #7a5000;">
+                  MeteoAlarm · Yellow
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Brittany, Normandy Coastal Zones
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 6 AM Monday
+              </div>
+              <div class="alert-summary">Vigilance jaune vent — Gusts 60–75 km/h possible along exposed coasts; localised disruption to transport...</div>
+            </div>
+            <!-- Flip navigation — State 3 of 3 -->
+            <div class="alert-flip-nav" aria-label="Alert navigation: 3 of 3">
+              <span class="flip-counter" aria-live="polite">3 of 3</span>
+              <!-- Severity-colored pips: purple · orange · yellow (active) -->
+              <div class="flip-pips" aria-hidden="true">
+                <span class="pip inactive" style="background: #9400C8;" title="JMA Level 4"></span>
+                <span class="pip inactive" style="background: #E06000;" title="MeteoAlarm Orange"></span>
+                <span class="pip" style="background: #F5C000;" title="MeteoAlarm Yellow — active"></span>
+              </div>
+              <div class="flip-arrows">
+                <button class="flip-btn" aria-label="Previous alert (2 of 3: MeteoAlarm Orange — Thunderstorm)">
+                  <iconify-icon icon="ph:caret-left-bold"></iconify-icon>
+                </button>
+                <button class="flip-btn" disabled aria-label="Next alert (none — this is the last)">
+                  <iconify-icon icon="ph:caret-right-bold"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /alert-stack -->
+    </div><!-- /frame -->
+  </div><!-- /frame-scroll -->
+  <p class="micro-note">
+    Multi-alert: one banner is visible at a time. Severity-colored pips show all active alerts at a glance —
+    the operator sees the severity distribution before navigating. Highest severity always shown first. Left arrow
+    disabled at position 1; right arrow disabled at the last position.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 2 — Dark Theme — flip navigator example
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:moon" style="opacity:.7"></iconify-icon>
+    Dark Theme — Flip Navigator
+    <span class="sub">Same flip indicator; dark glass surfaces; severity-colored icon blocks unchanged</span>
+  </h2>
+
+  <div class="frame-scroll">
+    <div class="frame dark-frame">
+      <div class="alert-stack">
+
+        <!-- Dark — State 1 of 3 — JMA Level 4 (purple) -->
+        <div class="state-label">
+          <strong>State 1 of 3</strong> — JMA Level 4 Purple (highest) — dark theme
+        </div>
+        <div class="alert-banner"
+             style="border-color: #9400C8;"
+             role="alert"
+             aria-label="1 of 3 alerts: JMA Urgent Warning — Typhoon. Use navigation buttons to browse other alerts.">
+          <div class="alert-row">
+            <div class="alert-icon-block" style="background: #9400C8;" aria-hidden="true">
+              <iconify-icon icon="ph:hurricane"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Typhoon Warning — Urgent</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(148,0,200,0.30); color: #d580ff;">
+                  JMA · Level 4
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Okinawa, Kyushu
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until midnight Sunday
+              </div>
+              <div class="alert-summary">Category 4 equivalent — sustained winds 115 kt, gusts to 140 kt. Storm surge 3–5 m coastal areas...</div>
+            </div>
+            <div class="alert-flip-nav" aria-label="Alert navigation: 1 of 3">
+              <span class="flip-counter">1 of 3</span>
+              <div class="flip-pips" aria-hidden="true">
+                <span class="pip" style="background: #9400C8;"></span>
+                <span class="pip inactive" style="background: #E06000;"></span>
+                <span class="pip inactive" style="background: #F5C000;"></span>
+              </div>
+              <div class="flip-arrows">
+                <button class="flip-btn" disabled aria-label="Previous alert (none)">
+                  <iconify-icon icon="ph:caret-left-bold"></iconify-icon>
+                </button>
+                <button class="flip-btn" aria-label="Next alert (2 of 3)">
+                  <iconify-icon icon="ph:caret-right-bold"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-sep"></div>
+
+        <!-- Dark — State 2 of 3 — NWS Warning (red) — icon color check: white on dark red -->
+        <div class="state-label">
+          <strong>Bonus: NWS Warning (red) — dark theme icon color check</strong> — red bg → white icon (consistent with light theme)
+        </div>
+        <div class="alert-banner"
+             style="border-color: #CC0000;"
+             role="alert"
+             aria-label="2 of 3 alerts: NWS Tornado Warning. Use navigation buttons to browse other alerts.">
+          <div class="alert-row">
+            <!-- Red bg → white icon (dark bg rule) -->
+            <div class="alert-icon-block" style="background: #CC0000;" aria-hidden="true">
+              <iconify-icon icon="ph:tornado"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Tornado Warning</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(204,0,0,0.30); color: #ff8080;">
+                  NWS · Warning
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Grady County, Oklahoma
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9:45 PM CDT
+              </div>
+              <div class="alert-summary">Confirmed tornado near Chickasha moving northeast at 40 mph. THIS IS A LIFE THREATENING SITUATION...</div>
+            </div>
+            <div class="alert-flip-nav" aria-label="Alert navigation: 2 of 3">
+              <span class="flip-counter">2 of 3</span>
+              <div class="flip-pips" aria-hidden="true">
+                <span class="pip inactive" style="background: #9400C8;"></span>
+                <span class="pip" style="background: #CC0000;"></span>
+                <span class="pip inactive" style="background: #F5C000;"></span>
+              </div>
+              <div class="flip-arrows">
+                <button class="flip-btn" aria-label="Previous alert (1 of 3)">
+                  <iconify-icon icon="ph:caret-left-bold"></iconify-icon>
+                </button>
+                <button class="flip-btn" aria-label="Next alert (3 of 3)">
+                  <iconify-icon icon="ph:caret-right-bold"></iconify-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /alert-stack -->
+    </div><!-- /dark-frame -->
+  </div><!-- /frame-scroll -->
+  <p class="micro-note">
+    Dark theme: severity-colored icon blocks are identical to light — colors don't change, only the glass surface darkens.
+    White icons on red/purple backgrounds remain white. The flip nav background adapts to dark glass.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SECTION 3 — Single alert (no flip controls)
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block">
+  <h2 class="section-heading">
+    <iconify-icon icon="ph:bell" style="opacity:.7"></iconify-icon>
+    Single Alert — No Flip Controls
+    <span class="sub">When only one alert is active, the flip nav is hidden — clean, no unnecessary UI</span>
+  </h2>
+
+  <div class="frame-scroll">
+    <div class="frame">
+      <div class="alert-stack">
+
+        <p class="annotation">
+          Single alert — NWS Flood Watch (level 3, orange) — no flip nav, standard chevron
+        </p>
+        <div class="alert-banner"
+             style="border-color: #E07B00;"
+             role="alert"
+             aria-label="NWS Flash Flood Watch — Northern Illinois">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <!-- Orange bg → white icon (dark bg rule) -->
+            <div class="alert-icon-block" style="background: #E07B00;" aria-hidden="true">
+              <iconify-icon icon="material-symbols:flood-outline-rounded"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Flash Flood Watch</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(224,123,0,0.14); color: #804000;">
+                  NWS · Watch
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Northern Illinois — Cook and DuPage Counties
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                through Monday morning
+              </div>
+              <div class="alert-summary">Conditions favorable for flash flooding. 2–4 inches of rainfall possible with locally higher amounts in storms...</div>
+            </div>
+            <!-- Standard chevron — no flip nav — clean single-alert appearance -->
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+        <p class="annotation" style="margin-top:.75rem;">
+          Single alert — NWS Dense Fog Advisory (level 2, yellow) — yellow bg uses DARK icon (#3d2800)
+        </p>
+        <div class="alert-banner"
+             style="border-color: #C8A400;"
+             role="status"
+             aria-label="NWS Dense Fog Advisory — Western Kansas">
+          <div class="alert-row" tabindex="0" role="button" aria-expanded="false"
+               onclick="toggleAlert(this)">
+            <!-- Yellow bg → DARK icon (#3d2800) — light bg rule -->
+            <div class="alert-icon-block" style="background: #C8A400;" data-bg-light="true" aria-hidden="true">
+              <iconify-icon icon="ph:cloud-fog" style="color: #3d2800 !important;"></iconify-icon>
+            </div>
+            <div class="alert-text-block">
+              <div class="alert-event-row">
+                <span class="alert-event-name">Dense Fog Advisory</span>
+                <span class="alert-system-badge"
+                      style="background: rgba(200,164,0,0.14); color: #7a5000;">
+                  NWS · Advisory
+                </span>
+              </div>
+              <div class="alert-meta">
+                <iconify-icon icon="ph:map-pin" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                Western Kansas — Ford and Gray Counties
+                <span class="sep">·</span>
+                <iconify-icon icon="ph:clock" aria-hidden="true" style="font-size:.85rem; flex-shrink:0"></iconify-icon>
+                until 9 AM MDT
+              </div>
+              <div class="alert-summary">Visibility one quarter mile or less expected. Patchy dense fog developing overnight into early morning hours...</div>
+            </div>
+            <div class="alert-chevron" aria-hidden="true">
+              <iconify-icon icon="ph:caret-down"></iconify-icon>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /alert-stack -->
+    </div><!-- /frame -->
+  </div><!-- /frame-scroll -->
+  <p class="micro-note">
+    Single alert: the flip nav is not rendered at all — zero controls, zero clutter. The expand chevron appears
+    as in the v2 mockup. Yellow-background advisory icon is dark (#3d2800) per the icon color rule.
+    Orange-background flood watch icon is white per the dark-bg rule.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     DESIGN NOTES
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-block" style="max-width:72rem; margin: 0 auto 3rem;">
+  <h2 class="section-heading">Design Notes</h2>
+  <div style="font-size:.82rem; font-family:'Manrope',sans-serif; color:var(--fg-muted); line-height:1.65; columns:2; column-gap:2rem;">
+    <p><strong style="color:var(--fg)">Icon color fix:</strong> All icons on the colored left panel now use CSS inheritance — the .alert-icon-block sets <code>color: #ffffff</code> (dark bg) or <code>color: #3d2800</code> (light bg, via <code>data-bg-light="true"</code>). No per-icon inline <code>!important</code> hacks. One rule governs all icons within a block. Dark backgrounds (red, orange, purple, green, steel-blue) use white icons. Light backgrounds (yellow, amber) use dark brown icons.</p>
+    <p><strong style="color:var(--fg)">Flip-through rationale:</strong> Stacking N banners consumes N banner heights of screen real estate, which exceeds a full viewport on mobile when there are 3+ simultaneous alerts. The single-banner flip model takes 1 banner height regardless of alert count, while the pip row gives the operator an immediate severity overview.</p>
+    <p><strong style="color:var(--fg)">Severity pips:</strong> Each pip is colored to match the alert's severity color — so the operator sees "purple + orange + yellow" before navigating and understands the severity distribution at a glance. Active pip is full opacity; inactive pips are 35% opacity.</p>
+    <p><strong style="color:var(--fg)">Flip nav as button elements:</strong> The prev/next arrows are <code>&lt;button&gt;</code> elements, not <code>&lt;div onClick&gt;</code>. Each has a descriptive <code>aria-label</code> naming the target alert. Disabled at boundaries. Keyboard-reachable via Tab, activatable via Enter/Space.</p>
+    <p><strong style="color:var(--fg)">Counter label:</strong> "1 of 3" text has <code>aria-live="polite"</code> so screen readers announce position changes when navigating. Not assertive — the operator chooses to navigate, so it's not an emergency announcement.</p>
+    <p><strong style="color:var(--fg)">Single alert:</strong> When only one alert exists, the flip nav component is not rendered — no "1 of 1" counter, no arrows. The standard expand chevron appears instead, keeping the single-alert layout identical to v2.</p>
+    <p><strong style="color:var(--fg)">Sorting:</strong> Alerts are ordered by severityLevel descending (4 → 1) per ADR-052. Navigation goes highest-first, so position 1 always shows the most severe alert.</p>
+  </div>
+</div>
+
+<!-- ── JavaScript: toggle expand/collapse (single-alert banners only) ────── -->
+<script>
+function toggleAlert(rowEl) {
+  const banner = rowEl.closest('.alert-banner');
+  const isExpanded = banner.classList.toggle('is-expanded');
+  rowEl.setAttribute('aria-expanded', String(isExpanded));
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const t = e.target;
+    if (t.matches('[role="button"]')) {
+      e.preventDefault();
+      toggleAlert(t);
+    }
+  }
+});
+</script>
+
+</body>
+</html>

@@ -497,27 +497,61 @@ h2.section-heading .sub {
           <div class="card-placeholder">[ hourly forecast strip ]</div>
         </div>
 
-        <!-- 5. Precipitation &amp; Barometer — 1×1 -->
+        <!-- 5. Today's Highlights — 2×1 (paired with Forecast) -->
+        <div class="card col-span-2 row-span-1">
+          <div class="fp-badge">2×1</div>
+          <div class="card-title">
+            <iconify-icon icon="ph:star"></iconify-icon>
+            Today's Highlights
+          </div>
+          <div class="card-placeholder">[ stat strip — high · low · humidity · dew point · pressure trend · visibility · gust ]</div>
+        </div>
+
+        <!-- Stat tiles row 1 (4× 1×1) -->
+
+        <!-- 6. Precipitation — 1×1 -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
-            <iconify-icon icon="ph:drop"></iconify-icon>
-            Precip &amp; Barometer
+            <iconify-icon icon="ph:cloud-rain"></iconify-icon>
+            Precipitation
           </div>
-          <div class="card-placeholder">[ rain · pressure ]</div>
+          <div class="card-placeholder">[ rain today · rain rate ]</div>
         </div>
 
-        <!-- 6. Solar &amp; UV — 1×1 -->
+        <!-- 7. Barometer — 1×1 -->
+        <div class="card col-span-1 row-span-1">
+          <div class="fp-badge">1×1</div>
+          <div class="card-title">
+            <iconify-icon icon="ph:gauge"></iconify-icon>
+            Barometer
+          </div>
+          <div class="card-placeholder">[ pressure · trend ]</div>
+        </div>
+
+        <!-- 8. Solar Radiation — 1×1 -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
             <iconify-icon icon="ph:sun"></iconify-icon>
-            Solar &amp; UV
+            Solar Radiation
           </div>
-          <div class="card-placeholder">[ solar rad · UV index ]</div>
+          <div class="card-placeholder">[ solar rad W/m² ]</div>
         </div>
 
-        <!-- 7. AQI — 1×1 -->
+        <!-- 9. UV Index — 1×1 -->
+        <div class="card col-span-1 row-span-1">
+          <div class="fp-badge">1×1</div>
+          <div class="card-title">
+            <iconify-icon icon="tabler:uv-index"></iconify-icon>
+            UV Index
+          </div>
+          <div class="card-placeholder">[ UV index · EPA category · severity bar ]</div>
+        </div>
+
+        <!-- Stat tiles row 2 (4× 1×1) -->
+
+        <!-- 10. AQI — 1×1 -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
@@ -527,7 +561,7 @@ h2.section-heading .sub {
           <div class="card-placeholder">[ air quality index ]</div>
         </div>
 
-        <!-- 8. Sun &amp; Moon — 1×1 -->
+        <!-- 11. Sun &amp; Moon — 1×1 -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
@@ -537,7 +571,7 @@ h2.section-heading .sub {
           <div class="card-placeholder">[ rise · set · phase ]</div>
         </div>
 
-        <!-- 9. Lightning — 1×1 (grouped with Sun &amp; Moon) -->
+        <!-- 12. Lightning — 1×1 -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
@@ -547,7 +581,7 @@ h2.section-heading .sub {
           <div class="card-placeholder">[ strike count · distance ]</div>
         </div>
 
-        <!-- 10. Recent Earthquake — 1×1 (grouped with Sun &amp; Moon) -->
+        <!-- 13. Recent Earthquake — 1×1 -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
@@ -555,16 +589,6 @@ h2.section-heading .sub {
             Recent Earthquake
           </div>
           <div class="card-placeholder">[ mag · location · distance ]</div>
-        </div>
-
-        <!-- 11. Today's Highlights — full (4×1) -->
-        <div class="card col-span-4 row-span-1">
-          <div class="fp-badge">4×1</div>
-          <div class="card-title">
-            <iconify-icon icon="ph:star"></iconify-icon>
-            Today's Highlights
-          </div>
-          <div class="card-placeholder">[ stat strip — high · low · humidity · dew point · pressure trend · visibility · gust ]</div>
         </div>
 
         <!-- 12. Radar — 2×2 -->
@@ -654,23 +678,51 @@ h2.section-heading .sub {
           <div class="card-placeholder">[ hourly forecast strip ]</div>
         </div>
 
-        <!-- 5–8 tile cards: 1×1 each, pair up in 2-col grid -->
+        <!-- 5. Today's Highlights — 2×1 → 1×1 (paired with Forecast) -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
-            <iconify-icon icon="ph:drop"></iconify-icon>
-            Precip &amp; Barometer
+            <iconify-icon icon="ph:star"></iconify-icon>
+            Today's Highlights
           </div>
-          <div class="card-placeholder">[ rain · pressure ]</div>
+          <div class="card-placeholder">[ stat strip — high · low · humidity · pressure · gust ]</div>
+        </div>
+
+        <!-- Stat tiles: 1×1 each, pair up in 2-col grid (4 rows of 2) -->
+        <div class="card col-span-1 row-span-1">
+          <div class="fp-badge">1×1</div>
+          <div class="card-title">
+            <iconify-icon icon="ph:cloud-rain"></iconify-icon>
+            Precipitation
+          </div>
+          <div class="card-placeholder">[ rain today · rain rate ]</div>
+        </div>
+
+        <div class="card col-span-1 row-span-1">
+          <div class="fp-badge">1×1</div>
+          <div class="card-title">
+            <iconify-icon icon="ph:gauge"></iconify-icon>
+            Barometer
+          </div>
+          <div class="card-placeholder">[ pressure · trend ]</div>
         </div>
 
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
             <iconify-icon icon="ph:sun"></iconify-icon>
-            Solar &amp; UV
+            Solar Radiation
           </div>
-          <div class="card-placeholder">[ solar rad · UV index ]</div>
+          <div class="card-placeholder">[ solar rad W/m² ]</div>
+        </div>
+
+        <div class="card col-span-1 row-span-1">
+          <div class="fp-badge">1×1</div>
+          <div class="card-title">
+            <iconify-icon icon="tabler:uv-index"></iconify-icon>
+            UV Index
+          </div>
+          <div class="card-placeholder">[ UV · EPA category ]</div>
         </div>
 
         <div class="card col-span-1 row-span-1">
@@ -691,7 +743,6 @@ h2.section-heading .sub {
           <div class="card-placeholder">[ rise · set · phase ]</div>
         </div>
 
-        <!-- Lightning &amp; Earthquake grouped with Sun &amp; Moon -->
         <div class="card col-span-1 row-span-1">
           <div class="fp-badge">1×1</div>
           <div class="card-title">
@@ -708,16 +759,6 @@ h2.section-heading .sub {
             Recent Earthquake
           </div>
           <div class="card-placeholder">[ mag · location ]</div>
-        </div>
-
-        <!-- Today's Highlights — full → 2 cols (4→2) -->
-        <div class="card col-span-2 row-span-1">
-          <div class="fp-badge">2×1</div>
-          <div class="card-title">
-            <iconify-icon icon="ph:star"></iconify-icon>
-            Today's Highlights
-          </div>
-          <div class="card-placeholder">[ stat strip — high · low · humidity · pressure · gust ]</div>
         </div>
 
         <!-- 12. Radar — 2×2 stays 2×2 (full width, 2 rows) -->
@@ -807,19 +848,46 @@ h2.section-heading .sub {
         <div class="card">
           <div class="fp-badge">1×auto</div>
           <div class="card-title">
-            <iconify-icon icon="ph:drop"></iconify-icon>
-            Precip &amp; Barometer
+            <iconify-icon icon="ph:star"></iconify-icon>
+            Today's Highlights
           </div>
-          <div class="card-placeholder" style="min-height:4rem">[ rain · pressure ]</div>
+          <div class="card-placeholder" style="min-height:4rem">[ stat strip ]</div>
+        </div>
+
+        <div class="card">
+          <div class="fp-badge">1×auto</div>
+          <div class="card-title">
+            <iconify-icon icon="ph:cloud-rain"></iconify-icon>
+            Precipitation
+          </div>
+          <div class="card-placeholder" style="min-height:4rem">[ rain today · rain rate ]</div>
+        </div>
+
+        <div class="card">
+          <div class="fp-badge">1×auto</div>
+          <div class="card-title">
+            <iconify-icon icon="ph:gauge"></iconify-icon>
+            Barometer
+          </div>
+          <div class="card-placeholder" style="min-height:4rem">[ pressure · trend ]</div>
         </div>
 
         <div class="card">
           <div class="fp-badge">1×auto</div>
           <div class="card-title">
             <iconify-icon icon="ph:sun"></iconify-icon>
-            Solar &amp; UV
+            Solar Radiation
           </div>
-          <div class="card-placeholder" style="min-height:4rem">[ solar · UV index ]</div>
+          <div class="card-placeholder" style="min-height:4rem">[ solar rad W/m² ]</div>
+        </div>
+
+        <div class="card">
+          <div class="fp-badge">1×auto</div>
+          <div class="card-title">
+            <iconify-icon icon="tabler:uv-index"></iconify-icon>
+            UV Index
+          </div>
+          <div class="card-placeholder" style="min-height:4rem">[ UV · EPA category ]</div>
         </div>
 
         <div class="card">
@@ -856,15 +924,6 @@ h2.section-heading .sub {
             Recent Earthquake
           </div>
           <div class="card-placeholder" style="min-height:4rem">[ mag · location ]</div>
-        </div>
-
-        <div class="card">
-          <div class="fp-badge">1×auto</div>
-          <div class="card-title">
-            <iconify-icon icon="ph:star"></iconify-icon>
-            Today's Highlights
-          </div>
-          <div class="card-placeholder" style="min-height:4rem">[ stat strip ]</div>
         </div>
 
         <div class="card">

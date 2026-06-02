@@ -173,8 +173,10 @@ For each page: **B** = current Belchertown · **CS** = existing Clear Skies buil
 | Today's Highlights | hi/lo, peak gust, rain-so-far, peak AQI, records-broken-today | `useTodayStats` over `/current`+today archive |
 | Wind compass | Signature dial; dir/deg + speed + gust + Beaufort *inside* the dial (img-17) | `/current` wind fields |
 | Station observations tile | Per-stat grid (ADR-024 locked default 8) + plain-language sentences | `/current` |
-| Precipitation & Barometer | Rain today/rate, barometer + 3hr trend | `/current` |
-| Solar & UV | Radiation + UV badge/bar + forecast UV peak | `/current`, `/forecast` |
+| Precipitation | Rain today + rain rate | `/current` |
+| Barometer | Pressure + 3hr trend | `/current` |
+| Solar Radiation | Solar radiation W/m² | `/current` |
+| UV Index | UV index + EPA category + severity bar + forecast UV peak | `/current`, `/forecast` |
 | AQI tile | Half-gauge + category + main pollutant (NOTES wants per-pollutant — gated) | `/aqi/current` |
 | Sun & Moon mini | Sunrise/sunset + phase + illumination% (NOTES wants arcs) | `/almanac` |
 | Lightning tile | 1h/24h count, nearest distance; ⬚ storm-phase badge + <5min accent | `useLightning(/current)` |

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C4 — Now-page stat tiles (v4)</title>
+<style>
+@font-face{font-family:'Manrope';font-weight:400;src:url('fonts/manrope-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Manrope';font-weight:600;src:url('fonts/manrope-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Manrope';font-weight:700;src:url('fonts/manrope-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Outfit';font-weight:400;src:url('fonts/outfit-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Outfit';font-weight:600;src:url('fonts/outfit-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Lexend';font-weight:400;src:url('fonts/lexend-latin-400-normal.woff2') format('woff2')}
+
+:root {
+  color-scheme: light dark;
+  --font-sans:'Manrope',system-ui,sans-serif;--font-display:'Outfit',system-ui,sans-serif;--font-chart:'Lexend',system-ui,sans-serif;
+  --text-card-title:13px;--text-primary:18px;--text-secondary:13px;--text-tertiary:10px;--text-label:12px;--text-micro:11px;
+  --gap-grid:1rem;--card-row:11rem;--card-radius:0.875rem;--card-pad:1rem;
+  --glass-bg:rgba(255,255,255,0.72);--glass-border:rgba(0,0,0,0.10);--glass-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.08);
+  --fg:#18181b;--fg-muted:#71717a;--fg-dim:#a1a1aa;--title-rule:rgba(0,0,0,0.12);
+  --gauge-fill:#3b82f6;--gauge-unfill:rgba(0,0,0,0.22);--gauge-indicator:#1e40af;
+  --page-bg:#f4f4f5;--page-fg:#18181b;--badge-bg:rgba(0,0,0,0.08);--badge-fg:#52525b;
+}
+@media(prefers-color-scheme:dark){:root{
+  --glass-bg:rgba(30,35,55,0.55);--glass-border:rgba(255,255,255,0.10);--glass-shadow:0 4px 28px rgba(0,0,0,0.45),0 1px 4px rgba(0,0,0,0.30);
+  --fg:#e7e7ea;--fg-muted:#a1a1aa;--fg-dim:#71717a;--title-rule:rgba(255,255,255,0.12);
+  --gauge-fill:#60a5fa;--gauge-unfill:rgba(255,255,255,0.35);--gauge-indicator:#93c5fd;
+  --page-bg:#0d0f18;--page-fg:#e7e7ea;--badge-bg:rgba(255,255,255,0.10);--badge-fg:#a1a1aa;
+}}
+
+*,*::before,*::after{box-sizing:border-box}
+body{font-family:var(--font-sans);margin:0;padding:2rem 1.5rem 4rem;background:var(--page-bg);color:var(--page-fg);line-height:1.5}
+.page-header{max-width:72rem;margin:0 auto 2rem}
+.page-header h1{font-size:1.25rem;font-weight:700;margin:0 0 .35rem}
+.page-header p{font-size:13px;color:var(--fg-muted);margin:0;max-width:72ch}
+
+.frame-section{margin-bottom:3rem}
+.frame-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-muted);margin:0 0 .6rem}
+.frame-scroll{overflow-x:auto;padding-bottom:.5rem}
+.frame{border-radius:1rem;padding:1rem}
+.frame--4col{width:1200px;background:linear-gradient(170deg,rgba(30,26,80,0.88) 0%,rgba(60,50,120,0.80) 28%,rgba(130,80,60,0.78) 56%,rgba(200,110,40,0.82) 74%,rgba(220,140,60,0.80) 88%,rgba(180,100,40,0.75) 100%),linear-gradient(180deg,#1e1a50 0%,#c86e28 100%);border:1px solid rgba(255,255,255,0.10)}
+@media(prefers-color-scheme:dark){.frame--4col{background:linear-gradient(170deg,rgba(10,8,35,0.93) 0%,rgba(25,18,60,0.90) 28%,rgba(70,35,20,0.88) 56%,rgba(110,55,10,0.90) 74%,rgba(130,70,15,0.88) 88%,rgba(90,45,10,0.88) 100%),linear-gradient(180deg,#0a0823 0%,#6e3208 100%)}}
+.grid-4col{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap-grid);grid-auto-rows:var(--card-row)}
+.col-span-1{grid-column:span 1}.col-span-2{grid-column:span 2}.row-span-1{grid-row:span 1}
+.card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--card-radius);padding:var(--card-pad);backdrop-filter:blur(8px) saturate(1.1);-webkit-backdrop-filter:blur(8px) saturate(1.1);box-shadow:var(--glass-shadow);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.card-title{font-family:var(--font-sans);font-size:var(--text-card-title);font-weight:600;color:var(--fg);margin:0 0 6px;padding-bottom:5px;border-bottom:1px solid var(--title-rule);flex-shrink:0;line-height:1.3}
+.fp-badge{position:absolute;top:8px;right:9px;background:var(--badge-bg);color:var(--badge-fg);border-radius:4px;font-size:10px;font-weight:700;font-family:ui-monospace,monospace;padding:1px 5px}
+.card-placeholder{flex:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--fg-dim);font-style:italic}
+
+/* Layouts */
+.tile-p1{display:flex;gap:12px;align-items:center;justify-content:center;flex:1;min-height:0}
+.tile-p1 .t-icon{flex-shrink:0;display:flex;align-items:center;color:var(--fg);opacity:.7}
+.tile-p1 .t-icon svg{width:52px;height:52px}
+.tile-vals{display:flex;flex-direction:column;gap:1px}
+.tile-p6{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.tile-p7{flex:1;display:flex;flex-direction:column;min-height:0}
+.tile-chart{flex:1;min-height:0;display:flex;align-items:stretch}
+.tile-chart svg{width:100%;height:100%}
+.tile-below{display:flex;align-items:center;justify-content:center;gap:6px;padding-top:3px;flex-shrink:0}
+.tile-below .t-icon{display:flex;align-items:center;color:var(--fg);opacity:.7}
+.tile-below .t-icon svg{width:22px;height:22px}
+
+/* AQI: gauge dominant left, compact pollutants right */
+.tile-aqi{display:flex;gap:4px;flex:1;min-height:0;align-items:stretch}
+.tile-aqi .aqi-left{flex:0 0 62%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tile-aqi .aqi-right{flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;padding-left:6px}
+.aqi-pollutant{display:flex;align-items:center;gap:4px;font-family:var(--font-sans);font-size:var(--text-tertiary);color:var(--fg-muted);line-height:1.25;padding:1px 0}
+.aqi-pollutant .sev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.aqi-pollutant .pn{min-width:30px}
+.aqi-pollutant .pv{font-family:var(--font-display);font-weight:600;font-size:var(--text-tertiary);color:var(--fg)}
+
+/* Earthquake */
+.tile-eq{display:flex;flex-direction:column;gap:5px;flex:1;min-height:0}
+.eq-row{display:flex;gap:8px;align-items:flex-start}
+.eq-divider{border-top:1px solid var(--title-rule)}
+.mag-badge{width:34px;height:34px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.mag-badge .mag-m{font-size:8px;font-weight:400;line-height:1;opacity:.85;font-family:var(--font-sans)}
+.mag-badge .mag-v{font-family:var(--font-display);font-size:14px;font-weight:700;line-height:1.1}
+.eq-info{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.eq-place{font-family:var(--font-sans);font-weight:600;font-size:12px;color:var(--fg);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-time{font-family:var(--font-sans);font-weight:400;font-size:11px;color:var(--fg-muted);line-height:1.3}
+.eq-meta{font-family:var(--font-sans);font-weight:400;font-size:var(--text-tertiary);color:var(--fg-dim)}
+
+/* Typography */
+.stat-primary{font-family:var(--font-display);font-weight:600;font-size:var(--text-primary);color:var(--fg);line-height:1.15}
+.stat-secondary{font-family:var(--font-sans);font-weight:400;font-size:var(--text-secondary);color:var(--fg);line-height:1.3}
+.lbl{font-family:var(--font-sans);font-weight:400;font-size:var(--text-label);color:var(--fg-muted);line-height:1.3}
+.lbl-micro{font-family:var(--font-sans);font-weight:400;font-size:var(--text-micro);color:var(--fg-muted)}
+.sev-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* UV: icon + two labeled value groups, center justified */
+.uv-row{display:flex;align-items:flex-start;justify-content:center;gap:8px;padding-top:2px;flex-shrink:0}
+.uv-row .t-icon{display:flex;align-items:center;color:var(--fg);opacity:.7}
+.uv-row .t-icon svg{width:36px;height:36px}
+.uv-group{display:flex;flex-direction:column;align-items:center;gap:0}
+.uv-pair{display:flex;align-items:center;gap:3px}
+.uv-pair .sev-dot{width:7px;height:7px}
+.uv-pair .uv-num{font-family:var(--font-display);font-weight:600;font-size:15px;color:var(--fg)}
+.uv-pair .uv-cat{font-family:var(--font-sans);font-size:var(--text-tertiary);color:var(--fg-muted);margin-left:1px}
+.uv-lbl{font-family:var(--font-sans);font-size:8px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:.04em}
+.uv-sep{color:var(--fg-dim);font-size:var(--text-tertiary);padding-top:4px}
+
+.ltng-stats{display:flex;flex-direction:column}
+.ltng-line{font-family:var(--font-sans);font-weight:400;font-size:var(--text-secondary);color:var(--fg);line-height:1.3}
+.ltng-line strong{font-family:var(--font-display);font-weight:600}
+.ltng-sub{font-family:var(--font-sans);font-size:var(--text-micro);color:var(--fg-muted)}
+
+.ax{font-family:'Lexend',system-ui,sans-serif;font-size:8px;fill:var(--fg-dim)}
+.ax-y{font-family:'Lexend',system-ui,sans-serif;font-size:7px;fill:var(--fg-dim)}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>C4 — Now-page stat tiles (v4)</h1>
+  <p>Primary 18px · Secondary 13px · Tertiary 10px · Inline SVG icons · Gauge unfilled ticks visible both themes · Option A (nested) confirmed for Sun &amp; Moon</p>
+</div>
+
+<div class="frame-section">
+  <div class="frame-label">Desktop · 4 columns · 1200 px</div>
+  <div class="frame-scroll"><div class="frame frame--4col"><div class="grid-4col">
+
+    <!-- Context -->
+    <div class="card col-span-2 row-span-1"><div class="fp-badge">2×1</div><div class="card-title">Today's Forecast</div><div class="card-placeholder">[ hourly strip — C3 ]</div></div>
+    <div class="card col-span-2 row-span-1"><div class="fp-badge">2×1</div><div class="card-title">Today's Highlights</div><div class="card-placeholder">[ hi · lo · humidity · dew · gust — C5 ]</div></div>
+
+    <!-- A. Precipitation -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">Precipitation</div>
+      <div class="tile-p1">
+        <div class="t-icon"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M174,47.75a254.19,254.19,0,0,0-41.45-38.3,8,8,0,0,0-9.18,0A254.19,254.19,0,0,0,82,47.75C54.51,79.32,40,112.6,40,144a88,88,0,0,0,176,0C216,112.6,201.49,79.32,174,47.75ZM128,216a72.08,72.08,0,0,1-72-72c0-57.23,55.47-105,72-118,16.53,13,72,60.75,72,118A72.08,72.08,0,0,1,128,216Zm55.89-62.67a57.6,57.6,0,0,1-46.56,46.55A8.75,8.75,0,0,1,136,200a8,8,0,0,1-1.32-15.89c16.57-2.79,30.63-16.85,33.44-33.45a8,8,0,0,1,15.78,2.68Z"/></svg></div>
+        <div class="tile-vals">
+          <span class="stat-primary">0.12 in</span><span class="lbl">Rain today</span>
+          <span class="stat-secondary" style="margin-top:4px">0.00 in/hr</span><span class="lbl-micro">Rain rate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- B. Barometer — dynamic scale 28.5–31.5 default -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">Barometer</div>
+      <div class="tile-p6" id="baro-gauge"></div>
+    </div>
+
+    <!-- C. Solar Radiation — rolling 24h, right edge = now -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">Solar Radiation</div>
+      <div class="tile-p7">
+        <div class="tile-chart">
+          <svg viewBox="0 0 240 80" preserveAspectRatio="none">
+            <!-- Theoretical max (yellow area) — closed at baseline y=80 -->
+            <polygon points="0,80 0,51 5,56 15,66 25,76 30,80 145,80 150,78 160,69 170,55 180,38 190,23 200,11 210,4 215,3 220,7 225,15 230,26 235,36 240,51 240,80"
+              fill="rgba(255,200,50,0.35)" stroke="rgba(220,170,30,0.5)" stroke-width="0.5" vector-effect="non-scaling-stroke"/>
+            <!-- Actual (orange line) — ends at right edge, no drop-off -->
+            <polyline points="0,55 5,60 15,70 25,78 30,80 145,80 150,79 160,74 170,64 180,50 190,36 200,26 210,18 215,15 220,18 225,29 230,40 235,48 240,55"
+              fill="none" stroke="#f7a35c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            <text x="2" y="78" class="ax">6p</text><text x="58" y="78" class="ax">12a</text>
+            <text x="118" y="78" class="ax">6a</text><text x="178" y="78" class="ax">12p</text>
+            <text x="232" y="78" class="ax" text-anchor="end">now</text>
+          </svg>
+        </div>
+        <div class="tile-below">
+          <div class="t-icon"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg></div>
+          <span class="stat-primary">342 W/m²</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D. UV Index — fixed daily 12a–12a, gradient bell, UV icon + labeled values -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">UV Index</div>
+      <div class="tile-p7">
+        <div class="tile-chart">
+          <svg viewBox="0 0 240 80" preserveAspectRatio="none">
+            <defs><linearGradient id="uv-grad" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="#3ea72d"/><stop offset="16%" stop-color="#3ea72d"/>
+              <stop offset="17%" stop-color="#fff300"/><stop offset="41%" stop-color="#fff300"/>
+              <stop offset="42%" stop-color="#f18b00"/><stop offset="58%" stop-color="#f18b00"/>
+              <stop offset="59%" stop-color="#e53210"/><stop offset="83%" stop-color="#e53210"/>
+              <stop offset="84%" stop-color="#b567a4"/><stop offset="100%" stop-color="#b567a4"/>
+            </linearGradient></defs>
+            <polygon points="0,80 60,80 70,78 80,72 90,63 100,50 105,42 110,35 115,30 120,27 125,30 130,35 135,42 140,50 150,60 160,70 170,77 180,80 240,80"
+              fill="url(#uv-grad)" opacity=".6"/>
+            <circle cx="155" cy="63" r="5" fill="#fff300" stroke="white" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            <text x="8" y="8" class="ax-y">12</text><text x="8" y="28" class="ax-y">8</text>
+            <text x="8" y="48" class="ax-y">4</text><text x="8" y="78" class="ax-y">0</text>
+            <text x="15" y="78" class="ax">12a</text><text x="58" y="78" class="ax">6a</text>
+            <text x="118" y="78" class="ax">12p</text><text x="178" y="78" class="ax">6p</text>
+            <text x="228" y="78" class="ax">12a</text>
+          </svg>
+        </div>
+        <div class="uv-row">
+          <div class="t-icon"><svg viewBox="0 0 256 256" fill="currentColor"><rect x="120" y="16" width="16" height="24" rx="8"/><rect x="120" y="216" width="16" height="24" rx="8"/><rect x="16" y="120" width="24" height="16" rx="8"/><rect x="216" y="120" width="24" height="16" rx="8"/><rect x="44" y="44" width="16" height="24" rx="8" transform="rotate(-45 52 56)"/><rect x="196" y="44" width="16" height="24" rx="8" transform="rotate(45 204 56)"/><rect x="44" y="188" width="16" height="24" rx="8" transform="rotate(45 52 200)"/><rect x="196" y="188" width="16" height="24" rx="8" transform="rotate(-45 204 200)"/><circle cx="128" cy="128" r="52" fill="none" stroke="currentColor" stroke-width="16"/><text x="128" y="145" text-anchor="middle" font-family="'Outfit',sans-serif" font-weight="700" font-size="56" fill="currentColor">UV</text></svg></div>
+          <div class="uv-group">
+            <div class="uv-pair"><span class="sev-dot" style="background:#fff300"></span><span class="uv-num">3</span><span class="uv-cat">Mod</span></div>
+            <span class="uv-lbl">Now</span>
+          </div>
+          <span class="uv-sep">·</span>
+          <div class="uv-group">
+            <div class="uv-pair"><span class="sev-dot" style="background:#e53210"></span><span class="uv-num">8</span><span class="uv-cat">V.High</span></div>
+            <span class="uv-lbl">Peak</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E. AQI — larger gauge left, compact pollutants right -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">AQI</div>
+      <div class="tile-aqi">
+        <div class="aqi-left" id="aqi-gauge"></div>
+        <div class="aqi-right">
+          <div class="aqi-pollutant"><span class="sev-dot" style="background:#00e400"></span><span class="pn">PM2.5</span><span class="pv">12</span></div>
+          <div class="aqi-pollutant"><span class="sev-dot" style="background:#00e400"></span><span class="pn">PM10</span><span class="pv">28</span></div>
+          <div class="aqi-pollutant"><span class="sev-dot" style="background:#00e400"></span><span class="pn">O₃</span><span class="pv">35</span></div>
+          <div class="aqi-pollutant"><span class="sev-dot" style="background:#00e400"></span><span class="pn">NO₂</span><span class="pv">8</span></div>
+          <div class="aqi-pollutant"><span class="sev-dot" style="background:#00e400"></span><span class="pn">CO</span><span class="pv">0.4</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F. Sun & Moon — Option A: Nested (confirmed) -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">Sun &amp; Moon</div>
+      <div class="tile-p6" id="sunmoon-grid"></div>
+    </div>
+
+    <!-- G. Lightning -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">Lightning</div>
+      <div class="tile-p7">
+        <div class="tile-chart">
+          <svg viewBox="0 0 300 100">
+            <line x1="10" y1="50" x2="290" y2="50" stroke="var(--fg-dim)" stroke-width=".5" opacity=".15"/>
+            <circle cx="117" cy="15" r="3.5" fill="var(--gauge-fill)" opacity=".3"/>
+            <circle cx="122" cy="17" r="3" fill="var(--gauge-fill)" opacity=".3"/>
+            <circle cx="129" cy="20" r="3.5" fill="var(--gauge-fill)" opacity=".35"/>
+            <circle cx="135" cy="25" r="3" fill="var(--gauge-fill)" opacity=".35"/>
+            <circle cx="140" cy="28" r="3.5" fill="var(--gauge-fill)" opacity=".4"/>
+            <circle cx="147" cy="33" r="3" fill="var(--gauge-fill)" opacity=".4"/>
+            <circle cx="152" cy="38" r="3.5" fill="var(--gauge-fill)" opacity=".45"/>
+            <circle cx="158" cy="43" r="3.5" fill="var(--gauge-fill)" opacity=".5"/>
+            <circle cx="163" cy="50" r="3" fill="var(--gauge-fill)" opacity=".5"/>
+            <circle cx="168" cy="57" r="3.5" fill="var(--gauge-fill)" opacity=".55"/>
+            <circle cx="173" cy="63" r="4" fill="var(--gauge-fill)" opacity=".6"/>
+            <circle cx="176" cy="68" r="3.5" fill="var(--gauge-fill)" opacity=".6"/>
+            <circle cx="180" cy="78" r="4" fill="var(--gauge-fill)" opacity=".7"/>
+            <circle cx="184" cy="83" r="4.5" fill="var(--gauge-fill)" opacity=".75"/>
+            <circle cx="187" cy="86" r="4.5" fill="var(--gauge-fill)" opacity=".8"/>
+            <circle cx="190" cy="83" r="4" fill="var(--gauge-fill)" opacity=".7"/>
+            <circle cx="195" cy="75" r="3.5" fill="var(--gauge-fill)" opacity=".6"/>
+            <circle cx="200" cy="67" r="3.5" fill="var(--gauge-fill)" opacity=".55"/>
+            <circle cx="205" cy="58" r="3" fill="var(--gauge-fill)" opacity=".5"/>
+            <circle cx="210" cy="50" r="3.5" fill="var(--gauge-fill)" opacity=".45"/>
+            <circle cx="216" cy="42" r="3" fill="var(--gauge-fill)" opacity=".4"/>
+            <circle cx="222" cy="35" r="3" fill="var(--gauge-fill)" opacity=".35"/>
+            <circle cx="228" cy="27" r="3" fill="var(--gauge-fill)" opacity=".3"/>
+            <circle cx="234" cy="20" r="3" fill="var(--gauge-fill)" opacity=".25"/>
+            <circle cx="240" cy="15" r="3" fill="var(--gauge-fill)" opacity=".2"/>
+            <circle cx="125" cy="18" r="2.5" fill="var(--gauge-fill)" opacity=".25"/>
+            <circle cx="150" cy="40" r="2.5" fill="var(--gauge-fill)" opacity=".35"/>
+            <circle cx="170" cy="60" r="2.5" fill="var(--gauge-fill)" opacity=".45"/>
+            <circle cx="185" cy="80" r="2.5" fill="var(--gauge-fill)" opacity=".6"/>
+            <circle cx="198" cy="70" r="2.5" fill="var(--gauge-fill)" opacity=".45"/>
+            <circle cx="215" cy="45" r="2.5" fill="var(--gauge-fill)" opacity=".35"/>
+            <text x="12" y="10" class="ax">30mi</text>
+            <text x="10" y="97" class="ax">-24h</text><text x="80" y="97" class="ax">-18h</text>
+            <text x="150" y="97" class="ax">-12h</text><text x="220" y="97" class="ax">-6h</text>
+            <text x="275" y="97" class="ax">now</text>
+          </svg>
+        </div>
+        <div class="tile-below">
+          <div class="t-icon"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.2-73.81a8,8,0,0,0-13.31-7.59L60.54,111.06A8,8,0,0,0,66,124.61l57.63,21.61L109.4,220.15a8,8,0,0,0,13.32,7.59l93.54-101.56A8,8,0,0,0,215.79,118.17Z"/></svg></div>
+          <div class="ltng-stats"><span class="ltng-line"><strong>12</strong> /hr · <strong>47</strong> /24h</span><span class="ltng-sub">Nearest: 4.2 mi</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- H. Earthquake -->
+    <div class="card col-span-1 row-span-1"><div class="fp-badge">1×1</div><div class="card-title">Recent Earthquake</div>
+      <div class="tile-eq">
+        <div class="eq-row"><div class="mag-badge" style="background:#eab308"><span class="mag-m">M</span><span class="mag-v">3.2</span></div><div class="eq-info"><span class="eq-place">14km SW of Volcano, HI</span><span class="eq-time">45 min ago · ML</span><span class="eq-meta">Depth: 8 km · USGS</span></div></div>
+        <div class="eq-divider"></div>
+        <div class="eq-row"><div class="mag-badge" style="background:#22c55e"><span class="mag-m">M</span><span class="mag-v">2.8</span></div><div class="eq-info"><span class="eq-place">8km NE of Pahala, HI</span><span class="eq-time">2.3 hrs ago · ML</span><span class="eq-meta">Depth: 12 km · USGS</span></div></div>
+      </div>
+    </div>
+
+  </div></div></div>
+</div>
+
+<script>
+function semiGauge(el,opts){
+  if(!el)return;
+  var cx=100,cy=92,r=85,n=36;
+  var pct=Math.max(0,Math.min(1,(opts.value-opts.min)/(opts.max-opts.min)));
+  var idx=Math.round(pct*n);
+  var s='<svg viewBox="0 0 200 112" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">';
+
+  /* Find nearest tick index for each threshold — those ticks get LONGER and THICKER */
+  var thresholds=opts.thresholds||[];
+  var thrIdx={};
+  for(var th=0;th<thresholds.length;th++){
+    var thrPct=(thresholds[th]-opts.min)/(opts.max-opts.min);
+    thrIdx[Math.round(thrPct*n)]=true;
+  }
+
+  for(var i=0;i<=n;i++){
+    var t=i/n,a=Math.PI*(1-t),filled=(i<=idx),isInd=(i===idx);
+    var isThr=!!thrIdx[i];
+    var tl=isInd?24:(isThr?22:14),tir=r-tl;
+    var x1=cx+r*Math.cos(a),y1=cy-r*Math.sin(a);
+    var x2=cx+tir*Math.cos(a),y2=cy-tir*Math.sin(a);
+    var color,op,w;
+    if(filled&&!isInd){
+      if(opts.bands){
+        var tickVal=opts.min+t*(opts.max-opts.min);
+        color=opts.bands[opts.bands.length-1].color;
+        for(var b=0;b<opts.bands.length;b++){if(tickVal>=opts.bands[b].from&&tickVal<opts.bands[b].to){color=opts.bands[b].color;break}}
+      }else{color='var(--gauge-fill)'}
+      op=0.9;w=isThr?4:2.5;
+    }else if(isInd){
+      color='var(--gauge-indicator)';op=1;w=5;
+    }else{
+      color='var(--gauge-unfill)';op=isThr?0.5:0.35;w=isThr?4:2.5;
+    }
+    s+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+color+'" stroke-width="'+w+'" opacity="'+op+'" stroke-linecap="round"/>';
+  }
+
+  /* Leaf icon for AQI — outline, sized to text block, LEFT of text */
+  var textX=cx;
+  if(opts.showLeaf){
+    textX=cx+10;
+    s+='<g transform="translate(58,50) scale(0.15)"><path d="M223.45,40.07a8,8,0,0,0-7.52-7.52C139.8,28.08,78.82,51,52.82,94a87.09,87.09,0,0,0-12.76,49c.57,15.92,5.21,32,13.79,47.85l-19.51,19.5a8,8,0,0,0,11.32,11.32l19.5-19.51C81,210.73,97.09,215.37,113,215.94q1.67.06,3.33.06A86.93,86.93,0,0,0,162,203.18C205,177.18,227.93,116.21,223.45,40.07ZM153.75,189.5c-22.75,13.78-49.68,14-76.71.77l88.63-88.62a8,8,0,0,0-11.32-11.32L65.73,179c-13.19-27-13-54,.77-76.71,22.09-36.47,74.6-56.44,141.31-54.06C210.2,114.89,190.22,167.41,153.75,189.5Z" fill="var(--fg)" opacity=".65"/></g>';
+  }
+
+  var ty=cy-22;
+  s+='<text x="'+textX+'" y="'+ty+'" text-anchor="middle" font-family="\'Outfit\',system-ui" font-weight="600" font-size="20" fill="var(--fg)">'+opts.valueText+'</text>';
+  ty+=14;
+  if(opts.unitText){s+='<text x="'+textX+'" y="'+ty+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="10" fill="var(--fg-muted)">'+opts.unitText+'</text>';ty+=13}
+  if(opts.category){s+='<text x="'+textX+'" y="'+ty+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="600" font-size="12" fill="var(--fg)">'+opts.category+'</text>';ty+=12}
+  if(opts.trend){s+='<text x="'+textX+'" y="'+ty+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="10" fill="var(--fg-muted)">'+opts.trend+'</text>'}
+  if(opts.sub){s+='<text x="'+textX+'" y="'+ty+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="9" fill="var(--fg-muted)">'+opts.sub+'</text>'}
+  if(opts.ends){
+    s+='<text x="'+(cx-r+8)+'" y="'+(cy+14)+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="9" fill="var(--fg-muted)">'+opts.ends[0]+'</text>';
+    s+='<text x="'+(cx+r-8)+'" y="'+(cy+14)+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="9" fill="var(--fg-muted)">'+opts.ends[1]+'</text>';
+  }
+  s+='</svg>';el.innerHTML=s;
+}
+
+function sunMoonArcs(id){
+  var el=document.getElementById(id);if(!el)return;
+  var sunPct=0.66,moonPct=0.10;
+  var s='<svg viewBox="0 0 220 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">';
+  function arc(cx,cy,r,pct,isSun,rT,sT,rL,sL){
+    var sx=cx-r,ex=cx+r;
+    var col=isSun?'#f59e0b':'#94a3b8';
+    s+='<path d="M '+sx+' '+cy+' A '+r+' '+r+' 0 1 1 '+ex+' '+cy+'" fill="none" stroke="'+col+'" stroke-width="3" stroke-dasharray="7,4" opacity="1"/>';
+    s+='<line x1="'+sx+'" y1="'+cy+'" x2="'+ex+'" y2="'+cy+'" stroke="var(--fg-dim)" stroke-width=".5" opacity=".15"/>';
+    var pa=Math.PI*(1-pct),px=cx+r*Math.cos(pa),py=cy-r*Math.sin(pa);
+    if(isSun){
+      s+='<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="9" fill="#fbbf24" opacity=".2"/>';
+      s+='<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="6" fill="#f59e0b"/>';
+    }else{
+      s+='<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="5.5" fill="#94a3b8"/>';
+      s+='<circle cx="'+(px+2).toFixed(1)+'" cy="'+(py-1.5).toFixed(1)+'" r="4" fill="var(--glass-bg)"/>';
+    }
+    s+='<text x="'+sx+'" y="'+(cy+11)+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="600" font-size="8" fill="var(--fg)">'+rT+'</text>';
+    s+='<text x="'+sx+'" y="'+(cy+19)+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="7" fill="var(--fg-muted)">'+rL+'</text>';
+    s+='<text x="'+ex+'" y="'+(cy+11)+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="600" font-size="8" fill="var(--fg)">'+sT+'</text>';
+    s+='<text x="'+ex+'" y="'+(cy+19)+'" text-anchor="middle" font-family="\'Manrope\',system-ui" font-weight="400" font-size="7" fill="var(--fg-muted)">'+sL+'</text>';
+    return{px:px,py:py};
+  }
+  arc(110,88,78,sunPct,true,'5:42a','8:28p','Sunrise','Sunset');
+  var mp=arc(110,88,44,moonPct,false,'2:15p','2:48a','Moonrise','Moonset');
+  s+='<text x="'+(mp.px+12).toFixed(0)+'" y="'+(mp.py+1).toFixed(0)+'" text-anchor="start" font-family="\'Manrope\',system-ui" font-weight="600" font-size="7.5" fill="var(--fg-muted)">☽ Waxing Gibbous</text>';
+  s+='<text x="'+(mp.px+12).toFixed(0)+'" y="'+(mp.py+10).toFixed(0)+'" text-anchor="start" font-family="\'Manrope\',system-ui" font-weight="400" font-size="7" fill="var(--fg-dim)">72% illuminated</text>';
+  s+='</svg>';el.innerHTML=s;
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  semiGauge(document.getElementById('baro-gauge'),{
+    value:30.12,min:29.32,max:30.52,valueText:'30.12',unitText:'inHg',trend:'↑ Rising',
+    ends:['Low','High'],thresholds:[29.80,30.20]
+  });
+  semiGauge(document.getElementById('aqi-gauge'),{
+    value:42,min:0,max:500,valueText:'42',category:'Good',sub:'PM2.5',showLeaf:true,
+    bands:[{from:0,to:50,color:'#00e400'},{from:50,to:100,color:'#ffff00'},{from:100,to:150,color:'#ff7e00'},{from:150,to:200,color:'#ff0000'},{from:200,to:300,color:'#8f3f97'},{from:300,to:500,color:'#7e0023'}]
+  });
+  sunMoonArcs('sunmoon-grid');
+});
+</script>
+</body>
+</html>
