@@ -1,7 +1,7 @@
 # UI-REDESIGN-PLAN — Clear Skies dashboard UI redesign (the "plan for the plan")
 
 **Status:** Active. This is a roadmap/index, not a decision record — decisions live in ADRs.
-**Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31); Track B research gates B2 + B3 are DONE (2026-05-31).** On-device visual/a11y/keyboard testing is the only remaining open item before Track C (see Next action).
+**Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31); Track B research gates B2 + B3 are DONE (2026-05-31). Now page (C1–C6) CODE-COMPLETE (2026-06-02) — pending batched push + deploy + live verification.** Next: batched deploy of C1–C6, then C7–C10 (see Next action).
 
 **Purpose:** Sequence the UI redesign as a series of **decision points**, each resolved into an
 ADR, each ADR operationalized into a **granular, prescriptive execution plan** that drives coding
@@ -351,33 +351,45 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   `aqiColor()`). Per-pollutant AQI data availability from API needs verification.
 
 - **C5. Active Alert banner + Today's Highlights strip** (two full-width Now-page elements).
-  Brief: [briefs/C5-FULL-WIDTH-CARDS-PLAN.md](briefs/C5-FULL-WIDTH-CARDS-PLAN.md).
+  ✅ **CODE-COMPLETE (2026-06-02).** Brief: [briefs/C5-FULL-WIDTH-CARDS-PLAN.md](briefs/C5-FULL-WIDTH-CARDS-PLAN.md).
 
   | Surface | Footprint | Current code | Inspiration |
   |---|---|---|---|
-  | A. Active Alert banner | `full` 4×1 (A4 line 459) | `alert-banner.tsx` (47 lines, hardcoded amber classes) | img-21 |
-  | B. Today's Highlights | `wide` 2×1 (A4 line 496, moved 2026-06-01) | `now.tsx` inline (~lines 304–369) | img-21, img-10 (per-stat icons) |
+  | A. Active Alert banner | `full` 4×1 (A4 line 459) | `alert-banner.tsx` | img-21 |
+  | B. Today's Highlights | `wide` 2×1 (A4 line 496, moved 2026-06-01) | `todays-highlights-card.tsx` | img-21, img-10 (per-stat icons) |
 
-  **Work:** apply A4 alert glass tokens (`--alert-glass`/`--alert-border`/`--alert-fg` from
-  A4-card-grid.html lines 46–48, 68–72) replacing hardcoded amber classes; extract highlights to
-  standalone component; apply design-system typography. Reconcile alert banner positioning (inside vs
-  outside Grid per ADR-051 universal card discipline). Decide multi-alert display (currently shows
-  only `alerts[0]`).
+  **Work done:** Alert banner redesigned — severity-colored glass tokens (`--alert-glass`/
+  `--alert-border`/`--alert-fg`), expandable detail panel, multi-alert flip-through with prev/next
+  navigation, ADR-052 severity-aware classification, 5 new Material Symbols alert icons, 13 Aeris
+  hazard categories; moved inside Grid as first child (ADR-051 universal card discipline). Highlights
+  extracted to standalone `TodaysHighlightsCard` — 6-stat strip with Phosphor icons, `wide` 2×1
+  footprint. `aria-live` added for reliable SR announcements.
+  **Commits:** dashboard `198ec34`–`37a3582` (11 commits: types, glass tokens, icon expansion,
+  category classifier, alert banner rewrite, highlights extraction, i18n, a11y fix; tsc 0 errors,
+  vite build clean).
   **Data:** `/alerts` (AlertRecord[]), `useTodayStats()` derived from `/current` + today's `/archive`.
 
 - **C6. Radar + Webcam card revamp** (two 2×2 media cards).
-  Brief: [briefs/C6-MEDIA-CARDS-PLAN.md](briefs/C6-MEDIA-CARDS-PLAN.md).
+  ✅ **CODE-COMPLETE (2026-06-02).** No brief needed — straightforward fix (footprint correction +
+  component extraction + legend addition).
 
   | Surface | Footprint | Current code | Inspiration |
   |---|---|---|---|
-  | A. Radar | `wide` + rowSpan=2, 2×2 (A4 line 570) | `now.tsx:523–541` + `radar-map.tsx` | img-15 (radar with legend) |
-  | B. Webcam | `wide` + rowSpan=2, 2×2 (A4 line 580) | `now.tsx:543–588` inline | — |
+  | A. Radar | `wide` + rowSpan=2, 2×2 | `now.tsx` Card + `radar-map.tsx` | img-15 (radar with legend) |
+  | B. Webcam | `wide` + rowSpan=2, 2×2 | `webcam-card.tsx` (extracted) | — |
 
-  **Work:** wrap Radar in Card primitive with proper footprint (current code toggles between `wide`
-  and `tile` based on webcam presence — violates ADR-051 min-footprint 2×2, fix to always `wide`);
-  add **radar color legend/key** (RainViewer scheme 2 color scale — identified gap in C0 inventory and
-  img-15); extract Webcam to standalone component with Live/Timelapse tabs. Do NOT merge
-  radar+webcam into one tabbed tile (open reconciliation item with ADR-024, not decided yet).
+  **Work done:** (1) Radar card footprint fixed — removed ternary that toggled between `wide`/`tile`
+  based on webcam presence (ADR-051 violation); now always `footprint="wide" rowSpan={2}`.
+  (2) Radar color legend added — `RadarLegend` overlay inside `radar-map.tsx` showing RainViewer
+  Universal Blue (scheme 2) precipitation intensity gradient with "Light"/"Heavy" labels; positioned
+  bottom-right of map; `aria-hidden` (supplementary visual). Fixed code comment: scheme 2 is
+  "Universal Blue", not "Original". (3) Webcam extracted to standalone `webcam-card.tsx` — props:
+  `webcamConfig`, `refreshTs`, `videoRefreshTs`; internal state: tab selection, image/video
+  availability; proper ARIA tab pattern (`role="tab"` + `aria-selected`, corrected from `aria-pressed`);
+  `footprint="wide" rowSpan={2}`. (4) `now.tsx` cleaned up — removed 3 state variables + unused
+  import; wired `<WebcamCard>`. (5) i18n keys added: `webcamTabLive`, `webcamTabTimelapse`,
+  `noData.timelapse` in `now.json`; `legendLight`, `legendHeavy` in `radar.json`.
+  **Verified:** `tsc --noEmit` 0 errors, `vite build` clean.
   **Data:** `/radar/frames`, `/capabilities`, `/webcam.json`.
   **Known gaps:** radar legend colors are RainViewer-scheme-specific; Radar/Webcam tabbed-vs-split
   reconciliation with ADR-024 still open.
@@ -627,20 +639,27 @@ push + deploy to weather-dev + live verification (Gate 3 visual + Gate 4 a11y).
 [briefs/C4-STAT-TILES-PLAN.md](briefs/C4-STAT-TILES-PLAN.md). Phase 0 mockup approved, Phase 1 doc
 corrections done, Phase 2 implementation done (BFF lightning strike buffer 497 tests pass; contract
 updated; 8 dashboard tile components created + wired into now.tsx; tsc 0 errors; vite build clean;
-19 i18n keys added). Pending push + deploy + live verification (batched with C1–C3, see below).
+19 i18n keys added). Pending push + deploy + live verification (batched with C1–C6).
+
+**C5 — Alert banner + Today's Highlights: CODE-COMPLETE (2026-06-02).** See Track C above for
+commits. Alert banner redesigned (ADR-052 severity-aware, expandable, multi-alert); highlights
+extracted to standalone component. Pending push + deploy.
+
+**C6 — Radar + Webcam revamp: CODE-COMPLETE (2026-06-02).** Radar footprint fixed to always 2×2;
+RainViewer color legend added; webcam extracted to standalone component. See Track C above. Pending
+push + deploy.
+
+**→ NOW PAGE IS COMPLETE (C1–C6 all code-complete).** Ready for batched push + deploy + verification.
 
 **Remaining Track C work (see roadmap above for full detail):**
-- **C5** Active Alert + Today's Highlights (full-width Now-page elements)
-- **C6** Radar + Webcam revamp (2×2 media cards) → **Now page complete after C6**
 - **C7** Almanac page (7 re-skins + sun/moon arcs net-new)
 - **C8** Seismic page (re-skin + map legend + ADR-046 reconciliation)
 - **C9** Records page (structural reconciliation + re-skin — **blocked on operator decision**)
 - **C10** Reports, About, Legal pages (grid migration batch)
 
-**BATCHED DEPLOY + LIVE VERIFICATION (all repos, one pass — after Now page complete).**
-C1, C2, C3, and C4 are all code-complete but unpushed. C5 and C6 will complete the Now page.
-Rather than deploy per-component, all Now-page work (C1–C6) will be pushed + deployed + tested
-in one pass after C6 is done. The verification pass covers:
+**BATCHED DEPLOY + LIVE VERIFICATION (all repos, one pass — NOW PAGE COMPLETE).**
+C1–C6 are all code-complete but unpushed. All Now-page work will be pushed + deployed + tested
+in one pass. The verification pass covers:
 - Push all local commits across all 3 repos (realtime, dashboard, meta contracts)
 - Deploy to weather-dev (all services)
 - Gate 3: visual verification both themes + responsive (4→2→1 col) on every Now-page card

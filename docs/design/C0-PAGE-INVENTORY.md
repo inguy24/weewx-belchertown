@@ -182,7 +182,7 @@ For each page: **B** = current Belchertown · **CS** = existing Clear Skies buil
 | Lightning tile | 1h/24h count, nearest distance; ⬚ storm-phase badge + <5min accent | `useLightning(/current)` |
 | Recent Earthquake tile | Most-recent within radius | `/earthquakes` |
 | Today's Forecast | Narrative + hi/lo + precip% + condition through day | `/forecast` daily[0] |
-| Radar tile | Animated radar + controls; ⬚ **color legend/key** (gap) | `/radar/*`, `/capabilities`, `/station` |
+| Radar tile | Animated radar + controls + **color legend** (C6, 2026-06-02) | `/radar/*`, `/capabilities`, `/station` |
 | Webcam / Timelapse tile | Live still + timelapse (ADR-024: one tabbed tile *with* radar) | `/webcam.json` |
 | ⬚ Homepage chart panel | Default homepage group + 1d/3d/7d/30d/90d + "View all charts" | homepage chart group |
 | ⬚ Station header / freshness strip | Station identity + last-updated/online (Belchertown parity) | `/station`, `/branding`, SSE state |
