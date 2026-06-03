@@ -367,3 +367,32 @@ Before tagging any release (v0.1.0, v0.2.0, etc.):
 - An accessibility issue is **release-blocking**, not "we'll get to it." Same severity as a security vuln or a broken-build.
 - A design decision (palette, layout, motion) that creates an accessibility problem must be revised, not waivered.
 - "We can fix it after launch" is the wrong posture. The user has been explicit: per-write audit + pre-ship full audit. Audits don't happen at the end if they aren't built into the development loop from day one.
+
+---
+
+## 6. Charts — Recharts reference discipline
+
+The Clear Skies dashboard uses Recharts v3.x for all chart components. Recharts has non-obvious layout behavior (additive margins, zero-guards, axis space allocation) that causes silent rendering failures when props are guessed at.
+
+**Read `docs/reference/recharts-axis-reference.md` before modifying ANY Recharts chart component.** This is mandatory, not optional. Every chart change brief must cite the relevant axis props and their documented behavior.
+
+**Why (2026-06-02):** A session spent 3+ hours fixing chart label visibility by guessing at Recharts margin/axis props. Labels were repeatedly broken and re-broken because the developer assumed `margin.bottom` controlled label visibility (it doesn't — XAxis `height` does), assumed `margin.left: -28` was safe (it clips data), and assumed `margin.top` would visually move the chart (it adds invisible SVG whitespace). Reading the actual Recharts source resolved every issue in minutes. The documentation is now saved in the project to prevent this from ever happening again.
+
+### 6.1 Rules
+
+1. **No negative margins on charts.** `margin.left: -28` clips leftmost data. `margin.bottom: -N` clips axis labels. Never use negative margins on Recharts charts.
+2. **Do not set `margin.bottom` to "make room for labels."** XAxis has a default `height` of 30px that already provides label space. Extra `margin.bottom` just wastes chart area.
+3. **Do not set `width={0}` on a visible YAxis.** The zero-guard (`width <= 0`) makes the axis return null — completely invisible.
+4. **Use `interval={0}` with explicit `ticks` arrays** to show all ticks without Recharts culling.
+5. **The UV and Solar charts must have matching axis configurations.** If one works and the other doesn't, diff the props — they should be identical.
+6. **Never use `hide` on YAxis** — known Recharts bug (#428) causes XAxis labels to vanish. Use `tick={false} axisLine={false} tickLine={false} width={1}` instead.
+7. **Chart wrapper divs need explicit sizing** — `minWidth: 0, minHeight: 0, width: '100%', height: '100%'` prevents flex containers from reporting 0 to ResizeObserver. Use `ResponsiveContainer width="99%"` (not 100%) to force recalculation.
+8. **`buildTicks` must use LOCAL time boundaries** — `getHours()` returns local hours; ticks computed in UTC won't match the formatter's expected hours (0/6/12/18).
+
+## 7. Build verification — zero TS errors before deploy
+
+**The dashboard build script is `tsc -b && vite build`.** If `tsc` fails, `vite build` never runs and `dist/` stays stale. rsync then deploys the OLD files. This means TS errors cause SILENT deployment failures — the deploy looks successful but nothing changes on the site.
+
+**Rule: After EVERY code change, `npx tsc --noEmit` must return ZERO errors — not warnings, not "just TS6133." ZERO.** If there are unused variable errors (TS6133), fix them before committing. Do not commit code with any TS errors.
+
+**Why (2026-06-02):** Multiple commits over ~2 hours were deployed but never reached the site because removing a YAxis import left unused variables. The TS6133 errors appeared in every deploy output and were ignored. The site served stale JS while the developer repeatedly changed code and asked the user to check — wasting hours of the user's time.

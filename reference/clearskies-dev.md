@@ -178,11 +178,15 @@ ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest -m 
 
 ### Browser testing
 
-Dashboard or API dev server on weather-dev is accessible from DILBERT at:
+The public-facing dev dashboard is at:
 
 ```
-http://192.168.2.113:<port>
+https://weather-test.shaneburkhardt.com
 ```
+
+This is the URL to use for visual verification, screenshots, and all browser-based testing. Do NOT use the raw container IP (192.168.2.113) — it is not routable from DILBERT's browser.
+
+For direct service ports via SSH (curl from weather-dev), use `ssh weather-dev "curl http://localhost:<port>/..."`.
 
 ## Pytest baselines
 

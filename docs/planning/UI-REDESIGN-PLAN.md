@@ -1,7 +1,7 @@
 # UI-REDESIGN-PLAN — Clear Skies dashboard UI redesign (the "plan for the plan")
 
 **Status:** Active. This is a roadmap/index, not a decision record — decisions live in ADRs.
-**Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31); Track B research gates B2 + B3 are DONE (2026-05-31). Now page (C1–C6) CODE-COMPLETE (2026-06-02) — pending batched push + deploy + live verification.** Next: batched deploy of C1–C6, then C7–C10 (see Next action).
+**Track A foundations (A0–A4) are CODE-COMPLETE and deployed to weather-dev (2026-05-31); Track B research gates B2 + B3 are DONE (2026-05-31). Now page (C1–C6) CODE-COMPLETE + post-code-complete polish pass (2026-06-02) — pending batched push + deploy + live verification.** Polish includes: precipitation card redesigned to "Precipitation & Humidity" (added dewpoint + humidity), nav rail converted to auto-hide overlay, Solar/UV chart axis overhaul, gauge geometry fixes, dark mode tuning, forecast card visual fidelity fixes. Next: batched deploy of C1–C6, then C7–C10 (see Next action).
 
 **Purpose:** Sequence the UI redesign as a series of **decision points**, each resolved into an
 ADR, each ADR operationalized into a **granular, prescriptive execution plan** that drives coding
@@ -308,6 +308,13 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   (5 commits: WindSymbol + TempTrendLine, HourlyStrip + DailyColumns, NowForecastCard + now.tsx wiring,
   forecast page cards + forecast.tsx rewrite, i18n + useForecast params; tsc 0 errors, vite build clean).
   **Pending:** push + deploy to weather-dev (batched with C1–C6, see Next action).
+  **Post-code-complete refinement (2026-06-02):** 16 dashboard commits fixing visual fidelity issues
+  found during live review. Wind symbols: direction defaulting to North when unknown → shows no tail
+  (`3801d7b`); Today vs. 7-Day sizing/font consistency (`a7060cf`/`239be60`/`bb2a3ac`/`8a59bd0`/
+  `1ee2962`/`aad81f0`/`da549a4`); hi/lo trend lines share one Y-axis scale (`c3dc7ab`); 7-Day trend
+  height + font sizing to fit 11rem row (`c83ca76`); precipitation font + gap fixes (`e761be6`/
+  `3481565`/`396591f`/`56702ad`); weather icon sourced from conditions engine weatherCode, not scene
+  object (`e0d357c`). All fixes are mechanical — no layout or data changes.
 - **C4. Now-page stat tiles** (eight 1×1 tiles — presentation-layer re-skin of existing cards).
   ✅ **CODE-COMPLETE (2026-06-01).** Brief: [archive/C4-STAT-TILES-PLAN.md](../archive/C4-STAT-TILES-PLAN.md).
 
@@ -317,7 +324,7 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
 
   | Surface | Footprint | Current code | Inspiration |
   |---|---|---|---|
-  | A. Precipitation | `tile` 1×1 (A4 line 506) | `precipitation-barometer-card.tsx` (extracted, split) | img-21 (tile grid) |
+  | A. Precipitation & Humidity | `tile` 1×1 (A4 line 506) | `precipitation-card.tsx` (extracted, split, redesigned 2026-06-02: added dewpoint + relative humidity) | img-21 (tile grid) |
   | B. Barometer | `tile` 1×1 (A4 line 515) | `precipitation-barometer-card.tsx` (extracted, split) | img-21, img-19 (pressure gauge) |
   | C. Solar Radiation | `tile` 1×1 (A4 line 524) | `solar-uv-card.tsx` (extracted, split) | img-21 |
   | D. UV Index | `tile` 1×1 (A4 line 533) | `solar-uv-card.tsx` (extracted, split) | img-21, img-18 (UV bell-curve — DEFERRED, too dense for 1×1) |
@@ -349,6 +356,37 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   - All gauges: unfilled ticks grey in both themes, filled ticks colored, animate on data change.
   **Known gaps/deferrals:** EPA AQI palette not tokenized (ADR-048 gap — continue hardcoded
   `aqiColor()`). Per-pollutant AQI data availability from API needs verification.
+
+  **Post-code-complete refinement (2026-06-02):** Extensive visual polish pass after live review
+  (50+ dashboard commits). Key changes:
+
+  - **Precipitation card redesigned → "Precipitation & Humidity"** (`7c599fd`/`1d1e743`/`b357d01`):
+    retained all precipitation info (rate/today/icon); added dewpoint (primary, bold, with °F/°C
+    suffix) + relative humidity (secondary). Dewpoint ordered above humidity as the more
+    scientifically accurate measure per operator directive.
+  - **Gauge indicator fixes** (`1a588ea`/`6357445`): tick width narrowed from 5 to 3 (just wider
+    than regular ticks); duplicate indicator tick removed from tick array.
+  - **Sun & Moon arc geometry** (9 commits `45ce028`–`c991cd5`): elliptical arcs (rx/ry), CY
+    tuning, viewBox adjustments, font sizing, top-clipping prevention for sun glow.
+  - **AQI card fixes** (`9f1239e`/`5b94de6`/`4af142c`): gauge wrapper alignItems, leaf icon sizing
+    spanning full text block, leaf-to-text gap reduced.
+  - **Solar Radiation + UV Index chart axis overhaul** (25+ commits `f12df8a`–`90d714f`): solar
+    chart switched to 24h rolling archive window; UV chart converted from archive data to predicted
+    bell curve (`sin²` formula from sunrise/sunset); Y-axis ticks corrected `[0,3,6,9,12]` →
+    `[0,4,8,12]` per mockup; fixed Recharts `hide` bug (#428) workaround, UTC-vs-local tick
+    boundaries, negative margin clipping, zero-guard axis. Lessons documented in
+    [recharts-axis-reference.md](../reference/recharts-axis-reference.md) and
+    [rules/coding.md §6](../../rules/coding.md).
+  - **Build verification rule** added to [rules/coding.md §7](../../rules/coding.md) — `tsc`
+    failures cause silent deploy failures because `tsc -b && vite build` means stale `dist/` if
+    tsc errors exist. Rule: zero TS errors before every commit.
+  - **Barometer gauge geometry** (`84b4a46`/`26309dd`): arc center CY 100→92, radius 88→85,
+    endpoint labels repositioned, wrapper alignItems fix.
+  - **Stat tile CSS alignment** (`15c22bf`): batch alignment of font sizes, border radii, gaps,
+    and divider margins across all 8 tiles to match C4 mockup exactly.
+  - **Briefs created:** [gauge-geometry-fix.md](briefs/gauge-geometry-fix.md),
+    [now-page-c4-tile-fixes.md](briefs/now-page-c4-tile-fixes.md),
+    [solar-uv-chart-fixes.md](briefs/solar-uv-chart-fixes.md).
 
 - **C5. Active Alert banner + Today's Highlights strip** (two full-width Now-page elements).
   ✅ **CODE-COMPLETE (2026-06-02).** Brief: [briefs/C5-FULL-WIDTH-CARDS-PLAN.md](briefs/C5-FULL-WIDTH-CARDS-PLAN.md).
@@ -395,6 +433,28 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   reconciliation with ADR-024 still open.
 
   **→ After C4 + C5 + C6: the Now page is complete.**
+
+  **Now-page polish pass (2026-06-02).** With C1–C6 code-complete, a visual review session
+  produced cross-cutting polish work spanning the entire Now page:
+
+  - **Nav rail overhaul** (`eeaf00b`/`616c548`): permanent 64px left sidebar replaced with an
+    auto-hiding floating glass panel. Desktop rail: `position:fixed`, vertically centered,
+    card-glass + shadow-lg + rounded-xl, slides in/out with 200ms ease transition. Grab bar
+    (button pill, w-1 h-10) visible when rail hidden. Pin toggle (PushPin/PushPinSlash Phosphor
+    icons) persists to `localStorage('clearskies.nav.pinned')`. 30-second auto-hide on mount/
+    mouseleave; cleared on mouseenter/pin. Rail overlays content (not a flex sibling). A11y
+    remediation: `aria-label`/`aria-expanded` on grab bar, tab management to avoid invisible
+    tab stops. **Amends ADR-009 navigation section** — see ADR-009 amendment 2026-06-02.
+  - **Dark mode card-glass opacity** (`2e9d99f`): increased from 0.72 → 0.85 for better
+    readability over dark photo backgrounds.
+  - **Dark mode basemap** (`8573386`/`0045cc4`): radar map switches to CartoDB dark tiles in
+    dark theme; canonical CARTO attribution string.
+  - **Theme sync via BFF** (`efa15ac`): dashboard dark/light mode syncs with background scene's
+    `daytime` field from the BFF, not just the CSS media query.
+  - **Visual polish:** photo credit moved to footer (`fdac474`), light mode `--border` to
+    `rgba(0,0,0,0.12)` per mockup (`6e7b820`), webcam `object-contain` instead of `object-cover`
+    (`9cccb53`), webcam tab pills match forecast style (`f3351de`), main temp + feels-like show
+    1 decimal place (`18b2fee`).
 
 - **C7. Almanac page** (7 existing cards re-skinned + 2 net-new arc visualizations).
   Brief: [briefs/C7-ALMANAC-PAGE-PLAN.md](briefs/C7-ALMANAC-PAGE-PLAN.md).
@@ -649,7 +709,18 @@ extracted to standalone component. Pending push + deploy.
 RainViewer color legend added; webcam extracted to standalone component. See Track C above. Pending
 push + deploy.
 
-**→ NOW PAGE IS COMPLETE (C1–C6 all code-complete).** Ready for batched push + deploy + verification.
+**→ NOW PAGE IS COMPLETE (C1–C6 all code-complete + post-code-complete polish pass).** Ready for
+batched push + deploy + verification.
+
+**Post-code-complete refinement pass (2026-06-02).** After declaring C1–C6 code-complete, a live
+visual review session produced ~80 additional dashboard commits covering: C3 forecast card visual
+fixes (16 commits), C4 stat tile fixes (50+ commits including precipitation card redesign to
+"Precipitation & Humidity", gauge geometry, Solar/UV chart axis overhaul, Sun & Moon arc tuning),
+nav rail overhaul (auto-hide with grab bar), dark mode polish (opacity + basemap + theme sync),
+and cross-cutting visual polish. Details recorded in the C3, C4, and C6 sections above. New
+documentation created: `rules/coding.md` §6 (Recharts discipline) + §7 (build verification),
+`reference/clearskies-dev.md` (browser testing URL), `docs/reference/recharts-axis-reference.md`,
+and 3 execution briefs in `docs/planning/briefs/`.
 
 **Remaining Track C work (see roadmap above for full detail):**
 - **C7** Almanac page (7 re-skins + sun/moon arcs net-new)
@@ -658,13 +729,13 @@ push + deploy.
 - **C10** Reports, About, Legal pages (grid migration batch)
 
 **BATCHED DEPLOY + LIVE VERIFICATION (all repos, one pass — NOW PAGE COMPLETE).**
-C1–C6 are all code-complete but unpushed. All Now-page work will be pushed + deployed + tested
-in one pass. The verification pass covers:
+C1–C6 are all code-complete but unpushed (including the 2026-06-02 polish pass). All Now-page
+work will be pushed + deployed + tested in one pass. The verification pass covers:
 - Push all local commits across all 3 repos (realtime, dashboard, meta contracts)
 - Deploy to weather-dev (all services)
 - Gate 3: visual verification both themes + responsive (4→2→1 col) on every Now-page card
 - Gate 4: axe-core on `/` and `/forecast`, keyboard Tab walkthrough, screen reader spot-check
 - Gate 5: live data verification — BFF `/current` carries `lightningStrikeHistory`, all 8 stat
   tiles render with real data, Solar/UV charts show today's archive, gauges show real pressure/AQI,
-  Sun & Moon arcs show correct station-TZ times
+  Sun & Moon arcs show correct station-TZ times, precipitation card shows dewpoint + humidity
 - Color-blindness simulation pass (protanopia, deuteranopia, tritanopia, achromatopsia)

@@ -137,6 +137,22 @@ The Almanac page gains two features previously deferred to Phase 6+:
 
 The "Phase 6+" note in the Almanac per-page content section (item 4) is superseded by this amendment.
 
+## Amendment: 2026-06-02
+
+### Desktop nav rail auto-hide + Now page content updates
+
+**Navigation model change:** The desktop icon-rail described in the Navigation section is now an
+**auto-hiding floating overlay** instead of a permanent sidebar. The rail auto-hides after 30
+seconds, has a grab bar for re-showing, and a pin toggle for persistent display. Content takes
+full width; the rail overlays when shown. Full behavioral spec in
+[ADR-009 amendment 2026-06-02](ADR-009-design-direction.md). Mobile bottom-nav is unchanged.
+
+**Now page content update (§1):** The Precipitation tile (formerly "Station observations"
+barometer+precip combined) was split during C4 (2026-06-01) and subsequently redesigned
+(2026-06-02) to **"Precipitation & Humidity"** — retaining precipitation rate/today totals and
+adding dewpoint (primary, bold, with temperature unit suffix) + relative humidity (secondary).
+This is a content addition, not a structural taxonomy change.
+
 ## References
 - Related: [ADR-002](ADR-002-tech-stack.md), [ADR-009](ADR-009-design-direction.md), [ADR-010](ADR-010-canonical-data-model.md), [ADR-011](ADR-011-multi-station-scope.md), [ADR-014](ADR-014-almanac-data-source.md), [ADR-015](ADR-015-radar-map-tiles-strategy.md), [ADR-022](ADR-022-theming-branding-mechanism.md), [ADR-023](ADR-023-light-dark-mode-mechanism.md), [ADR-026](ADR-026-accessibility-commitments.md), [ADR-027](ADR-027-config-and-setup-wizard.md).
 - Walk: [CLEAR-SKIES-CONTENT-DECISIONS.md](../reference/CLEAR-SKIES-CONTENT-DECISIONS.md), [DESIGN-INSPIRATION-NOTES.md](../reference/DESIGN-INSPIRATION-NOTES.md), [BELCHERTOWN-CONTENT-INVENTORY.md](../reference/BELCHERTOWN-CONTENT-INVENTORY.md).
