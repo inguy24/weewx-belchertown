@@ -540,6 +540,21 @@ paths:
               schema: { $ref: '#/components/schemas/AlmanacMeteorShowersResponse' }
         default: { $ref: '#/components/responses/Problem' }
 
+  /almanac/positions:
+    get:
+      summary: Current sun and moon positions
+      description: Real-time sun and moon azimuth/altitude computed at request time. No caching.
+      operationId: getAlmanacPositions
+      tags:
+        - Almanac
+      responses:
+        '200':
+          description: Current positions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionsResponse'
+
   # -------------------------------------------------------------------
   # Climatology
   # -------------------------------------------------------------------
@@ -2269,6 +2284,56 @@ components:
           required: [showers]
         generatedAt: { type: string, format: date-time }
       required: [data, generatedAt]
+
+    SunPosition:
+      type: object
+      required: [azimuth, altitude]
+      properties:
+        azimuth:
+          type: number
+          format: float
+          description: Sun azimuth in degrees (0-360)
+        altitude:
+          type: number
+          format: float
+          description: Sun altitude in degrees above horizon
+
+    MoonPosition:
+      type: object
+      required: [azimuth, altitude, illuminationPercent, phaseName]
+      properties:
+        azimuth:
+          type: number
+          format: float
+          description: Moon azimuth in degrees (0-360)
+        altitude:
+          type: number
+          format: float
+          description: Moon altitude in degrees above horizon
+        illuminationPercent:
+          type: number
+          format: float
+          description: Moon illumination percentage (0-100)
+        phaseName:
+          type: string
+          description: Moon phase name
+          enum: [new, waxing-crescent, first-quarter, waxing-gibbous, full, waning-gibbous, last-quarter, waning-crescent]
+
+    PositionsSnapshot:
+      type: object
+      required: [sun, moon]
+      properties:
+        sun:
+          $ref: '#/components/schemas/SunPosition'
+        moon:
+          $ref: '#/components/schemas/MoonPosition'
+
+    PositionsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PositionsSnapshot'
 
     ClimatologyMonthlyResponse:
       type: object
