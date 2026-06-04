@@ -315,6 +315,16 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   height + font sizing to fit 11rem row (`c83ca76`); precipitation font + gap fixes (`e761be6`/
   `3481565`/`396591f`/`56702ad`); weather icon sourced from conditions engine weatherCode, not scene
   object (`e0d357c`). All fixes are mechanical — no layout or data changes.
+  **Forecast detail + snow enrichment (2026-06-03):** API + dashboard work to enrich the 7-day
+  detail panel and add precipitation/snow support. Plan:
+  [archive/FORECAST-DETAIL-SNOW-PLAN.md](../archive/FORECAST-DETAIL-SNOW-PLAN.md) (COMPLETE).
+  **API (11 commits):** new DailyForecastPoint fields (dewpoint, humidity, visibility, snow, storm
+  risk) with provider mappings for all 5 providers; Aeris convective outlook integration; snow/snowRate
+  blended into /current; sunrise/sunset computed locally via Skyfield almanac; narrative mapped from
+  Aeris weatherPrimary. **Dashboard (13 commits):** detail panel enriched with full chip grid; hourly
+  card fixed to 24-hour windows per tab (was calendar-date partition); all labels i18n'd; unit suffixes
+  driven by API units block; first column auto-selected; card title icons removed; CloudSun hero icon
+  added to PageHeaderCard. **Deployed and verified live 2026-06-03.**
 - **C4. Now-page stat tiles** (eight 1×1 tiles — presentation-layer re-skin of existing cards).
   ✅ **CODE-COMPLETE (2026-06-01).** Brief: [archive/C4-STAT-TILES-PLAN.md](../archive/C4-STAT-TILES-PLAN.md).
 

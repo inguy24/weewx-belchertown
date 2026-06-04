@@ -62,6 +62,7 @@ Belchertown-era operational howtos:
 
 ## Archive
 
+- [archive/FORECAST-DETAIL-SNOW-PLAN.md](archive/FORECAST-DETAIL-SNOW-PLAN.md) — 7-day forecast detail panel enrichment + precipitation/snow support. ✅ Complete 2026-06-03.
 - [archive/AQI-CENTRALIZATION-PLAN.md](archive/AQI-CENTRALIZATION-PLAN.md) — Route AQI through weewx as the single hub. ✅ Complete 2026-04-29.
 - [archive/MQTT-TYPO-FIX-PLAN.md](archive/MQTT-TYPO-FIX-PLAN.md) — `mgtt://` → `mqtt://` fix. ✅ Complete 2026-04-29.
 - [archive/WEATHER-EVALUATION-PLAN.md](archive/WEATHER-EVALUATION-PLAN.md) — predecessor plan to Clear Skies. ✅ Closed 2026-04-29 when project pivoted from "evaluate alternative weewx skins" to "build new modern stack."
