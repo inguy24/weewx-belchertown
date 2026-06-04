@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C7 Almanac Page Mockup v3</title>
+<style>
+@font-face{font-family:'Manrope';font-weight:400;src:url('fonts/manrope-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Manrope';font-weight:600;src:url('fonts/manrope-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Manrope';font-weight:700;src:url('fonts/manrope-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Outfit';font-weight:400;src:url('fonts/outfit-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Outfit';font-weight:600;src:url('fonts/outfit-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Outfit';font-weight:700;src:url('fonts/outfit-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Lexend';font-weight:400;src:url('fonts/lexend-latin-400-normal.woff2') format('woff2')}
+
+:root{
+  --font-sans:'Manrope',system-ui,sans-serif;
+  --font-display:'Outfit',system-ui,sans-serif;
+  --font-chart:'Lexend',system-ui,sans-serif;
+  --text-section:0.95rem;--text-body:0.9rem;--text-secondary:0.85rem;
+  --text-card-title:0.82rem;--text-label:0.75rem;--text-micro:0.7rem;
+  --text-chart-label:0.875rem;
+  --gap-grid:1rem;--container-max:80rem;--card-radius:0.875rem;--card-pad:1rem;
+}
+[data-theme="dark"]{
+  --glass-bg:rgba(30,35,55,0.55);--glass-border:rgba(255,255,255,0.10);
+  --glass-shadow:0 4px 28px rgba(0,0,0,0.45),0 1px 4px rgba(0,0,0,0.30);
+  --fg:#e7e7ea;--fg-muted:#a1a1aa;--fg-dim:#71717a;
+  --title-rule:rgba(255,255,255,0.12);--page-bg:#0d0f18;
+  --badge-bg:rgba(255,255,255,0.10);--badge-fg:#a1a1aa;
+}
+[data-theme="light"]{
+  --glass-bg:rgba(255,255,255,0.72);--glass-border:rgba(0,0,0,0.10);
+  --glass-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 4px rgba(0,0,0,0.08);
+  --fg:#18181b;--fg-muted:#71717a;--fg-dim:#a1a1aa;
+  --title-rule:rgba(0,0,0,0.12);--page-bg:#f4f4f5;
+  --badge-bg:rgba(0,0,0,0.08);--badge-fg:#52525b;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--page-bg);color:var(--fg);line-height:1.5;padding:1.5rem}
+
+.theme-toggle{position:fixed;top:10px;right:10px;z-index:999;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--fg);border-radius:6px;padding:4px 10px;font:600 var(--text-micro) var(--font-sans);cursor:pointer;backdrop-filter:blur(8px)}
+
+/* Grid: matches actual Grid component responsive columns */
+.grid{max-width:var(--container-max);margin:0 auto;display:grid;grid-template-columns:1fr;gap:var(--gap-grid)}
+@media(min-width:768px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+/* Card: full footprint spans all columns */
+.card{grid-column:1/-1;background:var(--glass-bg);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);border-radius:var(--card-radius);backdrop-filter:blur(12px);overflow:hidden;padding:1rem 0}
+.card-header{padding:0 var(--card-pad) 0.6rem;border-bottom:1px solid var(--title-rule);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:var(--text-card-title);font-weight:600;letter-spacing:-0.01em}
+.card-note{font-size:var(--text-label);color:var(--fg-dim);display:flex;align-items:center;gap:0.3rem}
+.card-content{padding:var(--card-pad);padding-top:0.75rem}
+.card-subtitle{font-size:var(--text-label);color:var(--fg-dim);margin-bottom:1rem}
+
+/* Page Header (matches PageHeaderCard: py-2, full width) */
+.page-header{padding:0.5rem var(--card-pad);display:flex;align-items:center;gap:0.6rem}
+.page-header h1{font-size:1rem;font-weight:600;line-height:1.3}
+.page-header .ph-info{margin-left:auto;font-size:var(--text-secondary);color:var(--fg-muted)}
+.page-header .ph-icon{width:28px;height:28px;color:var(--fg);flex-shrink:0}
+
+/* Sun & Moon (LARGER fonts for almanac page) */
+.sun-moon-grid{display:grid;grid-template-columns:1fr 2fr 1fr;gap:1rem;align-items:start}
+.data-panel{display:flex;flex-direction:column;align-items:center}
+.data-panel h3{font-size:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--fg-muted);margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.35rem}
+.data-panel dl{display:grid;grid-template-columns:auto auto;gap:0.25rem 0.75rem;align-items:baseline}
+.data-panel dt{font-size:var(--text-secondary);color:var(--fg-dim);white-space:nowrap}
+.data-panel dd{font-size:var(--text-secondary);font-family:var(--font-display);font-weight:600;color:var(--fg)}
+.arc-center{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.arc-svg{width:100%;max-width:460px}
+.moon-phase-row{display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem}
+.moon-phase-img{width:36px;height:36px;border-radius:50%;background:linear-gradient(90deg,#1a1a2e 12%,#94a3b8 12%);flex-shrink:0}
+.moon-phase-text{font-size:var(--text-secondary);font-weight:600}
+.moon-phase-pct{font-size:var(--text-label);color:var(--fg-muted)}
+.moon-badges{display:flex;gap:0.3rem;margin-top:0.35rem;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:0.2rem;padding:0.15rem 0.5rem;border-radius:9999px;font-size:var(--text-label);font-weight:600;background:var(--badge-bg);color:var(--badge-fg)}
+.badge-moon{background:rgba(148,163,184,0.15);color:#94a3b8}
+
+/* Planets */
+.planets-top{display:flex;gap:1.75rem;padding-bottom:1rem;overflow-x:auto;justify-content:space-around}
+.planet-col{display:flex;flex-direction:column;align-items:center;gap:0.1rem;min-width:110px;flex-shrink:0}
+.planet-img-wrap{width:100%;height:90px;display:flex;align-items:center;justify-content:center}
+.planet-img{object-fit:contain}
+.planet-name{font-size:var(--text-label);font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
+.planet-quality{font-size:var(--text-label)}
+.planet-time{font-size:var(--text-label);color:var(--fg-muted);text-align:center}
+.planet-pos{font-size:var(--text-micro);color:var(--fg-dim);text-align:center;font-style:italic}
+.quality-dot{display:inline-flex;align-items:center;gap:0.25rem;font-size:var(--text-label);font-weight:600}
+.qd-green{color:#22c55e}.qd-blue{color:#3b82f6}.qd-yellow{color:#eab308}
+
+.timeline-wrap{border-top:1px solid var(--title-rule);padding-top:1rem}
+.timeline-svg{width:100%;height:180px;display:block}
+
+/* Eclipse columns (LARGER, breathing room) */
+.columns-row{display:flex;gap:2rem;padding-bottom:0.5rem}
+.event-col{flex:1;min-width:220px;display:flex;flex-direction:column;gap:0.5rem}
+.ev-date{font-size:var(--text-body);font-weight:700}
+.ev-day{font-size:var(--text-label);color:var(--fg-muted)}
+.ev-time-range{font-size:var(--text-secondary);font-family:var(--font-display);font-weight:600;color:var(--fg-muted)}
+.ev-img{width:100%;aspect-ratio:4/3;object-fit:contain}
+/* solar eclipse images now have transparent backgrounds */
+
+.type-badge{display:inline-flex;align-self:flex-start;align-items:center;gap:0.25rem;padding:0.12rem 0.55rem;border-radius:9999px;font-size:var(--text-label);font-weight:600}
+.tb-total{background:rgba(239,68,68,0.20);color:#ef4444}
+.tb-annular{background:rgba(245,158,11,0.20);color:#f59e0b}
+.tb-partial{background:rgba(148,163,184,0.20);color:#94a3b8}
+.tb-penumbral{background:rgba(148,163,184,0.15);color:#71717a}
+
+.ev-visibility{display:flex;align-items:center;gap:0.4rem;font-size:var(--text-secondary);font-weight:600}
+.vis-icon{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 4px currentColor}
+.v-green{background:#22c55e;color:#22c55e}.v-blue{background:#3b82f6;color:#3b82f6}.v-yellow{background:#eab308;color:#eab308}.v-gray{background:#71717a;color:#71717a}
+
+.ev-desc{font-size:var(--text-label);color:var(--fg-dim);line-height:1.4}
+
+/* Eclipse contact times (solar: icon + label + time on each row) */
+.ev-times{font-size:var(--text-secondary);color:var(--fg-muted);display:flex;flex-direction:column;gap:0.25rem}
+.ev-times .time-row{display:flex;align-items:center;gap:0.4rem}
+.ev-times .time-icon{width:16px;height:16px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--fg-dim);display:flex;align-items:center;justify-content:center}
+.ev-times .time-icon-inner{width:6px;height:6px;border-radius:50%}
+.ev-times .tl{color:var(--fg-dim);min-width:72px}
+.ev-times .tv{font-family:var(--font-display);font-weight:600;color:var(--fg)}
+
+/* Card footer / legend — prominent, not afterthought */
+.card-footer{padding:0.85rem var(--card-pad);border-top:1px solid var(--title-rule);margin-top:0.75rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.75rem}
+.legend{display:flex;gap:2rem;flex-wrap:wrap}
+.legend-item{display:flex;align-items:flex-start;gap:0.4rem;font-size:var(--text-label);color:var(--fg-muted);max-width:320px;line-height:1.35}
+.legend-item strong{color:var(--fg);font-weight:600;white-space:nowrap}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:2px}
+
+/* Meteor showers */
+.meteor-scroll{position:relative}
+.meteor-row{display:flex;gap:1.5rem;overflow-x:auto;scrollbar-width:none;padding:0 0.5rem}
+.meteor-row::-webkit-scrollbar{display:none}
+.meteor-col{flex:0 0 190px;display:flex;flex-direction:column;gap:0.4rem}
+.mt-header{display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
+.mt-name{font-size:var(--text-body);font-weight:700}
+.peak-badge{background:rgba(239,68,68,0.18);color:#ef4444;padding:0.1rem 0.4rem;border-radius:9999px;font-size:var(--text-micro);font-weight:700;text-transform:uppercase}
+.mt-active{font-size:var(--text-label);color:var(--fg-muted)}
+.meteor-img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+.mt-peak-label{font-size:var(--text-micro);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--fg-dim)}
+.mt-peak-date{font-size:var(--text-label);font-weight:600}
+.mt-rate{font-size:var(--text-label);color:var(--fg-muted)}
+.mt-rate b{color:var(--fg);font-family:var(--font-display)}
+.ico{width:16px;height:16px;flex-shrink:0;vertical-align:-3px}
+.mt-data-row{display:flex;align-items:flex-start;gap:0.4rem}
+.mt-data-label{font-size:var(--text-micro);color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.04em;font-weight:600}
+.mt-data-value{font-size:var(--text-label);font-family:var(--font-display);font-weight:600}
+.quality-pill{font-size:var(--text-micro);font-weight:700;padding:0.1rem 0.45rem;border-radius:9999px;text-transform:uppercase}
+.q-excellent{background:rgba(34,197,94,0.18);color:#22c55e}
+.q-good{background:rgba(59,130,246,0.18);color:#3b82f6}
+.q-fair{background:rgba(234,179,8,0.18);color:#eab308}
+
+/* Scroll arrows */
+.scroll-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--fg);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(8px);z-index:2;font-size:14px;font-weight:700}
+.scroll-arrow-left{left:-8px}
+.scroll-arrow-right{right:-8px}
+
+/* Chart */
+.chart-svg{width:100%;height:280px;display:block}
+
+/* Footer note */
+.foot-note{font-size:var(--text-micro);color:var(--fg-dim);margin-top:0.5rem}
+
+/* Responsive */
+@media(max-width:1023px)and(min-width:768px){.sun-moon-grid{grid-template-columns:1fr}}
+@media(max-width:767px){.sun-moon-grid{grid-template-columns:1fr}.columns-row{flex-direction:column}.event-col{min-width:auto}}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="var t=document.documentElement.getAttribute('data-theme');document.documentElement.setAttribute('data-theme',t==='dark'?'light':'dark');this.textContent=(t==='dark'?'Dark':'Light')">Light</button>
+
+<div class="grid">
+
+<!-- ════ Surface A: Page Header ════ -->
+<div class="card" style="padding:0">
+  <div class="page-header">
+    <svg class="ph-icon" viewBox="0 0 256 256" fill="currentColor"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+    <h1>Almanac</h1>
+    <span class="ph-info">Astronomical data for Hampton Bays, NY</span>
+  </div>
+</div>
+
+<!-- ════ Surface D: Monthly Averages (climate, first) ════ -->
+<div class="card">
+  <div class="card-header"><span class="card-title">Average Climatological Values by Month</span></div>
+  <div class="card-content">
+    <svg class="chart-svg" viewBox="0 0 840 280" role="img" aria-label="Monthly temperature and precipitation chart">
+      <title>4-series chart: Avg High, Low, Dewpoint lines and Monthly Rain bars.</title>
+      <text x="14" y="120" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="10" transform="rotate(-90,14,120)">Average Temperature (&#xb0;F)</text>
+      <text x="826" y="120" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="10" transform="rotate(90,826,120)">Avg Monthly Rain (in)</text>
+      <line x1="55" y1="20" x2="780" y2="20" stroke="var(--title-rule)" stroke-width="0.5"/>
+      <line x1="55" y1="65" x2="780" y2="65" stroke="var(--title-rule)" stroke-width="0.5"/>
+      <line x1="55" y1="110" x2="780" y2="110" stroke="var(--title-rule)" stroke-width="0.5"/>
+      <line x1="55" y1="155" x2="780" y2="155" stroke="var(--title-rule)" stroke-width="0.5"/>
+      <line x1="55" y1="200" x2="780" y2="200" stroke="var(--title-rule)" stroke-width="0.5"/>
+      <text x="50" y="24" text-anchor="end" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">90&#xb0;</text>
+      <text x="50" y="69" text-anchor="end" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">70&#xb0;</text>
+      <text x="50" y="114" text-anchor="end" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">50&#xb0;</text>
+      <text x="50" y="159" text-anchor="end" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">30&#xb0;</text>
+      <text x="50" y="204" text-anchor="end" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">10&#xb0;</text>
+      <text x="790" y="204" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">0</text>
+      <text x="790" y="159" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">1.2</text>
+      <text x="790" y="114" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">2.5</text>
+      <text x="790" y="69" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">3.8</text>
+      <text x="790" y="24" fill="var(--fg-dim)" font-family="var(--font-chart)" font-size="10">5.0</text>
+      <!-- Rain bars -->
+      <rect x="68" y="63" width="44" height="137" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="128" y="38" width="44" height="162" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="188" y="42" width="44" height="158" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="248" y="110" width="44" height="90" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="308" y="110" width="44" height="90" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="368" y="114" width="44" height="86" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="428" y="99" width="44" height="101" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="488" y="85" width="44" height="115" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="548" y="110" width="44" height="90" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="608" y="114" width="44" height="86" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="668" y="96" width="44" height="104" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <rect x="728" y="78" width="44" height="122" rx="2" fill="rgba(59,130,246,0.40)"/>
+      <!-- High temp (red) -->
+      <polyline points="90,135 150,130 210,112 270,90 330,67 390,47 450,36 510,38 570,54 630,79 690,101 750,126" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="90" cy="135" r="4" fill="#ef4444"/><circle cx="90" cy="135" r="2" fill="var(--page-bg)"/>
+      <circle cx="150" cy="130" r="4" fill="#ef4444"/><circle cx="150" cy="130" r="2" fill="var(--page-bg)"/>
+      <circle cx="210" cy="112" r="4" fill="#ef4444"/><circle cx="210" cy="112" r="2" fill="var(--page-bg)"/>
+      <circle cx="270" cy="90" r="4" fill="#ef4444"/><circle cx="270" cy="90" r="2" fill="var(--page-bg)"/>
+      <circle cx="330" cy="67" r="4" fill="#ef4444"/><circle cx="330" cy="67" r="2" fill="var(--page-bg)"/>
+      <circle cx="390" cy="47" r="4" fill="#ef4444"/><circle cx="390" cy="47" r="2" fill="var(--page-bg)"/>
+      <circle cx="450" cy="36" r="4" fill="#ef4444"/><circle cx="450" cy="36" r="2" fill="var(--page-bg)"/>
+      <circle cx="510" cy="38" r="4" fill="#ef4444"/><circle cx="510" cy="38" r="2" fill="var(--page-bg)"/>
+      <circle cx="570" cy="54" r="4" fill="#ef4444"/><circle cx="570" cy="54" r="2" fill="var(--page-bg)"/>
+      <circle cx="630" cy="79" r="4" fill="#ef4444"/><circle cx="630" cy="79" r="2" fill="var(--page-bg)"/>
+      <circle cx="690" cy="101" r="4" fill="#ef4444"/><circle cx="690" cy="101" r="2" fill="var(--page-bg)"/>
+      <circle cx="750" cy="126" r="4" fill="#ef4444"/><circle cx="750" cy="126" r="2" fill="var(--page-bg)"/>
+      <!-- Low temp (light blue + diamonds) -->
+      <polyline points="90,169 150,164 210,151 270,128 330,106 390,83 450,72 510,74 570,90 630,115 690,137 750,157" fill="none" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <g fill="#93c5fd"><g transform="translate(90,169) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(150,164) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(210,151) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(270,128) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(330,106) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(390,83) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(450,72) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(510,74) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(570,90) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(630,115) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(690,137) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g><g transform="translate(750,157) rotate(45)"><rect x="-3.5" y="-3.5" width="7" height="7"/></g></g>
+      <!-- Dewpoint (purple + squares) -->
+      <polyline points="90,182 150,180 210,164 270,144 330,115 390,92 450,79 510,81 570,97 630,126 690,148 750,171" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <g fill="#a855f7"><rect x="87" y="179" width="6" height="6" rx="1"/><rect x="147" y="177" width="6" height="6" rx="1"/><rect x="207" y="161" width="6" height="6" rx="1"/><rect x="267" y="141" width="6" height="6" rx="1"/><rect x="327" y="112" width="6" height="6" rx="1"/><rect x="387" y="89" width="6" height="6" rx="1"/><rect x="447" y="76" width="6" height="6" rx="1"/><rect x="507" y="78" width="6" height="6" rx="1"/><rect x="567" y="94" width="6" height="6" rx="1"/><rect x="627" y="123" width="6" height="6" rx="1"/><rect x="687" y="145" width="6" height="6" rx="1"/><rect x="747" y="168" width="6" height="6" rx="1"/></g>
+      <!-- X axis -->
+      <text x="90" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Jan</text>
+      <text x="150" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Feb</text>
+      <text x="210" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Mar</text>
+      <text x="270" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Apr</text>
+      <text x="330" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">May</text>
+      <text x="390" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Jun</text>
+      <text x="450" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Jul</text>
+      <text x="510" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Aug</text>
+      <text x="570" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Sep</text>
+      <text x="630" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Oct</text>
+      <text x="690" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Nov</text>
+      <text x="750" y="218" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="11" font-weight="600">Dec</text>
+      <!-- Legend -->
+      <circle cx="200" cy="248" r="4" fill="#ef4444"/><circle cx="200" cy="248" r="1.5" fill="var(--page-bg)"/>
+      <text x="208" y="252" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="10">Average High Temperature</text>
+      <g fill="#93c5fd" transform="translate(380,248) rotate(45)"><rect x="-3" y="-3" width="6" height="6"/></g>
+      <text x="388" y="252" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="10">Average Low Temperature</text>
+      <rect x="547" y="245" width="6" height="6" rx="1" fill="#a855f7"/>
+      <text x="557" y="252" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="10">Average Dewpoint</text>
+      <rect x="660" y="244" width="12" height="8" rx="1" fill="rgba(59,130,246,0.40)"/>
+      <text x="676" y="252" fill="var(--fg-muted)" font-family="var(--font-chart)" font-size="10">Avg Monthly Rain Total</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ════ Surface B: Sun & Moon ════ -->
+<div class="card">
+  <div class="card-header"><span class="card-title">Sun &amp; Moon</span></div>
+  <div class="card-content">
+    <div class="sun-moon-grid">
+      <!-- SUN panel: label | Jun 3 | Jun 4 -->
+      <div class="data-panel">
+        <h3><svg width="15" height="15" viewBox="0 0 256 256" fill="#f59e0b"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg> Sun</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:var(--text-secondary)">
+          <thead><tr>
+            <th style="text-align:left;font-weight:400;color:var(--fg-dim);padding-bottom:0.3rem"></th>
+            <th style="text-align:right;font-weight:600;color:var(--fg-muted);padding-bottom:0.3rem;font-size:var(--text-label)">Jun 3</th>
+            <th style="text-align:right;font-weight:600;color:var(--fg-muted);padding-bottom:0.3rem;font-size:var(--text-label)">Jun 4</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Sunrise</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">5:24 AM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">5:24 AM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Sunset</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">8:26 PM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">8:27 PM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Civil Dawn</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">4:51 AM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">4:50 AM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Civil Dusk</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">8:59 PM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">9:00 PM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Solar Noon</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">12:55 PM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">12:55 PM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Daylight</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">15h 2m <span style="color:#22c55e;font-size:var(--text-micro)">+1m</span></td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">15h 3m <span style="color:#22c55e;font-size:var(--text-micro)">+1m</span></td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Azimuth</td><td colspan="2" style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">238.4&#xb0;</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Altitude</td><td colspan="2" style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">42.1&#xb0;</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- ARC center -->
+      <div class="arc-center">
+        <svg class="arc-svg" viewBox="0 0 460 260" role="img" aria-label="Sun and moon arc positions">
+          <title>Sun arc from 5:24 AM to 8:26 PM with current positions.</title>
+          <defs><clipPath id="top"><rect x="0" y="0" width="460" height="211"/></clipPath></defs>
+          <line x1="30" y1="210" x2="430" y2="210" stroke="var(--fg-dim)" stroke-width="1" opacity="0.35"/>
+          <!-- Moon arc remaining (dashed) -->
+          <path d="M 253,62 A 150,150 0 0,1 380,210" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="5 4" opacity="0.5" clip-path="url(#top)"/>
+          <!-- Moon arc traveled (solid) -->
+          <path d="M 80,210 A 150,150 0 0,1 253,62" fill="none" stroke="#94a3b8" stroke-width="1.8" opacity="0.5" clip-path="url(#top)"/>
+          <path d="M 310,48 A 190,190 0 0,1 420,210" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="7 4" opacity="0.5"/>
+          <path d="M 40,210 A 190,190 0 0,1 310,48" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+          <circle cx="40" cy="210" r="4" fill="#f59e0b" opacity="0.7"/>
+          <circle cx="420" cy="210" r="4" fill="#f59e0b" opacity="0.4"/>
+          <circle cx="310" cy="48" r="14" fill="#f59e0b" opacity="0.12"/>
+          <circle cx="310" cy="48" r="8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+          <circle cx="310" cy="48" r="4" fill="#f59e0b"/>
+          <line x1="310" y1="34" x2="310" y2="30" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="310" y1="62" x2="310" y2="66" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="296" y1="48" x2="292" y2="48" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="324" y1="48" x2="328" y2="48" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+          <text x="310" y="22" text-anchor="middle" fill="var(--fg-muted)" font-family="var(--font-sans)" font-size="11" font-weight="600">42&#xb0;</text>
+          <circle cx="253" cy="62" r="7" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+          <path d="M253,55 A7,7 0 0,1 253,69 A4,7 0 0,0 253,55" fill="#94a3b8"/>
+          <text x="253" y="48" text-anchor="middle" fill="var(--fg-dim)" font-family="var(--font-sans)" font-size="10">28&#xb0;</text>
+          <text x="40" y="230" text-anchor="middle" fill="#f59e0b" font-family="var(--font-display)" font-weight="600" font-size="13">5:24 AM</text>
+          <text x="420" y="230" text-anchor="middle" fill="#f59e0b" font-family="var(--font-display)" font-weight="600" font-size="13">8:26 PM</text>
+          <text x="80" y="248" text-anchor="middle" fill="#94a3b8" font-family="var(--font-sans)" font-size="10">Rise 3:42 PM</text>
+          <text x="380" y="248" text-anchor="middle" fill="#94a3b8" font-family="var(--font-sans)" font-size="10">Set 2:18 AM</text>
+        </svg>
+        <div class="moon-phase-row">
+          <svg width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="Waxing Gibbous 88% illuminated" style="flex-shrink:0">
+            <title>Waxing Gibbous 88% illuminated</title>
+            <circle cx="18" cy="18" r="17" fill="#94a3b8"/>
+            <path d="M18 1 A17 17 0 0 0 18 35 A12.9 17 0 0 1 18 1" fill="#1a1a2e"/>
+          </svg>
+          <div>
+            <div class="moon-phase-text">Waxing Gibbous</div>
+            <div class="moon-phase-pct">88% illuminated</div>
+          </div>
+        </div>
+        <div class="moon-badges"><span class="badge badge-moon">Strawberry Moon</span></div>
+      </div>
+      <!-- MOON panel: label | Jun 3 | Jun 4 -->
+      <div class="data-panel">
+        <h3><svg width="15" height="15" viewBox="0 0 256 256" fill="#94a3b8"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg> Moon</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:var(--text-secondary)">
+          <thead><tr>
+            <th style="text-align:left;font-weight:400;color:var(--fg-dim);padding-bottom:0.3rem"></th>
+            <th style="text-align:right;font-weight:600;color:var(--fg-muted);padding-bottom:0.3rem;font-size:var(--text-label)">Jun 3</th>
+            <th style="text-align:right;font-weight:600;color:var(--fg-muted);padding-bottom:0.3rem;font-size:var(--text-label)">Jun 4</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Phase</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">Wax. Gibbous</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">Wax. Gibbous</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Illumination</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">88%</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">92%</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Moonrise</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">3:42 PM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">4:28 PM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Moonset</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">2:18 AM</td><td style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">3:01 AM</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Full Moon</td><td colspan="2" style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">Jun 7</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">New Moon</td><td colspan="2" style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">Jun 21</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Azimuth</td><td colspan="2" style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">142.7&#xb0;</td></tr>
+            <tr><td style="color:var(--fg-dim);padding:0.15rem 0">Altitude</td><td colspan="2" style="text-align:right;font-family:var(--font-display);font-weight:600;padding:0.15rem 0">28.3&#xb0;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Shared info -->
+    <div style="display:flex;gap:2rem;justify-content:center;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--title-rule);font-size:var(--text-label);color:var(--fg-dim);flex-wrap:wrap">
+      <span>Next Solstice: <strong style="color:var(--fg);font-family:var(--font-display);font-weight:600">Jun 20</strong></span>
+      <span>Next Equinox: <strong style="color:var(--fg);font-family:var(--font-display);font-weight:600">Sep 22</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- ════ Surface C: Planets Timeline ════ -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Tonight's Planet Outlook</span>
+    <span class="quality-dot qd-green" style="font-size:var(--text-label)">&#x25cf; Good Viewing Conditions</span>
+  </div>
+  <div class="card-content">
+    <p class="card-subtitle">Clear skies make for great viewing. Here's when each planet will be at its best.</p>
+
+    <!-- Planet columns: NAME + QUALITY above, fixed-height image area, TIME + POS below (aligned) -->
+    <div class="planets-top">
+      <div class="planet-col">
+        <span class="planet-name">Saturn</span>
+        <span class="planet-quality" style="color:#3b82f6">Excellent View</span>
+        <div class="planet-img-wrap"><img class="planet-img" style="width:110px;height:110px" src="../../../repos/weewx-clearskies-dashboard/public/images/planets/saturn.webp" alt="Saturn"></div>
+        <span class="planet-time">Now &#x2013; 10:30 PM</span>
+        <span class="planet-pos">In the southwest</span>
+      </div>
+      <div class="planet-col">
+        <span class="planet-name">Jupiter</span>
+        <span class="planet-quality" style="color:#3b82f6">Excellent View</span>
+        <div class="planet-img-wrap"><img class="planet-img" style="width:80px;height:80px" src="../../../repos/weewx-clearskies-dashboard/public/images/planets/jupiter.webp" alt="Jupiter"></div>
+        <span class="planet-time">8:30 PM &#x2013; 1:00 AM</span>
+        <span class="planet-pos">High in the south</span>
+      </div>
+      <div class="planet-col">
+        <span class="planet-name">Mars</span>
+        <span class="planet-quality" style="color:#3b82f6">Good View</span>
+        <div class="planet-img-wrap"><img class="planet-img" style="width:56px;height:56px" src="../../../repos/weewx-clearskies-dashboard/public/images/planets/mars.webp" alt="Mars"></div>
+        <span class="planet-time">12:30 AM &#x2013; 4:00 AM</span>
+        <span class="planet-pos">In the southeast</span>
+      </div>
+      <div class="planet-col">
+        <span class="planet-name">Venus</span>
+        <span class="planet-quality" style="color:#22c55e">Excellent View</span>
+        <div class="planet-img-wrap"><img class="planet-img" style="width:52px;height:52px" src="../../../repos/weewx-clearskies-dashboard/public/images/planets/venus.webp" alt="Venus"></div>
+        <span class="planet-time">4:30 AM &#x2013; Sunrise</span>
+        <span class="planet-pos">In the east</span>
+      </div>
+      <div class="planet-col">
+        <span class="planet-name">Mercury</span>
+        <span class="planet-quality" style="color:#eab308">Fair View</span>
+        <div class="planet-img-wrap"><img class="planet-img" style="width:42px;height:42px" src="../../../repos/weewx-clearskies-dashboard/public/images/planets/mercury.webp" alt="Mercury"></div>
+        <span class="planet-time">5:30 AM &#x2013; Sunrise</span>
+        <span class="planet-pos">Low in the east</span>
+      </div>
+    </div>
+
+    <!-- Gantt chart: width:100% + no fixed height = SVG auto-sizes from viewBox, fills width -->
+    <svg style="width:100%;display:block;margin-top:1rem" viewBox="0 0 1000 280" role="img" aria-label="Planet visibility timeline from sunset to sunrise">
+        <defs>
+          <!-- Gradient sampled from inspiration mockup at 2% increments -->
+          <linearGradient id="sky-bg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#4a2818"/>
+            <stop offset="2%" stop-color="#75422e"/>
+            <stop offset="4%" stop-color="#6e3f2f"/>
+            <stop offset="7%" stop-color="#5f3830"/>
+            <stop offset="10%" stop-color="#50312f"/>
+            <stop offset="13%" stop-color="#37252d"/>
+            <stop offset="16%" stop-color="#241d2e"/>
+            <stop offset="20%" stop-color="#18182e"/>
+            <stop offset="28%" stop-color="#0b122f"/>
+            <stop offset="40%" stop-color="#091432"/>
+            <stop offset="55%" stop-color="#0a1530"/>
+            <stop offset="70%" stop-color="#112244"/>
+            <stop offset="78%" stop-color="#182c51"/>
+            <stop offset="84%" stop-color="#1f385f"/>
+            <stop offset="90%" stop-color="#27436e"/>
+            <stop offset="96%" stop-color="#335183"/>
+            <stop offset="100%" stop-color="#355486"/>
+          </linearGradient>
+          <linearGradient id="bar-saturn" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c9a55a" stop-opacity="0.3"/><stop offset="100%" stop-color="#c9a55a" stop-opacity="0.95"/></linearGradient>
+          <linearGradient id="bar-jupiter" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c4956a" stop-opacity="0.3"/><stop offset="100%" stop-color="#c4956a" stop-opacity="0.95"/></linearGradient>
+          <linearGradient id="bar-mars" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c05040" stop-opacity="0.3"/><stop offset="100%" stop-color="#c05040" stop-opacity="0.95"/></linearGradient>
+          <linearGradient id="bar-venus" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ffe6a0" stop-opacity="0.3"/><stop offset="100%" stop-color="#ffe6a0" stop-opacity="0.95"/></linearGradient>
+          <linearGradient id="bar-mercury" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#999" stop-opacity="0.2"/><stop offset="100%" stop-color="#999" stop-opacity="0.85"/></linearGradient>
+          <filter id="planet-shadow" x="-30%" y="-20%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.6"/>
+          </filter>
+        </defs>
+
+        <!-- Full-width background gradient -->
+        <rect x="0" y="0" width="1000" height="280" rx="8" fill="url(#sky-bg)"/>
+
+        <!-- Section labels with icons -->
+        <!-- Scale: 7 equal intervals of 137 units. x=20 to x=980 -->
+        <!-- 6PM=20, 8PM=157, 10PM=294, 12AM=431, 2AM=569, 4AM=706, 6AM=843, Sunrise=980 -->
+        <!-- 1 hour = 68.5 units, 1 min = 1.142 units -->
+
+        <!-- EVENING: Phosphor ph:sun-horizon (regular) -->
+        <g transform="translate(110,30)">
+          <svg x="-28" y="-10" width="20" height="20" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg>
+          <text x="0" y="3" fill="var(--fg-muted)" font-family="var(--font-sans)" font-size="13" font-weight="700" letter-spacing="0.06em">EVENING</text>
+        </g>
+        <!-- NIGHT: Phosphor ph:moon-stars (regular) -->
+        <g transform="translate(475,30)">
+          <svg x="-28" y="-10" width="20" height="20" viewBox="0 0 256 256" fill="#94a3b8"><path d="M240,96a8,8,0,0,1-8,8H216v16a8,8,0,0,1-16,0V104H184a8,8,0,0,1,0-16h16V72a8,8,0,0,1,16,0V88h16A8,8,0,0,1,240,96ZM144,56h8v8a8,8,0,0,0,16,0V56h8a8,8,0,0,0,0-16h-8V32a8,8,0,0,0-16,0v8h-8a8,8,0,0,0,0,16Zm72.77,97a8,8,0,0,1,1.43,8A96,96,0,1,1,95.07,37.8a8,8,0,0,1,10.6,9.06A88.07,88.07,0,0,0,209.14,150.33,8,8,0,0,1,216.77,153Zm-19.39,14.88c-1.79.09-3.59.14-5.38.14A104.11,104.11,0,0,1,88,64c0-1.79,0-3.59.14-5.38A80,80,0,1,0,197.38,167.86Z"/></svg>
+          <text x="0" y="3" fill="var(--fg-muted)" font-family="var(--font-sans)" font-size="13" font-weight="700" letter-spacing="0.06em">NIGHT</text>
+        </g>
+        <!-- MORNING: Phosphor ph:sun-horizon (regular) -->
+        <g transform="translate(870,30)">
+          <svg x="-28" y="-10" width="20" height="20" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg>
+          <text x="0" y="3" fill="var(--fg-muted)" font-family="var(--font-sans)" font-size="13" font-weight="700" letter-spacing="0.06em">MORNING</text>
+        </g>
+
+        <!-- Planet bars: rows ~40 apart, tighter to timeline -->
+        <!-- Saturn: bar y=58, center=66. Image 60px, top=36 -->
+        <rect x="157" y="58" width="171" height="16" rx="8" fill="url(#bar-saturn)"/>
+        <image href="../../../repos/weewx-clearskies-dashboard/public/images/planets/saturn.webp" x="127" y="36" width="60" height="60" filter="url(#planet-shadow)"/>
+
+        <!-- Jupiter: bar y=98, center=106. Image 40px, top=86 -->
+        <rect x="191" y="98" width="309" height="16" rx="8" fill="url(#bar-jupiter)"/>
+        <image href="../../../repos/weewx-clearskies-dashboard/public/images/planets/jupiter.webp" x="171" y="86" width="40" height="40" filter="url(#planet-shadow)"/>
+
+        <!-- Mars: bar y=138, center=146. Image 32px, top=130 -->
+        <rect x="465" y="138" width="241" height="16" rx="8" fill="url(#bar-mars)"/>
+        <image href="../../../repos/weewx-clearskies-dashboard/public/images/planets/mars.webp" x="449" y="130" width="32" height="32" filter="url(#planet-shadow)"/>
+
+        <!-- Venus: bar y=176, center=184. Image 28px, top=170 -->
+        <rect x="740" y="176" width="70" height="16" rx="8" fill="url(#bar-venus)"/>
+        <image href="../../../repos/weewx-clearskies-dashboard/public/images/planets/venus.webp" x="726" y="170" width="28" height="28" filter="url(#planet-shadow)"/>
+
+        <!-- Mercury: bar y=212, center=219. Image 22px, top=208 -->
+        <rect x="808" y="212" width="35" height="14" rx="7" fill="url(#bar-mercury)"/>
+        <image href="../../../repos/weewx-clearskies-dashboard/public/images/planets/mercury.webp" x="797" y="208" width="22" height="22" filter="url(#planet-shadow)"/>
+
+        <!-- Time axis -->
+        <line x1="20" y1="245" x2="980" y2="245" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+        <text x="20" y="264" text-anchor="start" fill="#f59e0b" font-family="var(--font-chart)" font-size="13" font-weight="600">6 PM</text>
+        <line x1="20" y1="241" x2="20" y2="248" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <text x="157" y="264" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="var(--font-chart)" font-size="12">8 PM</text>
+        <line x1="157" y1="242" x2="157" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="294" y="264" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="var(--font-chart)" font-size="12">10 PM</text>
+        <line x1="294" y1="242" x2="294" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="431" y="264" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="var(--font-chart)" font-size="12">12 AM</text>
+        <line x1="431" y1="242" x2="431" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="569" y="264" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="var(--font-chart)" font-size="12">2 AM</text>
+        <line x1="569" y1="242" x2="569" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="706" y="264" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="var(--font-chart)" font-size="12">4 AM</text>
+        <line x1="706" y1="242" x2="706" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="843" y="264" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="var(--font-chart)" font-size="12">6 AM</text>
+        <line x1="843" y1="242" x2="843" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="980" y="264" text-anchor="end" fill="#f59e0b" font-family="var(--font-chart)" font-size="13" font-weight="600">Sunrise</text>
+        <line x1="980" y1="241" x2="980" y2="248" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+    </svg>
+    <p class="foot-note" style="margin-top:0.75rem;font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="var(--fg-dim)" style="vertical-align:-2px;margin-right:4px"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg>Times shown are local time. Planets rise and set at different times throughout the week.</p>
+  </div>
+</div>
+
+<!-- ════ Surface E: Solar Eclipses ════ -->
+<div class="card">
+  <div class="card-header"><span class="card-title">Solar Eclipses</span><span class="card-note">All times local</span></div>
+  <div class="card-content">
+    <p class="card-subtitle">The next solar eclipses visible from your location over the next two years.</p>
+    <div class="columns-row">
+      <div class="event-col">
+        <div><span class="ev-date">Aug 12, 2026</span><br><span class="ev-day">Wednesday</span></div>
+        <span class="type-badge tb-total">Total</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/solar-total.webp" alt="Total solar eclipse">
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#22c55e"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#22c55e">Visible</span></div>
+        <span style="font-size:var(--text-label);color:var(--fg-dim)">Within the path of totality</span>
+        <!-- HORIZONTAL times with sun icons -->
+        <div style="display:flex;gap:1.5rem;margin-top:0.3rem">
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Begins</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">3:44 PM</div></div>
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Totality</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">5:01 PM</div></div>
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Ends</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">6:12 PM</div></div>
+        </div>
+        <p class="ev-desc">Total solar eclipse. The Sun will be completely covered by the Moon.</p>
+      </div>
+      <div class="event-col">
+        <div><span class="ev-date">Feb 6, 2027</span><br><span class="ev-day">Saturday</span></div>
+        <span class="type-badge tb-annular">Annular</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/solar-annular.webp" alt="Annular solar eclipse">
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#3b82f6">Visible</span></div>
+        <span style="font-size:var(--text-label);color:var(--fg-dim)">Well placed in your location</span>
+        <div style="display:flex;gap:1.5rem;margin-top:0.3rem">
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Begins</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">7:38 AM</div></div>
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Maximum</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">9:12 AM</div></div>
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Ends</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">10:48 AM</div></div>
+        </div>
+        <p class="ev-desc">The Moon will pass in front of the Sun, leaving a brilliant ring of sunlight visible.</p>
+      </div>
+      <div class="event-col">
+        <div><span class="ev-date">Aug 2, 2027</span><br><span class="ev-day">Monday</span></div>
+        <span class="type-badge tb-partial">Partial</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/solar-partial.webp" alt="Partial solar eclipse">
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#3b82f6">Visible</span></div>
+        <span style="font-size:var(--text-label);color:var(--fg-dim)">Partially visible from your location</span>
+        <div style="display:flex;gap:1.5rem;margin-top:0.3rem">
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Begins</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">5:32 PM</div></div>
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Maximum</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">6:14 PM</div></div>
+          <div><div style="display:flex;align-items:center;gap:0.25rem;color:var(--fg-dim);font-size:var(--text-label)"><svg width="14" height="14" viewBox="0 0 256 256" fill="#f59e0b"><path d="M240,152H199.55a73.54,73.54,0,0,0,.45-8,72,72,0,0,0-144,0,73.54,73.54,0,0,0,.45,8H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM72,144a56,56,0,1,1,111.41,8H72.59A56.13,56.13,0,0,1,72,144Zm144,56a8,8,0,0,1-8,8H48a8,8,0,0,1,0-16H208A8,8,0,0,1,216,200ZM72.84,43.58a8,8,0,0,1,14.32-7.16l8,16a8,8,0,0,1-14.32,7.16Zm-56,48.84a8,8,0,0,1,10.74-3.57l16,8a8,8,0,0,1-7.16,14.31l-16-8A8,8,0,0,1,16.84,92.42Zm192,15.16a8,8,0,0,1,3.58-10.73l16-8a8,8,0,1,1,7.16,14.31l-16,8a8,8,0,0,1-10.74-3.58Zm-48-55.16,8-16a8,8,0,0,1,14.32,7.16l-8,16a8,8,0,1,1-14.32-7.16Z"/></svg> Ends</div><div style="font-family:var(--font-display);font-weight:600;font-size:var(--text-secondary)">6:51 PM</div></div>
+        </div>
+        <p class="ev-desc">The Moon will pass in front of the Sun, covering a portion of its disk.</p>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="legend">
+        <span class="legend-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> <span><strong>Total</strong> &#x2014; The Moon completely covers the Sun</span></span>
+        <span class="legend-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> <span><strong>Annular</strong> &#x2014; The Moon covers the center, leaving a ring</span></span>
+        <span class="legend-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18" fill="#94a3b8" opacity="0.3"/></svg> <span><strong>Partial</strong> &#x2014; Only a portion of the Sun is covered</span></span>
+      </div>
+    </div>
+    <p class="foot-note"><svg width="14" height="14" viewBox="0 0 256 256" fill="var(--fg-dim)" style="vertical-align:-2px;margin-right:4px"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg>Visibility can vary based on cloud cover and your exact location.</p>
+  </div>
+</div>
+
+<!-- ════ Surface F: Lunar Eclipses ════ -->
+<div class="card">
+  <div class="card-header"><span class="card-title">Lunar Eclipses</span><span class="card-note">All times local</span></div>
+  <div class="card-content">
+    <p class="card-subtitle">The next lunar eclipses visible from your location over the next year.</p>
+    <div class="columns-row">
+      <div class="event-col">
+        <div><span class="ev-date">Sep 7, 2025</span> <span class="ev-day">Sunday</span></div>
+        <span class="type-badge tb-total">Total</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/lunar-total.webp" alt="Total lunar eclipse">
+        <span class="ev-time-range">10:11 PM &#x2013; 1:25 AM</span>
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#22c55e"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#22c55e">Visible All Night</span></div>
+        <p class="ev-desc">Total lunar eclipse. The entire Moon will pass through Earth's umbra.</p>
+      </div>
+      <div class="event-col">
+        <div><span class="ev-date">Mar 3, 2026</span> <span class="ev-day">Tuesday</span></div>
+        <span class="type-badge tb-partial">Partial</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/lunar-partial.webp" alt="Partial lunar eclipse">
+        <span class="ev-time-range">12:45 AM &#x2013; 4:20 AM</span>
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#3b82f6">Mostly Visible</span></div>
+        <p class="ev-desc">Partial lunar eclipse. Part of the Moon will pass through Earth's umbra.</p>
+      </div>
+      <div class="event-col">
+        <div><span class="ev-date">Aug 28, 2026</span> <span class="ev-day">Friday</span></div>
+        <span class="type-badge tb-total">Total</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/lunar-total.webp" alt="Total lunar eclipse">
+        <span class="ev-time-range">9:15 PM &#x2013; 12:48 AM</span>
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#22c55e"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#22c55e">Visible All Night</span></div>
+        <p class="ev-desc">Total lunar eclipse. The entire Moon will pass through Earth's umbra.</p>
+      </div>
+      <div class="event-col">
+        <div><span class="ev-date">Feb 17, 2027</span> <span class="ev-day">Wednesday</span></div>
+        <span class="type-badge tb-penumbral">Penumbral</span>
+        <img class="ev-img" src="../../../repos/weewx-clearskies-dashboard/public/images/eclipses/lunar-penumbral.webp" alt="Penumbral lunar eclipse">
+        <span class="ev-time-range">4:09 AM &#x2013; 6:53 AM</span>
+        <div class="ev-visibility"><svg class="ico" viewBox="0 0 256 256" fill="#eab308"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span style="color:#eab308">Low in Sky</span></div>
+        <p class="ev-desc">Penumbral lunar eclipse. A subtle dimming as the Moon passes through Earth's penumbra.</p>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="legend">
+        <span class="legend-item"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ef4444" opacity="0.25" stroke="#ef4444" stroke-width="1.5"/></svg> <span><strong>Total</strong> &#x2014; The Moon passes completely through Earth's umbra</span></span>
+        <span class="legend-item"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#94a3b8" opacity="0.25" stroke="#94a3b8" stroke-width="1.5"/><path d="M12 3a9 9 0 0 1 0 18" fill="#94a3b8" opacity="0.4"/></svg> <span><strong>Partial</strong> &#x2014; Only a portion enters Earth's umbra</span></span>
+        <span class="legend-item"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#71717a" opacity="0.15" stroke="#71717a" stroke-width="1.5"/></svg> <span><strong>Penumbral</strong> &#x2014; Passes through Earth's penumbra only</span></span>
+      </div>
+    </div>
+    <p class="foot-note"><svg width="14" height="14" viewBox="0 0 256 256" fill="var(--fg-dim)" style="vertical-align:-2px;margin-right:4px"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg>Eclipse visibility can vary based on weather and your exact location.</p>
+  </div>
+</div>
+
+<!-- ════ Surface G: Meteor Showers ════ -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Meteor Showers</span>
+    <span class="quality-dot qd-green" style="font-size:var(--text-label)">&#x25cf; Good Viewing Conditions</span>
+  </div>
+  <div class="card-content">
+    <p class="card-subtitle">Upcoming meteor showers visible from your location over the next year.</p>
+    <div class="meteor-scroll">
+      <div class="meteor-row">
+        <div class="meteor-col">
+          <div class="mt-header"><span class="mt-name">Quadrantids</span><span class="peak-badge">Peak</span></div>
+          <span class="mt-active">Dec 28 &#x2013; Jan 12</span>
+          <img class="meteor-img" src="../../../repos/weewx-clearskies-dashboard/public/images/meteors/streak-1.webp" alt="Quadrantid meteor streak">
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg><div><span class="mt-data-label">Peak Night</span><br><span class="mt-data-value">Jan 3 &#x2013; 4, 2026</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"/></svg><div><span class="mt-data-label">Rate</span><br><span class="mt-data-value">Up to <b>110</b> meteors/hr</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="#22c55e"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg><div><span class="mt-data-label">Visibility</span><br><span class="mt-data-value" style="color:#22c55e;font-weight:600">Excellent</span></div></div>
+          <p class="ev-desc">Fast and bright meteors, known for persistent trains and occasional fireballs.</p>
+        </div>
+        <div class="meteor-col">
+          <div class="mt-header"><span class="mt-name">Lyrids</span><span class="peak-badge">Peak</span></div>
+          <span class="mt-active">Apr 16 &#x2013; Apr 25</span>
+          <img class="meteor-img" src="../../../repos/weewx-clearskies-dashboard/public/images/meteors/streak-2.webp" alt="Lyrid meteor streak">
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg><div><span class="mt-data-label">Peak Night</span><br><span class="mt-data-value">Apr 22 &#x2013; 23, 2026</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"/></svg><div><span class="mt-data-label">Rate</span><br><span class="mt-data-value">Up to <b>18</b> meteors/hr</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg><div><span class="mt-data-label">Visibility</span><br><span class="mt-data-value" style="color:#3b82f6;font-weight:600">Good</span></div></div>
+          <p class="ev-desc">Known for bright meteors and the occasional fireball with long-lasting trains.</p>
+        </div>
+        <div class="meteor-col">
+          <div class="mt-header"><span class="mt-name">Eta Aquarids</span><span class="peak-badge">Peak</span></div>
+          <span class="mt-active">Apr 15 &#x2013; May 27</span>
+          <img class="meteor-img" src="../../../repos/weewx-clearskies-dashboard/public/images/meteors/streak-3.webp" alt="Eta Aquarid meteor streak">
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg><div><span class="mt-data-label">Peak Night</span><br><span class="mt-data-value">May 5 &#x2013; 6, 2026</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"/></svg><div><span class="mt-data-label">Rate</span><br><span class="mt-data-value">Up to <b>20</b> meteors/hr</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="#eab308"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg><div><span class="mt-data-label">Visibility</span><br><span class="mt-data-value" style="color:#eab308;font-weight:600">Fair</span></div></div>
+          <p class="ev-desc">Produces fast meteors with bright trails. Halley's Comet debris.</p>
+        </div>
+        <div class="meteor-col">
+          <div class="mt-header"><span class="mt-name">Perseids</span><span class="peak-badge">Peak</span></div>
+          <span class="mt-active">Jul 17 &#x2013; Aug 24</span>
+          <img class="meteor-img" src="../../../repos/weewx-clearskies-dashboard/public/images/meteors/streak-4.webp" alt="Perseid meteor streak">
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg><div><span class="mt-data-label">Peak Night</span><br><span class="mt-data-value">Aug 12 &#x2013; 13, 2026</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"/></svg><div><span class="mt-data-label">Rate</span><br><span class="mt-data-value">Up to <b>100</b> meteors/hr</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="#22c55e"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg><div><span class="mt-data-label">Visibility</span><br><span class="mt-data-value" style="color:#22c55e;font-weight:600">Excellent</span></div></div>
+          <p class="ev-desc">The most popular shower. Consistent high rates and bright, colorful meteors.</p>
+        </div>
+        <div class="meteor-col">
+          <div class="mt-header"><span class="mt-name">Draconids</span><span class="peak-badge">Peak</span></div>
+          <span class="mt-active">Oct 6 &#x2013; Oct 10</span>
+          <img class="meteor-img" src="../../../repos/weewx-clearskies-dashboard/public/images/meteors/streak-5.webp" alt="Draconid meteor streak">
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg><div><span class="mt-data-label">Peak Night</span><br><span class="mt-data-value">Oct 8 &#x2013; 9, 2026</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"/></svg><div><span class="mt-data-label">Rate</span><br><span class="mt-data-value">Up to <b>10</b> meteors/hr</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg><div><span class="mt-data-label">Visibility</span><br><span class="mt-data-value" style="color:#3b82f6;font-weight:600">Good</span></div></div>
+          <p class="ev-desc">Best known for occasional outbursts. Slow-moving meteors in early evening.</p>
+        </div>
+        <div class="meteor-col">
+          <div class="mt-header"><span class="mt-name">Geminids</span><span class="peak-badge">Peak</span></div>
+          <span class="mt-active">Dec 4 &#x2013; Dec 17</span>
+          <img class="meteor-img" src="../../../repos/weewx-clearskies-dashboard/public/images/meteors/streak-6.webp" alt="Geminid meteor streak">
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg><div><span class="mt-data-label">Peak Night</span><br><span class="mt-data-value">Dec 13 &#x2013; 14, 2026</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="currentColor"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"/></svg><div><span class="mt-data-label">Rate</span><br><span class="mt-data-value">Up to <b>120</b> meteors/hr</span></div></div>
+          <div class="mt-data-row"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg><div><span class="mt-data-label">Visibility</span><br><span class="mt-data-value" style="color:#3b82f6;font-weight:600">Good</span></div></div>
+          <p class="ev-desc">Reliable shower with multi-colored meteors. Best after midnight.</p>
+        </div>
+      </div>
+      <div class="scroll-arrow scroll-arrow-left" onclick="this.parentElement.querySelector('.meteor-row').scrollBy({left:-200,behavior:'smooth'})">&lsaquo;</div>
+      <div class="scroll-arrow scroll-arrow-right" onclick="this.parentElement.querySelector('.meteor-row').scrollBy({left:200,behavior:'smooth'})">&rsaquo;</div>
+    </div>
+    <div class="card-footer">
+      <div class="legend">
+        <span class="legend-item"><svg class="ico" viewBox="0 0 256 256" fill="#22c55e"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span><strong style="color:#22c55e">Excellent</strong> &#x2014; Clear, dark skies with no moonlight interference</span></span>
+        <span class="legend-item"><svg class="ico" viewBox="0 0 256 256" fill="#3b82f6"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span><strong style="color:#3b82f6">Good</strong> &#x2014; Mostly clear skies with minimal moonlight</span></span>
+        <span class="legend-item"><svg class="ico" viewBox="0 0 256 256" fill="#eab308"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg> <span><strong style="color:#eab308">Fair</strong> &#x2014; Some moonlight interference may reduce visibility</span></span>
+      </div>
+    </div>
+    <p class="foot-note"><svg width="14" height="14" viewBox="0 0 256 256" fill="var(--fg-dim)" style="vertical-align:-2px;margin-right:4px"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg>Rates shown are predicted zenith hourly rate (ZHR) under ideal conditions.</p>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
