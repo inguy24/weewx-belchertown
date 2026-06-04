@@ -453,6 +453,49 @@ All responses share a common envelope:
 
 Both metric and imperial fields are returned in the same payload (e.g. `tempC` and `tempF`, `windSpeedKPH` and `windSpeedMPH`). The client picks which to read; there is no global `units=` switch.
 
+### Convective Outlook (storm risk)
+
+**Captured:** 2026-06-03 via https://www.xweather.com/docs/weather-api/endpoints/convective-outlook/
+
+**Coverage:** Continental US only. Up to Day 8.
+
+**Endpoint:** `GET https://data.api.xweather.com/convective/outlook/{location}?client_id=...&client_secret=...`
+
+Actions: `:id` (location query), `affects`, `contains`, `search`.
+
+**Response:** Array of outlook objects, one per risk type per day:
+
+```
+response[].details.product     → "convective"
+response[].details.category    → outlook category
+response[].details.day         → 1–8
+response[].details.risk.type   → "general" | "tornado" | "hail" | "wind"
+response[].details.risk.name   → SPC full risk name
+response[].details.risk.code   → numeric risk level (see scales below)
+response[].details.range.minTimestamp / maxTimestamp
+response[].details.range.minDateTimeISO / maxDateTimeISO
+response[].details.issuedTimestamp / issuedDateTimeISO
+response[].geoPoly             → GeoJSON polygon (null when no geo filter / no risk)
+```
+
+**Risk code scales:**
+
+| Type    | 0    | 1   | 2        | 4   | 5   | 6        | 8        | 10  | 15  | 30  | 45  | 60  |
+|---------|------|-----|----------|-----|-----|----------|----------|-----|-----|-----|-----|-----|
+| general | None | Gen | Marginal |     |     | Enhanced | Moderate |     |     |     |     |     |
+| general |      |     |          | Slt |     |          |          | Hgh |     |     |     |     |
+| tornado | None |     | 2%       |     | 5%  |          |          | 10% | 15% | 30% | 45% | 60% |
+| hail    | None |     |          |     | 5%  |          |          |     | 15% | 30% | 45% | 60% |
+| wind    | None |     |          |     | 5%  |          |          |     | 15% | 30% | 45% | 60% |
+
+**Canonical mapping (for clearskies-api):**
+- `thunderRisk` ← `risk.code` where `risk.type === "general"` (0–10 scale)
+- `tornadoRisk` ← `risk.code` where `risk.type === "tornado"` (0–60, percentage)
+- `hailRisk` ← `risk.code` where `risk.type === "hail"` (0–60, percentage)
+- `windRisk` ← `risk.code` where `risk.type === "wind"` (0–60, percentage)
+
+Match to DailyForecastPoint by comparing `details.day` to the forecast day index.
+
 ## Known issues / gotchas
 
 - `client_id`/`client_secret` are bound to a registered namespace (domain or bundle ID) — server-side calls from an unregistered host will be rejected.
