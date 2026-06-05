@@ -141,6 +141,16 @@ paths:
         - { $ref: '#/components/parameters/Limit' }
         - { $ref: '#/components/parameters/Cursor' }
         - { $ref: '#/components/parameters/Page' }
+        - name: agg
+          in: query
+          required: false
+          description: >-
+            Aggregation function override for interval=day and interval=hour.
+            When omitted, per-field defaults apply (e.g., outTemp uses avg).
+            For interval=raw, this parameter is silently ignored.
+          schema:
+            type: string
+            enum: [min, max, avg, sum, count]
       responses:
         '200':
           description: Archive page
