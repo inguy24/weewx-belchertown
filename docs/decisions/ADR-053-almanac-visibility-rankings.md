@@ -39,10 +39,11 @@ A unified 5-tier color scale applies across all almanac visibility ratings. Each
 | Tier | Label | Condition | User experience |
 |---|---|---|---|
 | 1 Green | Fully Visible | `totalStart` is non-null (observer in path of totality/annularity) | Corona visible or Ring of Fire |
-| 2 Lime | Mostly Visible | O ≥ 75% and A > 0° | Noticeable twilight drop in daylight |
-| 3 Yellow | Partially Visible | 10% ≤ O < 75% and A > 0° | Crescent Sun shape visible |
-| 4 Orange | Barely Visible | 0% < O < 10% and A > 0° | Very slight dimming, hard to notice |
-| 5 Red | Not Visible | O = 0% or A ≤ 0° | Eclipse below horizon or outside path |
+| 2 Lime | Mostly Visible | O ≥ 75% | Noticeable twilight drop in daylight |
+| 3 Yellow | Partially Visible | 10% ≤ O < 75% | Crescent Sun shape visible |
+| 4 Orange | Barely Visible | O < 10% | Very slight dimming, hard to notice |
+
+Note: "Not Visible" is not a solar eclipse tier because AstronomyAPI.com only returns eclipses visible from the observer's location. Eclipses whose shadow does not reach the station are omitted from the response entirely.
 
 **Graceful degradation:** When AstronomyAPI.com credentials are not configured, the API returns eclipse dates and types from Skyfield only (no obscuration, no contact times). Dashboard shows the eclipse with type badge but omits visibility tier and contact times.
 
@@ -127,6 +128,19 @@ Documented in full in the archived `PLANET-VIEWING-QUALITY-PLAN.md`. Summary:
 - Dashboard color mapping: use CSS classes `.vc-excellent` (#22c55e), `.vc-good` (#84cc16), `.vc-fair` (#eab308), `.vc-poor` (#f97316), `.vc-none` (#ef4444) — already defined in the mockup CSS.
 - Planet viewing quality is already implemented — do not re-implement. Reference the BFF enrichment module.
 - Type badge click modals (Total/Annular/Partial definitions) are a dashboard-only UI feature, not an API concern.
+- **AstronomyAPI.com obscuration scale:** The API returns `extraInfo.obscuration` as a 0–1 fraction (NOT 0–100 percentage). Multiply by 100 before comparing against the tier thresholds above.
+- **AstronomyAPI.com is location-filtered:** The API only returns eclipses visible from the observer's location. If an eclipse's shadow does not reach the observer, it is omitted entirely. There is no global/unfiltered mode. The "Not Visible" tier therefore never appears for eclipses (only for meteor showers where radiant altitude < 0°).
+- **AstronomyAPI.com response format:** Use `output=rows` query parameter to get `data.rows[].events[]` structure. The default `output=table` returns `data.table.rows[].cells[]` which is a different shape.
+
+### Eclipse query window and progressive fill
+
+- **API window:** Both endpoints default to a 10-year window (3652 days). This ensures enough data for the progressive fill algorithm.
+- **Dashboard progressive fill rule:** The eclipse cards (solar + lunar) show up to 4 columns, never scrolling. Algorithm:
+  1. Filter API results to eclipses within the next 2 years.
+  2. If 2-year results fill or overflow 4 columns, show only the first 4 from the 2-year set.
+  3. If fewer than 4 in the 2-year window, backfill from the full API result set (up to 10 years) until 4 columns are filled or data runs out.
+  4. Never trigger horizontal scrolling on eclipse cards — max 4 columns.
+- **Rationale:** Solar eclipses are rare per location (often 0–1 in a 2-year window). Showing a 10-year backfill prevents an empty card for locations between eclipse paths, while the 2-year priority ensures near-term events take precedence.
 
 ## References
 
