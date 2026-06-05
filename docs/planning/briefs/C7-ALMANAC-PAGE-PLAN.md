@@ -1,8 +1,11 @@
 # C7 — Almanac Page Redesign — Execution Plan
 
-**Status:** NOT STARTED.
+**Status:** IN PROGRESS — Planet viewing quality sub-plan complete (2026-06-04). Remaining: Phase 0–3.
 **Component:** C7 of the UI redesign. Parent roadmap: [UI-REDESIGN-PLAN.md](../../docs/planning/UI-REDESIGN-PLAN.md) Track C.
 **Per-component workflow:** [UI-REDESIGN-PLAN.md](../../docs/planning/UI-REDESIGN-PLAN.md) "Per-component workflow."
+
+**Completed sub-plans:**
+- [PLANET-VIEWING-QUALITY-PLAN.md](../../archive/PLANET-VIEWING-QUALITY-PLAN.md) — IMPLEMENTED 2026-06-04. 7Timer seeing forecast integration, BFF planet viewing quality enrichment, expanded planet data (magnitude, RA/Dec, elongation, transit time, Uranus/Neptune). Supersedes T1.8 below.
 
 ---
 
@@ -17,7 +20,7 @@
   - `weewx-clearskies-realtime` — BFF (Python). Agent: `clearskies-realtime-dev`.
   - `weewx-clearskies-api` — FastAPI + SQLAlchemy backend. Agent: `clearskies-api-dev`.
   - `weewx-clearskies-dashboard` — React 19 + Vite + Tailwind v4 + shadcn/ui + Recharts SPA. Agent: `clearskies-dashboard-dev`.
-- **Data flow:** dashboard → BFF `/api/v1/*` (REST + SSE) → API backend. Almanac endpoints go through the API directly (no BFF passthrough for almanac — BFF is for `/current` + SSE only).
+- **Data flow:** dashboard → BFF `/api/v1/*` (REST + SSE) → API backend. Most almanac endpoints pass through the BFF proxy. As of 2026-06-04, the BFF enriches `/almanac/planets` responses with per-planet viewing quality from 7Timer seeing forecast data (see archived PLANET-VIEWING-QUALITY-PLAN.md).
 - **Deploy targets:**
   - **API** runs on the **weewx** LXD container (192.168.7.20), NOT weather-dev. Deploy and test API changes there.
   - **Dashboard** dev server runs on **weather-dev** LXD container (192.168.2.113), accessible at `http://192.168.2.113:5173/`.
@@ -224,8 +227,14 @@ All computed in `repos/weewx-clearskies-api/weewx_clearskies_api/services/almana
 - Moon illumination for meteor interference: inside `compute_meteor_showers()` (line 1270–1282)
 - Radiant altitude: inside `compute_meteor_showers()` (line 1256–1268)
 
-**New computations:**
-- **Planet apparent magnitude:** Skyfield can compute this. Add to `compute_planets()` return dict. Used for viewing quality rating.
+**Already completed (PLANET-VIEWING-QUALITY-PLAN, 2026-06-04):**
+- **Planet apparent magnitude:** computed via `skyfield.magnitudelib.planetary_magnitude()` at local noon. Added to `compute_planets()` return dict.
+- **Planet transit time, RA/Dec, elongation:** computed via Skyfield. Added to `compute_planets()` and `PlanetEntry` response model.
+- **All 7 planets (Mercury–Neptune):** Uranus and Neptune added (previously capped at Saturn).
+- **Per-planet viewing quality:** computed in the BFF (`weewx_clearskies_realtime/enrichment/planet_viewing.py`) using 7Timer seeing forecast (80% weight), planet altitude (15%), transparency (5%), with cloud gate, Mercury elongation gate + score cap, and Uranus/Neptune moon penalty.
+- **7Timer seeing forecast endpoint:** `GET /almanac/seeing-forecast` with 3-hour cache warming.
+
+**Still needed for C7:**
 - **Meteor viewing quality rating:** Derive from existing moon illumination + radiant altitude. Formula: if `radiant_alt < 10°` → "Poor"; if `moon_illum > 75%` → degrade one level; if `radiant_alt > 40° AND moon_illum < 25%` → "Excellent"; else "Good". Add as `viewingQuality` field.
 - **Meteor active date range:** Compute from `peak_month/peak_day ± duration_days/2`. Add `activeStart` and `activeEnd` fields.
 - **Solar eclipses via Skyfield:** `skyfield.eclipselib` does NOT compute solar eclipses. Solar eclipse data comes entirely from AstronomyAPI.com. No Skyfield fallback for solar.
@@ -259,7 +268,8 @@ All computed in `repos/weewx-clearskies-api/weewx_clearskies_api/services/almana
 |---|---|---|
 | `GET /almanac/eclipses` | Split into `/almanac/eclipses/lunar` and `/almanac/eclipses/solar` | Enriched with contact times + visibility from AstronomyAPI.com |
 | `GET /almanac/meteor-showers` | Enriched response | Add `activeStart`, `activeEnd`, `description`, `viewingQuality`, `image` fields. Read from JSON catalog. |
-| `GET /almanac/planets` | Add magnitude | Add `magnitude` field (Skyfield-computed apparent magnitude) |
+| `GET /almanac/planets` | ✅ DONE (2026-06-04) | Magnitude, transitTime, RA/Dec, elongation added to API. BFF enriches with viewingQuality, viewingScore, bestViewingTime, clearWindow, conjunction, viewingNote. See archived PLANET-VIEWING-QUALITY-PLAN. |
+| `GET /almanac/seeing-forecast` | ✅ DONE (2026-06-04) | New endpoint. 7Timer ASTRO product, 3-hour intervals, cached by warmer. |
 
 ### 4.6 Static assets
 
@@ -334,9 +344,10 @@ Standard page header per `PageHeaderCard` (line 67 of `page-header-card.tsx`).
 
 **Top section:** Planet columns ordered by viewing time (earliest visible → latest), each showing:
 - NASA thumbnail (~48px WebP from `public/images/planets/`)
-- Viewing quality badge: derive from altitude + magnitude → "Excellent" / "Good" / "Fair"
-- Best viewing window: rise–set times formatted to local TZ
+- Viewing quality badge: ✅ already in API response as `viewingQuality` (Excellent/Good/Fair/Poor/Not Visible) — computed by BFF from 7Timer seeing forecast + altitude + transparency. Dashboard reads it directly, no client-side computation needed.
+- Best viewing time + clear window: `bestViewingTime` and `clearWindowStart`/`clearWindowEnd` from BFF enrichment
 - Sky position: direction + altitude ("High in the south", "In the east")
+- Conjunction callout: `conjunction` field from BFF when planet is within 5° of Moon
 
 **Bottom section:** SVG Gantt-chart timeline:
 - X-axis: sunset → sunrise (from `almanac.sun.set` → next `almanac.sun.rise`)
@@ -347,7 +358,7 @@ Standard page header per `PageHeaderCard` (line 67 of `page-header-card.tsx`).
 **Mobile:** Planet row scrollable horizontally; timeline compressed or stays horizontal with scroll.
 
 **Data:** `useAlmanacPlanets()` (line 762 of useWeatherData.ts) + `useAlmanac()` for sun rise/set.
-New field `magnitude` on PlanetEntry (API change, Task T2.5).
+PlanetEntry already has: `magnitude`, `transitTime`, `rightAscension`, `declination`, `elongation` (API), plus `viewingQuality`, `viewingScore`, `bestViewingTime`, `clearWindowStart`, `clearWindowEnd`, `conjunction`, `viewingNote` (BFF enrichment). ✅ All data fields done — dashboard just needs to render them.
 
 ### Surface D — Monthly Averages (`full`, auto height ~22rem)
 
@@ -540,20 +551,16 @@ Skyfield fallback: existing `useAlmanacEclipses()` (line 831) returns dates + ty
 - Accept: Response includes all new fields. Viewing quality computed correctly for edge cases (high moon + low radiant = Fair; low moon + high radiant = Excellent). `ruff` + `mypy` clean.
 - QC: coordinator verifies viewing quality for known cases (e.g., Perseids with crescent moon → Excellent; Quadrantids with full moon → Fair)
 
-**T1.8 — Add planet magnitude to planets endpoint**
-- Owner: `clearskies-api-dev` · Dep: none
-- Files: `repos/weewx-clearskies-api/weewx_clearskies_api/services/almanac.py` (modify `compute_planets()` at line 872), `models/responses.py` (update `PlanetEntry` at line 431)
-- Do:
-  - Add `magnitude: float | None` to `PlanetEntry` response model
-  - In `compute_planets()`, compute apparent magnitude using Skyfield for each visible planet
-  - Add `viewingQuality` derived field: magnitude < 0 AND altitude > 30° → "Excellent"; magnitude < 2 AND altitude > 15° → "Good"; else → "Fair"
-- Accept: Planet entries include magnitude (float, e.g., -4.6 for Venus) and viewingQuality. `ruff` + `mypy` clean.
-- QC: coordinator verifies magnitude values are astronomically reasonable (Venus ~-4, Jupiter ~-2, Saturn ~+0.5, Mars ~+1)
+**T1.8 — ~~Add planet magnitude to planets endpoint~~ ✅ SUPERSEDED**
+- **Status:** DONE — superseded by [PLANET-VIEWING-QUALITY-PLAN](../../archive/PLANET-VIEWING-QUALITY-PLAN.md) (2026-06-04).
+- Magnitude, RA/Dec, elongation, transit time added to API. Per-planet viewing quality (Excellent/Good/Fair/Poor/Not Visible) computed in BFF via 7Timer seeing forecast + altitude + transparency + cloud gate + Mercury/Uranus/Neptune special cases. Far more sophisticated than the original altitude+magnitude formula.
+- Commits: API `001b2cc`, `67e5cba`, `49c1bb2`, `0caa067`; BFF `6fba919`, `1d6868a`; Dashboard `d47aa72`, `28596ed`, `96c126c`.
 
 **T1.9 — Update OpenAPI contract**
-- Owner: `clearskies-api-dev` · Dep: T1.4, T1.5, T1.7, T1.8
+- Owner: `clearskies-api-dev` · Dep: T1.4, T1.5, T1.7, ~~T1.8~~
 - Files: `docs/contracts/openapi-v1.yaml` (authoritative) + `repos/weewx-clearskies-dashboard/src/api/openapi-v1.yaml` (sync copy)
-- Do: Update/add schemas for: `SolarEclipseEntry`, enriched `LunarEclipseEntry`, enriched `MeteorShowerEntry`, enriched `PlanetEntry`. Add new endpoint `/almanac/eclipses/solar`. Update `/almanac/eclipses` → `/almanac/eclipses/lunar`. Sync both copies.
+- Do: Update/add schemas for: `SolarEclipseEntry`, enriched `LunarEclipseEntry`, enriched `MeteorShowerEntry`. Add new endpoint `/almanac/eclipses/solar`. Update `/almanac/eclipses` → `/almanac/eclipses/lunar`. Sync both copies.
+- **Partially done (2026-06-04):** `PlanetEntry` schema (with viewing quality fields), `/almanac/seeing-forecast` endpoint, and `SeeingForecastResponse` schema already added to contract (commits `3130077`, `28596ed`). Remaining: eclipse + meteor schemas.
 - Accept: YAML valid. Both copies identical. New schemas match actual API response.
 - QC: coordinator diff review, validates YAML syntax
 
@@ -586,7 +593,7 @@ Skyfield fallback: existing `useAlmanacEclipses()` (line 831) returns dates + ty
   - Add `SolarEclipseData` type with eclipses array
   - Update `LunarEclipseEntry` (line 684): add contactTimes, obscuration, visibility
   - Update `MeteorShowerEntry` (line 698): add activeStart, activeEnd, description, viewingQuality, image
-  - Update `PlanetEntry` (line 637): add magnitude, viewingQuality
+  - ~~Update `PlanetEntry` (line 637): add magnitude, viewingQuality~~ ✅ DONE — PlanetEntry already has magnitude, transitTime, RA/Dec, elongation, viewingQuality, viewingScore, bestViewingTime, clearWindow, conjunction, viewingNote (commits `d47aa72`, `28596ed`)
 - Accept: `tsc --noEmit` → 0 errors. Types match OpenAPI contract from T1.9.
 - QC: coordinator diff review
 
@@ -715,6 +722,7 @@ Skyfield fallback: existing `useAlmanacEclipses()` (line 831) returns dates + ty
 - Owner: `clearskies-dashboard-dev` · Dep: T2.1
 - Files: `repos/weewx-clearskies-dashboard/src/mock/eclipses.ts`, `src/mock/meteorShowers.ts`, `src/mock/planets.ts` (update existing), `src/mock/solarEclipses.ts` (new)
 - Do: Update mock data to include new fields (contactTimes, visibility, viewingQuality, magnitude, activeStart, activeEnd, description, image). Add solar eclipse mock data.
+- **Partially done (2026-06-04):** `planets.ts` mock updated with all new PlanetEntry fields (commit `96c126c`). Remaining: eclipses, meteorShowers, solarEclipses mocks.
 - Accept: Mock data matches updated TypeScript types. App renders correctly in mock mode.
 - QC: coordinator diff review
 
