@@ -627,6 +627,24 @@ paths:
         registry. Every array is either 12 elements (one per month,
         Jan–Dec) or omitted entirely — no partial arrays.
       operationId: getClimatologyMonthly
+      parameters:
+        - name: fields
+          in: query
+          required: false
+          description: |
+            Comma-separated list of canonical field names to include
+            (e.g. `outTemp,rain`). Omit to return all available fields.
+          schema: { type: string }
+        - name: agg
+          in: query
+          required: false
+          description: |
+            Aggregation type to apply. Omit to use the server default
+            (`avg_max` / `avg_min` pair for temperatures, `avg_monthly_total`
+            for rain).
+          schema:
+            type: string
+            enum: [avg_max, avg_min, avg, avg_monthly_total, sum]
       responses:
         '200':
           description: Monthly climatology averages
@@ -748,6 +766,23 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChartGroupResponse' }
+        default: { $ref: '#/components/responses/Problem' }
+
+  /charts/config:
+    get:
+      tags: [Charts]
+      summary: Full chart configuration
+      description: |
+        Returns the full operator chart configuration tree including all
+        groups, charts, and series that survived pruning against the
+        ColumnRegistry at startup.
+      operationId: getChartsConfig
+      responses:
+        '200':
+          description: Full chart configuration
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChartsConfigResponse' }
         default: { $ref: '#/components/responses/Problem' }
 
   # -------------------------------------------------------------------
@@ -2722,5 +2757,134 @@ components:
       type: object
       properties:
         data: { $ref: '#/components/schemas/BrandingConfig' }
+        generatedAt: { type: string, format: date-time }
+      required: [data, generatedAt]
+
+    # ---------- Charts config ----------
+
+    SeriesConfigResponse:
+      type: object
+      description: One data series configuration within a chart.
+      properties:
+        seriesId: { type: string }
+        observationType: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        type: { type: string, nullable: true }
+        zIndex: { type: integer, nullable: true }
+        yAxis: { type: integer, nullable: true }
+        yAxisMin: { type: number, nullable: true }
+        yAxisMax: { type: number, nullable: true }
+        yAxisLabel: { type: string, nullable: true }
+        yAxisTickInterval: { type: number, nullable: true }
+        lineWidth: { type: integer, nullable: true }
+        connectNulls: { type: boolean, nullable: true }
+        visible: { type: boolean, nullable: true }
+        opacity: { type: number, nullable: true }
+        stacking: { type: string, nullable: true }
+        aggregateType: { type: string, nullable: true }
+        averageType: { type: string, nullable: true }
+        markerEnabled: { type: boolean, nullable: true }
+        markerRadius: { type: integer, nullable: true }
+        beaufortColors:
+          type: object
+          description: Map of Beaufort scale integer (as string key) to hex color string.
+          additionalProperties: { type: string }
+        rangeType: { type: string, nullable: true }
+        areaDisplay: { type: integer, nullable: true }
+        useCustomSql: { type: boolean }
+        customSqlQuery: { type: string, nullable: true }
+        xColumn: { type: string, nullable: true }
+        yColumn: { type: string, nullable: true }
+      required: [seriesId, useCustomSql]
+
+    ChartConfigResponse:
+      type: object
+      description: One chart configuration within a group.
+      properties:
+        chartId: { type: string }
+        title: { type: string, nullable: true }
+        type: { type: string, nullable: true }
+        connectNulls: { type: boolean, nullable: true }
+        yAxisMin: { type: number, nullable: true }
+        aggregateType: { type: string, nullable: true }
+        aggregateInterval: { type: integer, nullable: true }
+        xAxisGroupby: { type: string, nullable: true }
+        xAxisCategories:
+          type: array
+          items: { type: string }
+        forceFullYear: { type: boolean, nullable: true }
+        series:
+          type: array
+          items: { $ref: '#/components/schemas/SeriesConfigResponse' }
+      required: [chartId]
+
+    ChartGroupConfigResponse:
+      type: object
+      description: One chart group (tab) configuration.
+      properties:
+        groupId: { type: string }
+        title: { type: string, nullable: true }
+        showButton: { type: boolean }
+        buttonText: { type: string, nullable: true }
+        type: { type: string, nullable: true }
+        enableDateRanges: { type: boolean }
+        rollingRanges:
+          type: array
+          items: { type: string }
+        availableYears:
+          type: array
+          items: { type: integer }
+        enableMonthlyBreakdown: { type: boolean }
+        timeLength:
+          oneOf:
+            - { type: integer }
+            - { type: string }
+            - { type: 'null' }
+          description: Time window length (integer seconds or string shorthand, e.g. "1y").
+        timespanStart: { type: integer, nullable: true }
+        timespanStop: { type: integer, nullable: true }
+        tooltipDateFormat: { type: string, nullable: true }
+        gapsize: { type: integer, nullable: true }
+        aggregateInterval: { type: integer, nullable: true }
+        aggregateType: { type: string, nullable: true }
+        forceFullYear: { type: boolean }
+        startAtBeginningOfMonth: { type: boolean }
+        pageContent: { type: string, nullable: true }
+        generate: { type: string, nullable: true }
+        charts:
+          type: array
+          items: { $ref: '#/components/schemas/ChartConfigResponse' }
+      required: [groupId, showButton, enableDateRanges, enableMonthlyBreakdown, forceFullYear, startAtBeginningOfMonth]
+
+    ChartsConfigData:
+      type: object
+      description: Full charts configuration tree (global defaults + all groups).
+      properties:
+        aggregateType: { type: string, nullable: true }
+        timeLength:
+          oneOf:
+            - { type: integer }
+            - { type: string }
+            - { type: 'null' }
+          description: Global default time window length.
+        type:
+          type: string
+          description: Default chart type (e.g. "line").
+        colors:
+          type: array
+          items: { type: string }
+          description: Global default color palette (hex strings).
+        tooltipDateFormat: { type: string, nullable: true }
+        groups:
+          type: array
+          items: { $ref: '#/components/schemas/ChartGroupConfigResponse' }
+      required: [type]
+
+    ChartsConfigResponse:
+      type: object
+      description: Envelope for GET /charts/config.
+      properties:
+        data: { $ref: '#/components/schemas/ChartsConfigData' }
         generatedAt: { type: string, format: date-time }
       required: [data, generatedAt]
