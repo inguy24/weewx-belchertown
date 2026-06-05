@@ -30,7 +30,22 @@ Eclipse data for sun or moon. **This is the primary endpoint for Clear Skies alm
 | `to_date` | YYYY-MM-DD | `2026-12-31` |
 | `time` | HH:MM:SS | `00:00:00` |
 
-**Response (body=moon — lunar eclipses):**
+**Optional query parameters:**
+
+| Param | Default | Options | Notes |
+|---|---|---|---|
+| `output` | `table` | `rows`, `table` | Controls response structure (see below) |
+
+**Response format:** Two formats available via `output` param:
+
+- `output=rows` → `data.rows[].body` + `data.rows[].events[]` — flat list, easier to parse
+- `output=table` (default) → `data.table.rows[].entry` + `data.table.rows[].cells[]` — tabular format
+
+**Clear Skies uses `output=rows`** for simpler parsing.
+
+**IMPORTANT: The API only returns eclipses visible from the observer's location.** If an eclipse is not visible from the given latitude/longitude (e.g., a solar eclipse whose partial shadow doesn't reach the observer), it will not appear in the response. There is no way to query for all global eclipses — the location parameters are required and the API filters by them. (Verified 2026-06-04: Aug 12, 2026 total solar eclipse not returned for Huntington Beach, CA (33.66°N, -117.98°W) but returned as partial for NYC (40.7°N, -74.0°W).)
+
+**Response (output=rows, body=moon — lunar eclipses):**
 ```json
 {
   "data": {
@@ -75,7 +90,9 @@ Eclipse data for sun or moon. **This is the primary endpoint for Clear Skies alm
 
 **extraInfo:** `{ "obscuration": float }` — 0.0 to 1.0 scale
 
-**CRITICAL:** Returns ALL global eclipses in the date range, NOT filtered by location. Use `altitude` at `peak` to determine local visibility: negative altitude = below horizon = not visible from the observer's location.
+**CRITICAL: Location-filtered results.** The API ONLY returns eclipses visible from the observer's location. If an eclipse's shadow does not reach the observer, it is omitted entirely from the response. There is no global/unfiltered mode. (Corrected 2026-06-04 — previous version incorrectly stated "returns ALL global eclipses".)
+
+**Altitude at peak:** For eclipses that ARE returned, `peak.altitude` indicates how high in the sky the eclipse appears. Negative altitude means the eclipse phase occurs below the horizon (the event is partially visible but that specific phase is not).
 
 **Determining totality path (solar):** If `totalStart` is non-null, the observer IS within the path of totality/annularity.
 
