@@ -29,17 +29,20 @@ During daytime, the station's pyranometer is the authoritative source. Provider 
 
 **Clear sky index:** kc = GHI_measured / GHI_clearsky, clamped to [0, 1.2]. Values >1.0 occur from cloud-edge enhancement (Tapakis & Charalambides 2014).
 
-**Two-dimensional classification** over a **30-minute sliding window** of loop data (~5-second MQTT intervals, ~360 samples):
+**Sigma-first two-dimensional classification** over a **30-minute sliding window** of loop data (~5-second MQTT intervals, ~360 samples):
 
-| mean(kc) | σ(kc) | Classification |
-|---|---|---|
-| ≥ 0.85 | < 0.10 | Clear |
-| ≥ 0.85 | ≥ 0.10 | Mostly Clear (cloud-edge events) |
-| 0.40–0.85 | ≥ 0.10 | Partly Cloudy (broken cumulus) |
-| 0.40–0.85 | < 0.10 | Mostly Cloudy (uniform stratus) |
-| < 0.40 | any | Overcast |
+> **Amendment (2026-06-05):** Classification axes swapped — σ(kc) is now the primary axis, mean(kc) secondary. The original table used mean(kc) as primary, which conflated cloud opacity with cloud coverage. A thin marine stratus layer (kc ≈ 0.70) with low variability was classified as "Mostly Cloudy" or "Partly Cloudy" instead of "Overcast." The curve shape (σ) is the authoritative signal for cloud coverage fraction: a flat line below clear-sky = uniform cover regardless of how much light penetrates. Mean(kc) within the low-sigma branch indicates layer thickness/opacity, not coverage. "Heavily Overcast" added for very thick uniform layers (kc < 0.30).
 
-σ(kc) threshold of 0.10 separates stable skies from intermittent clouds (Dürr & Philipona 2001). The 30-minute window provides ~360 samples at 5-second intervals — sufficient statistical power for variance estimation.
+| σ(kc) | mean(kc) | Classification | Physical meaning |
+|---|---|---|---|
+| < 0.10 | ≥ 0.85 | Clear | Flat line near clear-sky model |
+| < 0.10 | 0.30–0.85 | Overcast | Flat line below clear-sky — uniform cloud layer, any thickness |
+| < 0.10 | < 0.30 | Heavily Overcast | Flat line far below clear-sky — thick, dark uniform layer |
+| ≥ 0.10 | ≥ 0.70 | Mostly Clear | Mostly sun, occasional cloud passages |
+| ≥ 0.10 | 0.40–0.70 | Partly Cloudy | Mix of sun and cloud |
+| ≥ 0.10 | < 0.40 | Mostly Cloudy | Mostly cloud with occasional sun breaks |
+
+σ(kc) threshold of 0.10 separates uniform skies from broken/variable skies (Dürr & Philipona 2001). The 30-minute window provides ~360 samples at 5-second intervals — sufficient statistical power for variance estimation.
 
 **Startup:** Until **~3 minutes** of data accumulates (**36 samples** at ~5-second intervals),
 fall back to provider cloud cover. If no provider either, report no sky condition
