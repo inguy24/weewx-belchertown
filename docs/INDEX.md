@@ -14,7 +14,7 @@ This repo started as a Belchertown skin evaluation and pivoted to the Clear Skie
 
 - **[planning/CLEAR-SKIES-PLAN.md](planning/CLEAR-SKIES-PLAN.md)** — phase tracker for the Clear Skies build (api / realtime / dashboard / stack repos). Plan body is an index — decision content lives in ADRs per [rules/clearskies-process.md](../rules/clearskies-process.md).
 - **[planning/briefs/CONFIGURABLE-CHARTS-PLAN.md](planning/briefs/CONFIGURABLE-CHARTS-PLAN.md)** — operator-configurable charts system (charts.conf, wind rose, custom SQL, weather range, LTTB, export, migration tool).
-- **[planning/briefs/LAYER-CORRECTION-PLAN.md](planning/briefs/LAYER-CORRECTION-PLAN.md)** — API data flexibility (`agg` param) + layer correction (wind rose Beaufort binning moved from API to dashboard per ADR-041/042).
+- ~~planning/briefs/LAYER-CORRECTION-PLAN.md~~ → archived (see below)
 
 ## Decisions
 
@@ -64,6 +64,7 @@ Belchertown-era operational howtos:
 
 ## Archive
 
+- [archive/LAYER-CORRECTION-PLAN.md](archive/LAYER-CORRECTION-PLAN.md) — API `agg` param + wind rose layer correction (ADR-041/042). ✅ Complete 2026-06-05.
 - [archive/MOBILE-BACKGROUND-POLISH-PLAN.md](archive/MOBILE-BACKGROUND-POLISH-PLAN.md) — Mobile layout fixes, background system polish, per-card collapse fixes. ✅ Complete 2026-06-03.
 - [archive/FORECAST-DETAIL-SNOW-PLAN.md](archive/FORECAST-DETAIL-SNOW-PLAN.md) — 7-day forecast detail panel enrichment + precipitation/snow support. ✅ Complete 2026-06-03.
 - [archive/AQI-CENTRALIZATION-PLAN.md](archive/AQI-CENTRALIZATION-PLAN.md) — Route AQI through weewx as the single hub. ✅ Complete 2026-04-29.

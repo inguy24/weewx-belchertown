@@ -1,6 +1,6 @@
 # API Data Flexibility + Layer Correction Plan
 
-**Status:** APPROVED 2026-06-05
+**Status:** ✅ COMPLETE 2026-06-05 — all phases delivered, pushed, deployed, verified live.
 **Predecessor:** [CONFIGURABLE-CHARTS-PLAN.md](CONFIGURABLE-CHARTS-PLAN.md) Phase 4
 **Parent roadmap:** [CLEAR-SKIES-PLAN.md](../CLEAR-SKIES-PLAN.md)
 
@@ -323,16 +323,25 @@ Phase 5 (cleanup) ────> after all code lands
 
 ## 5. Verification bar
 
-- [ ] `ARCHITECTURE.md` has "Layer Responsibilities" section defining API/BFF/Dashboard boundaries
-- [ ] ADR-041 has computation boundary amendment
-- [ ] `GET /archive?interval=day&fields=outTemp&agg=min` → daily minimum temperatures
-- [ ] `GET /archive?interval=day&fields=outTemp&agg=max` → daily maximum temperatures
-- [ ] `GET /archive?interval=day&fields=outTemp` (no agg) → daily avg (backward compatible)
-- [ ] `GET /charts/wind-rose` → 404 (endpoint removed)
-- [ ] Wind rose chart on `/charts` page renders identically (using archive data + client-side binning)
-- [ ] Weather range chart renders for operator's monthly + annual groups
-- [ ] OpenAPI contract updated (wind-rose removed, agg param added)
-- [ ] CONFIGURABLE-CHARTS-PLAN.md updated with layer correction notes
-- [ ] `tsc --noEmit` → 0 errors (dashboard)
-- [ ] `ruff` + `mypy` clean (API)
+- [x] `ARCHITECTURE.md` has "Layer Responsibilities" section defining API/BFF/Dashboard boundaries
+- [x] ADR-041 has computation boundary amendment
+- [x] `GET /archive?interval=day&fields=outTemp&agg=min` → daily minimum temperatures (verified: 61.88°F)
+- [x] `GET /archive?interval=day&fields=outTemp&agg=max` → daily maximum temperatures
+- [x] `GET /archive?interval=day&fields=outTemp` (no agg) → daily avg (backward compatible)
+- [x] `GET /charts/wind-rose` → 404 (endpoint removed — verified live)
+- [x] Wind rose chart on `/charts` page renders identically (using archive data + client-side binning)
+- [x] Weather range chart renders for operator's monthly + annual groups
+- [x] OpenAPI contract updated (wind-rose schemas never existed; agg param added — commit `653c095`)
+- [x] CONFIGURABLE-CHARTS-PLAN.md updated with layer correction notes
+- [x] `tsc --noEmit` → 0 errors (dashboard)
+- [x] `ruff` + `mypy` clean (API — 0 introduced errors across all commits)
+- [x] BFF repo: ZERO code changes (confirms correct architecture)
+
+### Deferred items (tracked in UI-REDESIGN-PLAN.md LC-1 through LC-5)
+
+- LC-1 [MEDIUM]: WeatherRangeChart gradient colors hardcoded hex → CSS variables
+- LC-2 [MEDIUM]: Range chart table/CSV export shows raw data instead of aggregated high/low
+- LC-3 [LOW]: `agg` missing from `useArchive` deps array (latent)
+- LC-4 [LOW]: No unit tests for `wind-rose-binning.ts`
+- LC-5 [LOW]: Wasteful main archive fetch for range chart groups (couples with LC-2)
 - [ ] BFF repo: ZERO code changes (confirms correct architecture)
