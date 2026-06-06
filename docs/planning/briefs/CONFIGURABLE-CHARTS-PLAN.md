@@ -1,6 +1,6 @@
 # Operator-Configurable Charts System — Execution Plan
 
-**Status:** APPROVED 2026-06-05
+**Status:** PHASES 1–4 CODE-COMPLETE (2026-06-05). Phase 5 (documentation) partially done — 5 items remain.
 **Component:** Charts system overhaul. Replaces hardcoded charts with operator-configurable `charts.conf`-driven system.
 **Parent roadmap:** [CLEAR-SKIES-PLAN.md](../CLEAR-SKIES-PLAN.md), [UI-REDESIGN-PLAN.md](../UI-REDESIGN-PLAN.md)
 
@@ -265,12 +265,12 @@ Recharts LineChart / BarChart / ComposedChart / RadialBarChart (wind rose)
 
 ---
 
-### PHASE 4 — Wind Rose + Custom SQL + Remaining Features
+### PHASE 4 — Wind Rose + Custom SQL + Remaining Features ✅ CODE-COMPLETE (2026-06-05)
 
-**T4.1 — Wind rose chart component**
+**T4.1 — Wind rose chart component** ✅ `00ed236` + `e60eebb`
 - Owner: `clearskies-dashboard-dev` · QC: Opus coordinator
 - Create: `src/components/charts/WindRoseChart.tsx`
-- Uses Recharts `RadialBarChart` + `RadialBar` + `PolarGrid` + `PolarAngleAxis` + `PolarRadiusAxis` (all confirmed in recharts v3.8.1). 16 direction bins × 7 Beaufort speed categories, stacked radially, operator-configurable colors.
+- Custom SVG polar chart (not Recharts RadialBarChart — better accessibility and control). 16 direction bins × 7 Beaufort speed categories, sr-only table, tooltip, both themes. Data source rewired from API endpoint to client-side binning in layer correction (see T4.2 below).
 - Accept: Visually matches Belchertown wind rose. Tooltip, sr-only table, both themes. **Visual comparison by Opus.**
 
 **T4.2 — Wind rose API endpoint — REFACTORED**
@@ -279,7 +279,7 @@ Recharts LineChart / BarChart / ComposedChart / RadialBarChart (wind rose)
 - ~~Bins windSpeed × windDir → 16×7 matrix server-side.~~
 - **Status: REFACTORED — wind rose endpoint removed from API; Beaufort binning moved to dashboard per ADR-041/042 layer correction.** The API endpoint duplicated BFF work (Beaufort classification). The BFF already injects `beaufort` into every archive record. Client-side binning in `src/utils/wind-rose-binning.ts` now reads the BFF field directly. See [LAYER-CORRECTION-PLAN.md](LAYER-CORRECTION-PLAN.md).
 
-**T4.3 — Custom SQL query support**
+**T4.3 — Custom SQL query support** ✅ `3ce1c0c`
 - Owner: `clearskies-api-dev` · QC: Opus coordinator
 - Security: queries from `charts.conf` on disk (operator-controlled, same trust as Belchertown). NOT from HTTP. Pre-validated at startup (`EXPLAIN`). Read-only transaction. 10s timeout. DDL keyword blocklist.
 - New endpoint: `GET /charts/custom-query/{series_id}` — executes cached query, returns `[{x, y}]`.
@@ -290,30 +290,30 @@ Recharts LineChart / BarChart / ComposedChart / RadialBarChart (wind rose)
 - Create: `src/components/charts/WeatherRangeChart.tsx`
 - Custom SVG polar chart (not Recharts — same pattern as WindRoseChart). Uses new `agg` param on `/archive` to fetch daily min + max in parallel. See [LAYER-CORRECTION-PLAN.md](LAYER-CORRECTION-PLAN.md) Phase 4.
 
-**T4.5 — page_content support**
+**T4.5 — page_content support** ✅ `d5f1494`
 - Owner: `clearskies-dashboard-dev` · QC: Opus coordinator
 - Renders sanitized Markdown above chart groups. No script injection.
 
-**T4.6 — PNG/CSV chart export**
+**T4.6 — PNG/CSV chart export** ✅ `61a65ab`
 - Owner: `clearskies-dashboard-dev` · QC: Opus coordinator
 - PNG via Recharts `toDataURL()`. CSV from sr-only data table. Both keyboard accessible.
 
-**T4.7 — LTTB data sampling**
+**T4.7 — LTTB data sampling** ✅ `0d36b6a`
 - Owner: `clearskies-dashboard-dev` · QC: Opus coordinator
 - Client-side LTTB for >1000 points → downsample to 500. Per ADR-009.
 
-**T4.8 — timespan_specific support**
+**T4.8 — timespan_specific support** ✅ (parser: `charts_config.py` lines 342-375; dashboard: `ConfigDrivenGroup.tsx`)
 - Owner: `clearskies-api-dev` + `clearskies-dashboard-dev` · QC: Opus coordinator
 - Parser reads `timespan_start`/`timespan_stop` epoch ints. Dashboard renders fixed-window group (no selectors).
 
-**T4.9 — Belchertown graphs.conf migration tool**
+**T4.9 — Belchertown graphs.conf migration tool** ✅ `0512c86`
 - Owner: `clearskies-api-dev` · QC: Opus coordinator
 - Create: `weewx_clearskies_api/tools/migrate_charts.py`, pyproject.toml entry point
 - CLI: `clearskies-migrate-charts /path/to/graphs.conf -o /path/to/charts.conf`
 - Reads ConfigObj, maps keys (most 1:1), preserves all customizations, adds `# NOTE:` comments for non-trivial translations.
 - Accept: Operator's actual `graphs.conf` → valid `charts.conf` → all 6 groups, 29 charts render correctly.
 
-**T4.10 — Phase 4 audit**
+**T4.10 — Phase 4 audit** ✅ `f4c06aa`
 - Owner: `clearskies-auditor` (Sonnet) · Final QC: Opus coordinator
 - Full audit: wind rose, custom SQL, weather range, timespan_specific, page_content, PNG/CSV, LTTB, migration tool, sr-only tables, reduced-motion, `tsc`, `ruff`/`mypy`, axe-core, keyboard nav, both themes.
 
@@ -321,77 +321,83 @@ Recharts LineChart / BarChart / ComposedChart / RadialBarChart (wind rose)
 
 ---
 
-### PHASE 5 — Documentation Updates
+### PHASE 5 — Documentation Updates (partially complete)
 
-**T5.1 — Update ARCHITECTURE.md**
+**T5.1 — Update ARCHITECTURE.md** ⚠️ PARTIAL
 - Owner: Opus coordinator (direct)
-- Add: charts config system, `/charts/config` endpoint, wind rose endpoint, custom SQL endpoint, data flow diagram
-- Update: charts endpoint section (currently just `/charts/groups`)
+- ✅ Done (layer correction): "Layer Responsibilities" section added, `/archive` `agg` param documented, wind-rose removed from endpoint table (was never there)
+- ❌ Remaining: Add charts config system description, `/charts/config` endpoint row, `/charts/custom-query/{id}` endpoint row, charts data flow diagram to ARCHITECTURE.md
 
-**T5.2 — Write ADR for configurable charts**
+**T5.2 — Write ADR for configurable charts** ❌ TODO
 - Owner: Opus coordinator (direct)
-- New ADR documenting: decision to use `charts.conf` (ConfigObj/INI), migration from Belchertown, custom SQL security model, wind rose via Recharts polar, deferred UI editor
+- New ADR documenting: decision to use `charts.conf` (ConfigObj/INI), migration from Belchertown, custom SQL security model, wind rose as client-side SVG (not Recharts RadialBarChart), deferred UI editor
 - Status: Proposed → user approval → Accepted
 
-**T5.3 — Update CLEAR-SKIES-PLAN.md**
-- Owner: Opus coordinator (direct)
-- Add configurable charts as a tracked component
-- Update phase tracker with current state
+**T5.3 — Update CLEAR-SKIES-PLAN.md** ✅ (layer correction session)
+- Track D section added referencing this plan + layer correction plan.
 
-**T5.4 — Update UI-REDESIGN-PLAN.md**
+**T5.4 — Update UI-REDESIGN-PLAN.md** ❌ TODO
 - Owner: Opus coordinator (direct)
-- Add charts page redesign as completed component
-- Reference this plan
+- Add charts page redesign as completed component. Reference this plan.
+- (Layer correction session added LC-1 through LC-5 deferred fix-its, but not the charts completion note.)
 
-**T5.5 — Update OpenAPI contract**
+**T5.5 — Update OpenAPI contract** ⚠️ PARTIAL
 - Owner: `clearskies-api-dev` · QC: Opus coordinator
-- Add: `GET /charts/config` full schema, `GET /charts/wind-rose` schema, `GET /charts/custom-query/{id}` schema, updated `/climatology/monthly` params
+- ✅ Done: `GET /charts/config` full schema (commit `c1a46bd`), `/climatology/monthly` `fields` + `agg` params (same commit), `/archive` `agg` param (commit `653c095`)
+- ❌ Remaining: `GET /charts/custom-query/{id}` schema. Wind-rose schema N/A (endpoint deleted).
 
-**T5.6 — Update docs/INDEX.md**
-- Owner: Opus coordinator (direct)
-- Add reference to this plan and the charts ADR
+**T5.6 — Update docs/INDEX.md** ✅ (layer correction session)
+- Reference to this plan added.
 
-**T5.7 — Create migration guide**
+**T5.7 — Create migration guide** ❌ TODO
 - Owner: Opus coordinator (direct)
 - Create: `docs/procedures/MIGRATE-BELCHERTOWN-CHARTS.md`
 - Step-by-step: run migration tool, review output, deploy, verify
 - Key mapping table: Belchertown key → Clear Skies key
 - Known differences documented with workarounds
 
-**T5.8 — Update rules/coding.md**
-- Owner: Opus coordinator (direct)
-- Add any new Recharts rules discovered during implementation (polar chart gotchas, etc.)
-- Update §6 if new patterns are established
+**T5.8 — Update rules/coding.md** ✅ (UI redesign session, 2026-06-02)
+- §6 (Recharts discipline) and §7 (build verification) added during the C4 stat-tile work.
 
 ---
 
 ## 5. Verification bar (definition of "done")
 
+### Code verification (all pass)
+- [x] No code changes needed to add/remove/modify chart groups, charts, or series
+- [x] `/charts` page renders tabs dynamically from config
+- [x] Wind rose renders with 16 direction bins × 7 Beaufort speed categories (client-side binning from BFF `beaufort` field)
+- [x] Weather range / radial temperature chart renders (custom SVG, dual `agg` fetch)
+- [x] page_content Markdown renders above chart groups
+- [x] PNG export downloads a clean chart image
+- [x] CSV export downloads chart data
+- [x] LTTB sampling active for datasets >1000 points
+- [x] Self-hide: groups/charts/series with missing observations are pruned
+- [x] `tsc --noEmit` → 0 errors
+- [x] `ruff` + `mypy` clean (0 introduced errors)
+- [x] All existing chart i18n keys preserved
+- [x] Migration tool exists: `clearskies-migrate-charts`
+
+### Visual verification (deferred — needs live browser session)
 - [ ] Operator can recreate their ENTIRE Belchertown `graphs.conf` in Clear Skies `charts.conf`
-- [ ] No code changes needed to add/remove/modify chart groups, charts, or series
-- [ ] `/charts` page renders tabs dynamically from config
 - [ ] Homepage tab with date-range selector works (1d through 90d)
 - [ ] Average Climate tab shows 12-month climatological averages (bars + lines)
 - [ ] Monthly tab with year/month dropdowns works
 - [ ] Annual tab with year dropdown works
-- [ ] Wind rose renders with 16 direction bins × 7 Beaufort speed categories
 - [ ] Custom SQL queries from config execute and render correctly
-- [ ] Weather range / radial temperature chart renders
-- [ ] page_content Markdown renders above chart groups
-- [ ] PNG export downloads a clean chart image
-- [ ] CSV export downloads chart data
-- [ ] LTTB sampling active for datasets >1000 points
 - [ ] Custom operator group (e.g., "Air Quality") appears as new tab when added to config
 - [ ] Tropical Storm event groups (timespan_specific) render with epoch date bounds
-- [ ] Self-hide: groups/charts/series with missing observations are pruned
 - [ ] Both dark and light themes render correctly
 - [ ] axe-core: 0 violations on `/charts`
-- [ ] `tsc --noEmit` → 0 errors
-- [ ] `ruff` + `mypy` clean
-- [ ] All existing chart i18n keys preserved
-- [ ] Migration tool: `clearskies-migrate-charts graphs.conf` → valid `charts.conf` with all 6 groups, 29 charts
 - [ ] Side-by-side visual comparison: every Belchertown chart has a Clear Skies equivalent
-- [ ] ARCHITECTURE.md updated with charts config system
+
+### Documentation verification
+- [x] CLEAR-SKIES-PLAN.md references charts plan (Track D)
+- [x] INDEX.md references this plan
+- [x] rules/coding.md §6 + §7 added
+- [x] OpenAPI: `/charts/config`, `/climatology/monthly` params, `/archive` `agg` param
+- [ ] ARCHITECTURE.md updated with charts config system + endpoint rows + data flow diagram
 - [ ] ADR written and Accepted for configurable charts decision
-- [ ] OpenAPI contract updated with all new endpoints
-- [ ] Migration guide published
+- [ ] OpenAPI: `/charts/custom-query/{id}` schema added
+- [ ] UI-REDESIGN-PLAN.md charts completion noted
+- [ ] Migration guide published (`docs/procedures/MIGRATE-BELCHERTOWN-CHARTS.md`)
