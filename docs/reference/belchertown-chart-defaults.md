@@ -329,3 +329,4 @@ These are NOT defaults — they're the operator's actual configuration:
 | No fixed text artifacts | sr-only tables wrapped in div | CLOSED (2026-06-07) — T-C3 |
 | Proportional data scaling | `aggregate_interval` + `agg_map` API params | CLOSED (2026-06-07) — matches Belchertown |
 | Per-field aggregation in rolling ranges | `agg_map` passes operator's `aggregate_type` per series | CLOSED (2026-06-07) |
+| rainTotal cumulative running total | `sumcumulative` aggregate type — API post-processes SUM into running total | CLOSED (2026-06-07) — API archive.py |
