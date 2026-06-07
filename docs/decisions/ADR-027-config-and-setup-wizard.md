@@ -80,6 +80,8 @@ Search order:
 
 First match wins. Service refuses to start with no config and no `--init`.
 
+**All config files — including those served to the browser (e.g., `webcam.json`) — live in this directory, never in the web root.** The web root (`/var/www/clearskies/`) is wiped by `rsync --delete` on every dashboard deploy. Browser-accessible config files are served via a Caddy `handle` route pointing at `/etc/weewx-clearskies/`.
+
 ### 3. Secrets: single env file
 
 `/etc/weewx-clearskies/secrets.env`, mode `0600`, owner = service user. systemd `EnvironmentFile=`, docker-compose `env_file:`. Configuration UI creates it; manual edits supported.
@@ -158,6 +160,8 @@ Generated `.conf` files carry `# MANAGED REGION BEGIN` / `# MANAGED REGION END` 
 ├── api.conf              # api config, no secrets
 ├── realtime.conf         # realtime config, no secrets
 ├── stack.conf            # stack + [ui] config
+├── charts.conf           # chart groups/charts/series (migrated from Belchertown graphs.conf)
+├── webcam.json           # webcam config (written by wizard step 7, served by Caddy)
 ├── secrets.env           # mode 0600, owner = service user
 ├── ui-cert.pem           # self-signed cert (mode 0644)
 ├── ui-key.pem            # private key (mode 0600)
