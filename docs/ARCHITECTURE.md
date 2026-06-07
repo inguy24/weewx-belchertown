@@ -172,7 +172,7 @@ Wizard step 7 (apply)
 |------|--------|---------|
 | `/api/v1/station` | GET | Station metadata (singleton). The `name` field is the operator's configured display location, read from `weewx.conf [Station] location` at startup. |
 | `/api/v1/current` | GET | Most recent observation. The `weatherText` field is always null in the API response; the BFF enrichment pipeline (`enrich_weather_text`) injects the composed conditions string before serving the dashboard (ADR-041, ADR-044). |
-| `/api/v1/archive` | GET | Historical archive records with pagination/filtering. Optional `agg` param (`min`/`max`/`avg`/`sum`/`count`) overrides per-field default aggregation for `interval=day` and `interval=hour`. |
+| `/api/v1/archive` | GET | Historical archive records with pagination/filtering. Optional `agg` param (`min`/`max`/`avg`/`sum`/`count`) overrides per-field default aggregation for `interval=day` and `interval=hour`. Optional `aggregate_interval` (seconds, 60–604800) groups records into fixed-width time buckets via `FLOOR(dateTime/N)*N` for proportional scaling. Optional `agg_map` (`field:func,...`) applies per-field SQL aggregation within custom-interval buckets; defaults to AVG. |
 | `/api/v1/records` | GET | Section-grouped highs and lows |
 | `/api/v1/forecast` | GET | Forecast bundle (hourly + daily + discussion) |
 | `/api/v1/alerts` | GET | Active severe-weather alerts |
@@ -383,13 +383,19 @@ The charts system is operator-configurable via `charts.conf`, a ConfigObj/INI fi
 
 **Data flow:** `charts.conf` is parsed by `services/charts_config.py` at API startup. Each series is pruned against the `ColumnRegistry` — series whose `observation_type` is not present in the database are removed, and empty charts/groups cascade-removed. The pruned config tree is served via `GET /api/v1/charts/config`. The dashboard's `ConfigDrivenGroup` and `ConfigDrivenChart` components fetch this config and render charts dynamically using Recharts (standard time-series) or custom SVG (wind rose, weather range).
 
-**Wind rose:** uses client-side binning from the BFF-injected `beaufort` field (per ADR-041 computation boundary amendment, ADR-042). The dashboard reads `beaufort.value` from archive records and bins into a 16-direction × 7-Beaufort-speed matrix. No Beaufort computation in the dashboard — the BFF is the single Beaufort authority.
+**Proportional scaling (2026-06-07):** For rolling-range chart groups (1d/3d/7d/30d/90d), the dashboard computes a proportional `aggregate_interval` matching Belchertown's data-density approach: `ratio = max(1, range_seconds / base_time_seconds)`, `aggregate_interval = base_aggregate_interval × ratio`. This keeps ~170–288 data points per chart regardless of time range. The `aggregate_interval` (seconds) is passed to `GET /api/v1/archive` which groups records into `FLOOR(dateTime / N) * N` buckets.
+
+**Per-field aggregation:** Each series in `charts.conf` may specify an `aggregate_type` (e.g., `sum` for rainTotal, `max` for rainRate). The dashboard reads these from the chart config and passes them to the API as `agg_map=rain:sum,rainRate:max,...`. The API applies the specified SQL function per field within each proportional bucket; fields without an explicit type default to `AVG` (matching Belchertown's rolling-range default).
+
+**BFF archive conversion (2026-06-07):** The BFF proxy now applies `UnitTransformer.transform_record()` to `/archive` responses. It infers `usUnits` from the response envelope's `units` label block (same as `/current`), converts each record, injects derived fields (`beaufort`, `comfortIndex`), and flattens ConvertedValue dicts to full-precision scalars. The `beaufort` field is kept as a `{value, label, formatted}` dict (not flattened) so the wind rose binning can read it via `extractNumber()`.
+
+**Wind rose:** uses client-side binning from the BFF-injected `beaufort` field (per ADR-041 computation boundary amendment, ADR-042). The dashboard makes a **separate raw archive fetch** (no `aggregate_interval`) for wind rose data, with `fields=windSpeed,windDir` and a high limit. This preserves the actual wind speed distribution for correct Beaufort classification — aggregated (AVG'd) wind speeds would smooth out higher categories. The dashboard reads `beaufort.value` from these raw records and bins into a 16-direction × 7-Beaufort-speed matrix. No Beaufort computation in the dashboard — the BFF is the single Beaufort authority.
 
 **Weather range chart:** custom SVG polar chart showing daily temperature range. Uses the `agg` query parameter on `/archive` with dual fetches (`agg=min` and `agg=max`) to get daily extremes.
 
 **Custom SQL queries:** operators define SQL in `charts.conf` (disk-only, same trust model as Belchertown). Queries are pre-validated at startup via `EXPLAIN`, executed in read-only transactions with a 10-second timeout and DDL keyword blocklist. Served via `GET /api/v1/charts/custom-query/{series_id}`.
 
-**Migration:** `clearskies-migrate-charts` CLI converts Belchertown `graphs.conf` → Clear Skies `charts.conf`. Most INI keys are identical by design; the tool annotates unsupported keys with `# NOTE:` comments.
+**Migration:** `clearskies-migrate-charts` CLI converts Belchertown `graphs.conf` → Clear Skies `charts.conf`. Most INI keys are identical by design; the tool annotates unsupported keys with `# NOTE:` comments. The migration tool injects rendering defaults: `markerEnabled=false` on line/spline/area series, `type=scatter` promotion for `lineWidth=0` series (windDir), `yAxisTickDecimals=2` for barometer, `yAxis_min=0` for rain series.
 
 ## API TLS
 
