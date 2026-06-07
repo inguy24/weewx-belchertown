@@ -4,7 +4,9 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-05-29 (B-1 fix: all three Caddyfiles now route /api/v1/* to realtime:8766 BFF instead of directly to the API; stack config/realtime.conf.example updated with [api] upstream_url section).
+Last verified: 2026-06-07 (webcam.json moved from web root to /etc/weewx-clearskies/ so dashboard rsync --delete cannot remove it; Caddy /webcam.json route added to serve from config dir).
+
+Previous: 2026-05-29 (B-1 fix: all three Caddyfiles now route /api/v1/* to realtime:8766 BFF instead of directly to the API; stack config/realtime.conf.example updated with [api] upstream_url section).
 
 ---
 
@@ -63,6 +65,8 @@ Each repo builds its own container image independently (ADR-034). A dashboard CS
 > **Config UI is NOT containerized.** It has no Dockerfile and is not in any compose file. It is distributed as a pip package (`weewx-clearskies-config`) and run manually by the operator. ADR-027 says "bundled compose adds a `config` service" — this is an unimplemented requirement. See Known gaps.
 
 > **API native install (2026-05-24):** The API is currently installed natively on the `weewx` LXD container (not in Docker) via pip into a Python 3.12 venv at `/home/ubuntu/repos/weewx-clearskies-api/.venv`, managed by systemd unit `weewx-clearskies-api.service`. Config at `/etc/weewx-clearskies/api.conf`. Health port (8081) also serves TLS. This is the production deployment path on bare-metal / LXD; the Dockerfile exists for Docker compose deployments.
+>
+> **API startup time: ~2 minutes.** After `systemctl restart weewx-clearskies-api`, the service runs a cache warmer that makes outbound API calls to configured providers (Aeris, NWS, etc.) before uvicorn binds to port 8765. The service is not ready to serve requests until the cache warm completes. When scripting restarts, wait at least 120 seconds before hitting endpoints — `sleep 10` is not enough.
 
 > **Native dashboard / dev deploy (2026-05-29):** On the `weather-dev` LXD container the dashboard is NOT run as a Docker init container. Instead the source is pulled to `/home/ubuntu/repos/weewx-clearskies-dashboard`, built natively with `npm run build` (Vite → `dist/`), and the built `dist/` is rsync'd into the Caddy web root `/var/www/clearskies/` (excluding the read-only `webcam/` bind-mount). Realtime, API, and Config UI run as systemd units (`weewx-clearskies-{realtime,api,config}.service`). The full redeploy is automated by `scripts/redeploy-weather-dev.sh`; source-only refresh by `scripts/sync-to-weather-dev.sh`. Procedure: [procedures/deploy-clearskies.md](procedures/deploy-clearskies.md). The Docker init-container model above is the compose deployment path.
 
@@ -101,6 +105,7 @@ All three Caddyfile variants (frontend-host, single-host, examples/reverse-proxy
 | `/bootstrap*` | `config:9876` | First-run admin credential setup |
 | `/login*`, `/logout*` | `config:9876` | Admin auth |
 | `/admin*` | `config:9876` | Ongoing config management |
+| `/webcam.json` | `file_server` from `/etc/weewx-clearskies/` | Webcam config JSON (safe from rsync --delete; lives outside web root) |
 | `/webcam/*` | `file_server` from `/var/www/clearskies/webcam/` | Live webcam still + timelapse. No `try_files` — returns 404 for missing files. |
 | `/static/*` | `config:9876` | Config UI static assets (CSS, JS) |
 | `/*` (fallback) | `/srv/dashboard` static files (shared volume from init container) | React SPA with `try_files` fallback to `index.html` |
@@ -136,7 +141,7 @@ The setup wizard (stack repo, step 7 of 8) collects webcam settings: enabled fla
 
 | Output | Path | Purpose |
 |--------|------|---------|
-| `webcam.json` | `/var/www/clearskies/webcam.json` | Static JSON fetched directly by the dashboard; contains `enabled`, `imageUrl`, `videoUrl`, `refreshInterval` |
+| `webcam.json` | `/etc/weewx-clearskies/webcam.json` | Static JSON fetched directly by the dashboard; contains `enabled`, `imageUrl`, `videoUrl`, `refreshInterval`. Served by Caddy at `/webcam.json` from `/etc/weewx-clearskies/` — outside the web root so dashboard rsync --delete cannot remove it. |
 | `[webcam]` section | `stack.conf` | Persists settings so the wizard can pre-fill them on re-run |
 
 The dashboard fetches `/webcam.json` on the Now page. If `enabled` is true, it renders the webcam card. If the fetch fails or `enabled` is false, the card is hidden gracefully — no error state surfaced to the user.
@@ -152,8 +157,9 @@ External capture process
   → browser
 
 Wizard step 7 (apply)
-  → /var/www/clearskies/webcam.json  (dashboard config)
-  → stack.conf [webcam]              (wizard re-run pre-fill)
+  → /etc/weewx-clearskies/webcam.json  (dashboard config; safe from rsync)
+  → stack.conf [webcam]                (wizard re-run pre-fill)
+  → Caddy /webcam.json route → file_server from /etc/weewx-clearskies/
   → Dashboard fetches /webcam.json on Now page load
   → renders webcam card if enabled, hides gracefully on error
 ```
@@ -178,6 +184,8 @@ Wizard step 7 (apply)
 | `/api/v1/almanac/moon-phases` | GET | Per-day moon-phase grid (month or year) |
 | `/api/v1/almanac/seeing-forecast` | GET | 72-hour astronomical seeing forecast (7Timer ASTRO, 3-hour intervals) |
 | `/api/v1/charts/groups` | GET | Chart-group structure |
+| `/api/v1/charts/config` | GET | Full chart configuration tree (groups, charts, series) parsed from `charts.conf` |
+| `/api/v1/charts/custom-query/{series_id}` | GET | Execute operator-defined SQL query from `charts.conf` (read-only, pre-validated at startup) |
 | `/api/v1/reports` | GET | Available NOAA report files |
 | `/api/v1/reports/{year}/{month}` | GET | Monthly NOAA report (raw text) |
 | `/api/v1/reports/{year}` | GET | Yearly NOAA report (raw text) |
@@ -316,7 +324,7 @@ Config UI is a standalone FastAPI app, run via `weewx-clearskies-config` CLI on 
 | `/wizard/step/6/test-key/{id}` | POST | Test provider connectivity |
 | `/wizard/step/7` | GET/POST | Webcam settings (enabled, image URL, video URL, refresh interval) |
 | `/wizard/step/8` | GET | Review summary |
-| `/wizard/apply` | POST | Finalize config + write files (writes `api.conf`, `webcam.json`, `stack.conf`) |
+| `/wizard/apply` | POST | Finalize config + write files (writes `api.conf`, `webcam.json` to `/etc/weewx-clearskies/`, `stack.conf`) |
 | `/wizard/restart-status` | GET | Service restart status |
 
 ### Admin (ongoing config)
@@ -366,6 +374,20 @@ All config in `/etc/weewx-clearskies/` (search order: `CLEARSKIES_CONFIG` env va
 **Secret-leak guard:** API and realtime scan `.conf` at startup; any key matching `(?i)_(KEY|SECRET|TOKEN|PASSWORD)$` is a fatal startup error. Secrets belong in `secrets.env` only.
 
 **Startup behavior when config missing:** Both API and realtime raise `FileNotFoundError` and exit non-zero. Neither starts in an "unconfigured" mode.
+
+## Charts configuration
+
+The charts system is operator-configurable via `charts.conf`, a ConfigObj/INI file (same format as weewx `skin.conf` — operator familiarity, per ADR-027). Three-level nesting: group → chart → series, matching Belchertown's `graphs.conf` structure.
+
+**Data flow:** `charts.conf` is parsed by `services/charts_config.py` at API startup. Each series is pruned against the `ColumnRegistry` — series whose `observation_type` is not present in the database are removed, and empty charts/groups cascade-removed. The pruned config tree is served via `GET /api/v1/charts/config`. The dashboard's `ConfigDrivenGroup` and `ConfigDrivenChart` components fetch this config and render charts dynamically using Recharts (standard time-series) or custom SVG (wind rose, weather range).
+
+**Wind rose:** uses client-side binning from the BFF-injected `beaufort` field (per ADR-041 computation boundary amendment, ADR-042). The dashboard reads `beaufort.value` from archive records and bins into a 16-direction × 7-Beaufort-speed matrix. No Beaufort computation in the dashboard — the BFF is the single Beaufort authority.
+
+**Weather range chart:** custom SVG polar chart showing daily temperature range. Uses the `agg` query parameter on `/archive` with dual fetches (`agg=min` and `agg=max`) to get daily extremes.
+
+**Custom SQL queries:** operators define SQL in `charts.conf` (disk-only, same trust model as Belchertown). Queries are pre-validated at startup via `EXPLAIN`, executed in read-only transactions with a 10-second timeout and DDL keyword blocklist. Served via `GET /api/v1/charts/custom-query/{series_id}`.
+
+**Migration:** `clearskies-migrate-charts` CLI converts Belchertown `graphs.conf` → Clear Skies `charts.conf`. Most INI keys are identical by design; the tool annotates unsupported keys with `# NOTE:` comments.
 
 ## API TLS
 

@@ -214,6 +214,12 @@ When the task originated from a user prompt (not a plan-internal round), walk th
 
 **Single test host.** All services (API, realtime, config UI), the dashboard, and the web server run on `weather-dev`. Do not split services across containers for testing — one host, everything local.
 
+**API startup takes ~2 minutes.** After `systemctl restart weewx-clearskies-api`, the cache warmer makes outbound provider API calls (Aeris, NWS, etc.) before uvicorn binds to port 8765. Any deployment script or verification step that restarts the API must wait at least 120 seconds before hitting endpoints. `sleep 10` will get connection refused.
+
+**Config files NEVER go in the web root.** All configuration files (`api.conf`, `realtime.conf`, `stack.conf`, `secrets.env`, `charts.conf`, `webcam.json`) live in `/etc/weewx-clearskies/`. The web root (`/var/www/clearskies/`) is wiped by `rsync --delete` on every dashboard deployment. Any file placed there that isn't in the dashboard's `dist/` output WILL be deleted. If a config file needs to be browser-accessible, Caddy serves it from `/etc/weewx-clearskies/` via a `handle` route — never by placing it alongside static assets.
+
+**Why (2026-06-06):** `webcam.json` was placed in the web root by the wizard and deleted by `rsync --delete` during a dashboard redeploy. This happened repeatedly because the wizard wrote to `_dashboard_root` and no deployment script could exclude every possible config file. Moving all config to `/etc/weewx-clearskies/` eliminates the category of bug.
+
 **PowerShell multi-line commits: use `git commit -F`.** Write message to `c:\tmp\<task>-msg.txt`, then `git commit -s -F c:\tmp\<task>-msg.txt`. PowerShell heredocs break on parens/quotes.
 
 ## Plan and documentation discipline
