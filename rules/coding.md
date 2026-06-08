@@ -389,7 +389,19 @@ The Clear Skies dashboard uses Recharts v3.x for all chart components. Recharts 
 7. **Chart wrapper divs need explicit sizing** — `minWidth: 0, minHeight: 0, width: '100%', height: '100%'` prevents flex containers from reporting 0 to ResizeObserver. Use `ResponsiveContainer width="99%"` (not 100%) to force recalculation.
 8. **`buildTicks` must use LOCAL time boundaries** — `getHours()` returns local hours; ticks computed in UTC won't match the formatter's expected hours (0/6/12/18).
 
-## 7. Build verification — zero TS errors before deploy
+## 7. Documentation — save locally, read before fetching
+
+**All third-party documentation for libraries used in this project MUST be saved in `docs/reference/` and read from there before any web fetch.** Do not use WebFetch or WebSearch for documentation that should already be local. If a reference doc doesn't exist yet, fetch it ONCE, save it to `docs/reference/<library>-reference.md`, and read from the local copy going forward.
+
+**Why (2026-06-07):** Multiple sessions wasted time WebFetching Recharts and Belchertown documentation that should have been saved locally after the first fetch. The user has asked for this repeatedly. Documentation for our dependencies is a project asset — it belongs in the repo, not re-fetched every session.
+
+**How to apply:** Before any work that touches a third-party library (Recharts, Leaflet, Tailwind, shadcn, etc.):
+1. Check `docs/reference/` for an existing reference doc.
+2. If it exists, read it with the Read tool.
+3. If it doesn't exist, fetch it, save it, THEN read the local copy.
+4. Never WebFetch documentation that already has a local copy.
+
+## 8. Build verification — zero TS errors before deploy
 
 **The dashboard build script is `tsc -b && vite build`.** If `tsc` fails, `vite build` never runs and `dist/` stays stale. rsync then deploys the OLD files. This means TS errors cause SILENT deployment failures — the deploy looks successful but nothing changes on the site.
 

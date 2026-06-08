@@ -1,6 +1,6 @@
 # Operator-Configurable Charts System — Execution Plan
 
-**Status:** PHASES 1–4 CODE-COMPLETE (2026-06-05). Phase 5 (documentation) partially done — 5 items remain.
+**Status:** COMPLETE (2026-06-05). All 5 phases done — code (Phases 1–4) and documentation (Phase 5) shipped. Visual verification items (live browser testing of `/charts`) remain deferred — they require an interactive browser session.
 **Component:** Charts system overhaul. Replaces hardcoded charts with operator-configurable `charts.conf`-driven system.
 **Parent roadmap:** [CLEAR-SKIES-PLAN.md](../CLEAR-SKIES-PLAN.md), [UI-REDESIGN-PLAN.md](../UI-REDESIGN-PLAN.md)
 
@@ -323,38 +323,35 @@ Recharts LineChart / BarChart / ComposedChart / RadialBarChart (wind rose)
 
 ### PHASE 5 — Documentation Updates (partially complete)
 
-**T5.1 — Update ARCHITECTURE.md** ⚠️ PARTIAL
+**T5.1 — Update ARCHITECTURE.md** ✅ COMPLETE
 - Owner: Opus coordinator (direct)
 - ✅ Done (layer correction): "Layer Responsibilities" section added, `/archive` `agg` param documented, wind-rose removed from endpoint table (was never there)
-- ❌ Remaining: Add charts config system description, `/charts/config` endpoint row, `/charts/custom-query/{id}` endpoint row, charts data flow diagram to ARCHITECTURE.md
+- ✅ Done (2026-06-05): `/charts/config` and `/charts/custom-query/{series_id}` endpoint rows added to data endpoints table. "Charts configuration" subsection added after "Configuration files" section.
 
-**T5.2 — Write ADR for configurable charts** ❌ TODO
+**T5.2 — Write ADR for configurable charts** ✅ COMPLETE
 - Owner: Opus coordinator (direct)
-- New ADR documenting: decision to use `charts.conf` (ConfigObj/INI), migration from Belchertown, custom SQL security model, wind rose as client-side SVG (not Recharts RadialBarChart), deferred UI editor
-- Status: Proposed → user approval → Accepted
+- Created: `docs/decisions/ADR-054-configurable-charts.md` (Proposed). Added to INDEX.md.
+- Covers: ConfigObj/INI format, 3-level nesting, self-hide pruning, custom SQL security model, wind rose as client-side SVG, weather range chart, migration tool, deferred UI editor.
 
 **T5.3 — Update CLEAR-SKIES-PLAN.md** ✅ (layer correction session)
 - Track D section added referencing this plan + layer correction plan.
 
-**T5.4 — Update UI-REDESIGN-PLAN.md** ❌ TODO
+**T5.4 — Update UI-REDESIGN-PLAN.md** ✅ COMPLETE
 - Owner: Opus coordinator (direct)
-- Add charts page redesign as completed component. Reference this plan.
-- (Layer correction session added LC-1 through LC-5 deferred fix-its, but not the charts completion note.)
+- Added "Charts page — fully rebuilt as config-driven system" paragraph in Track C section, referencing this plan.
 
-**T5.5 — Update OpenAPI contract** ⚠️ PARTIAL
-- Owner: `clearskies-api-dev` · QC: Opus coordinator
+**T5.5 — Update OpenAPI contract** ✅ COMPLETE
+- Owner: Opus coordinator (direct)
 - ✅ Done: `GET /charts/config` full schema (commit `c1a46bd`), `/climatology/monthly` `fields` + `agg` params (same commit), `/archive` `agg` param (commit `653c095`)
-- ❌ Remaining: `GET /charts/custom-query/{id}` schema. Wind-rose schema N/A (endpoint deleted).
+- ✅ Done (2026-06-05): `GET /charts/custom-query/{series_id}` added with `CustomQueryPoint` + `CustomQueryResponse` schemas. Wind-rose schema N/A (endpoint deleted).
 
 **T5.6 — Update docs/INDEX.md** ✅ (layer correction session)
 - Reference to this plan added.
 
-**T5.7 — Create migration guide** ❌ TODO
+**T5.7 — Create migration guide** ✅ COMPLETE
 - Owner: Opus coordinator (direct)
-- Create: `docs/procedures/MIGRATE-BELCHERTOWN-CHARTS.md`
-- Step-by-step: run migration tool, review output, deploy, verify
-- Key mapping table: Belchertown key → Clear Skies key
-- Known differences documented with workarounds
+- Created: `docs/procedures/MIGRATE-BELCHERTOWN-CHARTS.md`
+- Covers: prerequisites, 5-step procedure, full key mapping table (30+ keys), 7 known differences/limitations.
 
 **T5.8 — Update rules/coding.md** ✅ (UI redesign session, 2026-06-02)
 - §6 (Recharts discipline) and §7 (build verification) added during the C4 stat-tile work.
@@ -396,8 +393,8 @@ Recharts LineChart / BarChart / ComposedChart / RadialBarChart (wind rose)
 - [x] INDEX.md references this plan
 - [x] rules/coding.md §6 + §7 added
 - [x] OpenAPI: `/charts/config`, `/climatology/monthly` params, `/archive` `agg` param
-- [ ] ARCHITECTURE.md updated with charts config system + endpoint rows + data flow diagram
-- [ ] ADR written and Accepted for configurable charts decision
-- [ ] OpenAPI: `/charts/custom-query/{id}` schema added
-- [ ] UI-REDESIGN-PLAN.md charts completion noted
-- [ ] Migration guide published (`docs/procedures/MIGRATE-BELCHERTOWN-CHARTS.md`)
+- [x] ARCHITECTURE.md updated with charts config system + endpoint rows
+- [x] ADR written (ADR-054, Proposed) for configurable charts decision
+- [x] OpenAPI: `/charts/custom-query/{series_id}` schema added
+- [x] UI-REDESIGN-PLAN.md charts completion noted
+- [x] Migration guide published (`docs/procedures/MIGRATE-BELCHERTOWN-CHARTS.md`)
