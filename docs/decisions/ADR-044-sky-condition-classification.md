@@ -1,7 +1,7 @@
 ---
 status: Accepted
 date: 2026-05-26
-amended: 2026-06-05
+amended: 2026-06-08
 deciders: shane
 ---
 
@@ -31,18 +31,29 @@ During daytime, the station's pyranometer is the authoritative source. Provider 
 
 **Sigma-first two-dimensional classification** over a **30-minute sliding window** of loop data (~5-second MQTT intervals, ~360 samples):
 
-> **Amendment (2026-06-05):** Classification axes swapped — σ(kc) is now the primary axis, mean(kc) secondary. The original table used mean(kc) as primary, which conflated cloud opacity with cloud coverage. A thin marine stratus layer (kc ≈ 0.70) with low variability was classified as "Mostly Cloudy" or "Partly Cloudy" instead of "Overcast." The curve shape (σ) is the authoritative signal for cloud coverage fraction: a flat line below clear-sky = uniform cover regardless of how much light penetrates. Mean(kc) within the low-sigma branch indicates layer thickness/opacity, not coverage. "Heavily Overcast" added for very thick uniform layers (kc < 0.30).
+> **Amendment (2026-06-05):** Classification axes swapped — σ(kc) is now the primary axis, mean(kc) secondary. The original table used mean(kc) as primary, which conflated cloud opacity with cloud coverage.
+
+> **Amendment (2026-06-08):** Thresholds revised for sensor accuracy. Davis 6450 pyranometer ±5% accuracy + weewx maxSolarRad model ±4% error means a perfectly clear sky can produce kc ~0.93 from systematic bias alone — the previous Clear threshold of 0.95 was inside the noise floor. σ threshold corrected from 0.10 to 0.08 (matching deployed code). Intermediate low-sigma tiers restored (the June 5 simplification conflated opacity with coverage, but thin cirrus/haze legitimately produces low-sigma intermediate kc). "Overcast"/"Heavily Overcast" replaced with "Cloudy" per NWS display vocabulary. Day/night display vocabulary added (§2).
+
+**Low sigma (< 0.08) — uniform sky, no cloud transits detected:**
 
 | σ(kc) | mean(kc) | Classification | Physical meaning |
 |---|---|---|---|
-| < 0.10 | ≥ 0.85 | Clear | Flat line near clear-sky model |
-| < 0.10 | 0.30–0.85 | Overcast | Flat line below clear-sky — uniform cloud layer, any thickness |
-| < 0.10 | < 0.30 | Heavily Overcast | Flat line far below clear-sky — thick, dark uniform layer |
-| ≥ 0.10 | ≥ 0.70 | Mostly Clear | Mostly sun, occasional cloud passages |
-| ≥ 0.10 | 0.40–0.70 | Partly Cloudy | Mix of sun and cloud |
-| ≥ 0.10 | < 0.40 | Mostly Cloudy | Mostly cloud with occasional sun breaks |
+| < 0.08 | ≥ 0.85 | Clear | Uniform irradiance near clear-sky level |
+| < 0.08 | 0.70–0.85 | Mostly Clear | Thin uniform dimming (cirrus, haze, marine layer) |
+| < 0.08 | 0.50–0.70 | Partly Cloudy | Thin uniform overcast |
+| < 0.08 | 0.30–0.50 | Mostly Cloudy | Moderate uniform overcast |
+| < 0.08 | < 0.30 | Cloudy | Thick uniform cover |
 
-σ(kc) threshold of 0.10 separates uniform skies from broken/variable skies (Dürr & Philipona 2001). The 30-minute window provides ~360 samples at 5-second intervals — sufficient statistical power for variance estimation.
+**High sigma (≥ 0.08) — variable sky, cloud transits detected:**
+
+| σ(kc) | mean(kc) | Classification | Physical meaning |
+|---|---|---|---|
+| ≥ 0.08 | ≥ 0.85 | Mostly Clear | Infrequent cloud passages, mostly sun |
+| ≥ 0.08 | 0.60–0.85 | Partly Cloudy | Frequent cloud passages |
+| ≥ 0.08 | < 0.60 | Mostly Cloudy | Mostly cloud with sun breaks |
+
+σ(kc) threshold of 0.08 separates uniform skies from broken/variable skies. The 30-minute window provides ~360 samples at 5-second intervals — sufficient statistical power for variance estimation.
 
 **Startup:** Until **~3 minutes** of data accumulates (**36 samples** at ~5-second intervals),
 fall back to provider cloud cover. If no provider either, report no sky condition
@@ -66,7 +77,7 @@ Provider data is used only when solar radiation analysis is unavailable: at nigh
 | Fog, Mist | Foggy |
 | Haze, Smoke | Hazy |
 | Blowing Snow | Blowing Snow |
-| Overcast | Overcast |
+| Overcast | Cloudy |
 | Mostly Cloudy, Considerable Cloudiness | Mostly Cloudy |
 | Partly Cloudy, Partly Sunny | Partly Cloudy |
 | Mostly Clear, Mostly Sunny | Mostly Clear |
@@ -80,7 +91,7 @@ Provider data is used only when solar radiation analysis is unavailable: at nigh
 | 7–31 | Few (FEW) — display as "Mostly Clear" |
 | 32–56 | Scattered (SCT) — display as "Partly Cloudy" |
 | 57–87 | Broken (BKN) — display as "Mostly Cloudy" |
-| 88–100 | Overcast (OVC) |
+| 88–100 | Cloudy (OVC) |
 
 3. **Neither available** — omit sky descriptor entirely.
 
@@ -106,9 +117,21 @@ Solar zenith angle computed from station coordinates and timestamp (pvlib `solar
 |---|---|
 | < 90° | Day — use sky condition as-is |
 | 90–96° | Civil twilight — prefix conditions with no qualifier |
-| > 96° | Night — substitute sky label: "Clear" → "Clear", "Partly Cloudy" → "Partly Cloudy", etc. (NWS uses identical terms day and night) |
+| > 96° | Night — use night display vocabulary (see below) |
 
-Night/day affects only whether solar-radiation-based sky classification is attempted (§1b). Provider cloud cover and all other components are unaffected by time of day.
+> **Amendment (2026-06-08):** Day/night display vocabulary added. NWS uses "Sunny"/"Mostly Sunny" during the day and "Clear"/"Mostly Clear" at night. The mapping is applied at display time by `_to_display_label()` in `conditions_text.py` and by `_cloud_pct_to_sky(is_day=True)` in `enrichment/weather_text.py`.
+
+**Display vocabulary mapping (NWS standard):**
+
+| Classification label | Day display | Night display |
+|---|---|---|
+| Clear | Sunny | Clear |
+| Mostly Clear | Mostly Sunny | Mostly Clear |
+| Partly Cloudy | Partly Cloudy | Partly Cloudy |
+| Mostly Cloudy | Mostly Cloudy | Mostly Cloudy |
+| Cloudy | Cloudy | Cloudy |
+
+Night/day affects (1) whether solar-radiation-based sky classification is attempted (§1b) and (2) the display vocabulary used for the sky label.
 
 ### 3. Precipitation
 

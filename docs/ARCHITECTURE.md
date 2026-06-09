@@ -4,7 +4,7 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-06-07 (webcam.json moved from web root to /etc/weewx-clearskies/ so dashboard rsync --delete cannot remove it; Caddy /webcam.json route added to serve from config dir).
+Last verified: 2026-06-08 (sky condition thresholds corrected for sensor accuracy, day/night display vocabulary added, Known gap #8 resolved).
 
 Previous: 2026-05-29 (B-1 fix: all three Caddyfiles now route /api/v1/* to realtime:8766 BFF instead of directly to the API; stack config/realtime.conf.example updated with [api] upstream_url section).
 
@@ -268,7 +268,9 @@ The realtime service hosts a multi-module, stateful conditions-text engine that 
 
 **Registration:** `__main__.py` registers `enrich_weather_text` against the `"current"` endpoint key. Every `GET /api/v1/current` response is enriched before being returned to the browser.
 
-**Startup behavior:** The solar kc-buffer requires approximately 3 minutes of loop packets before the sky classifier can produce a result. During this warm-up window, `weatherText` may be `null`. Once data accumulates, the engine produces output continuously. When solar analysis is unavailable (night, twilight, no pyranometer), the engine is *intended* to fall back to provider cloud cover / weather text for sky classification — but that fallback is currently **not wired** (see Known gaps #8), so at night the sentence omits its sky component.
+**Sky classification thresholds (ADR-044, amended 2026-06-08):** σ(kc) threshold = 0.08, hysteresis ±0.03. Low sigma: Clear ≥0.85, Mostly Clear ≥0.70, Partly Cloudy ≥0.50, Mostly Cloudy ≥0.30, Cloudy <0.30. High sigma: Mostly Clear ≥0.85, Partly Cloudy ≥0.60, Mostly Cloudy <0.60. Display vocabulary: "Sunny"/"Mostly Sunny" during day, "Clear"/"Mostly Clear" at night per NWS standard.
+
+**Startup behavior:** The solar kc-buffer requires approximately 3 minutes of loop packets before the sky classifier can produce a result. During this warm-up window, `weatherText` may be `null`. Once data accumulates, the engine produces output continuously. When solar analysis is unavailable (night, twilight, no pyranometer), the engine falls back to provider cloud cover via `_cloud_pct_to_sky()` in `enrichment/weather_text.py`, which maps cloud cover percentage to the sky label with day/night vocabulary awareness.
 
 ## Realtime modes (ADR-005)
 
@@ -535,7 +537,6 @@ weewx-clearskies-stack/
 | 5 | No stack.conf example | ADR-027 references `stack.conf` | Does not exist | Deferred — CLI flags sufficient for v0.1. | Low |
 | 6 | ADR-034 container table incomplete | ADR-027 adds config service | ADR-034 lists only 4 containers | Amend ADR-034 to add config UI row after gap #1 is implemented. | ADR consistency |
 | 7 | Config UI imports API code directly | ADR-038a: wizard talks to API via HTTP | `wizard/schema.py` and `wizard/routes.py` import `STOCK_COLUMN_MAP` from `weewx_clearskies_api.db.reflection` — forces API source into config UI Docker build | Eliminate after first-run UX ships. Get stock column map from `/setup/schema` endpoint instead. | Code coupling |
-| 8 | Conditions text: night-sky fallback not wired | ADR-044 §1b specifies provider cloud cover as the intended fallback when solar analysis is unavailable at night | `compose_weather_text()` in realtime `enrichment/weather_text.py` does not pass `provider_sky` to `build_weather_text()`, so the conditions sentence omits its sky component at night even when a forecast provider is configured. `build_weather_text()` accepts `provider_sky: str \| None = None` but the argument is never supplied. | Tracked code gap, not an ADR contradiction. | Conditions text |
 | 9 | Wizard does not deliver station logo + station name to config | Operator-configured station logo + station name (`branding.siteTitle`, surfaced via `/api/v1/branding`) should be captured by the setup wizard and persisted so the dashboard hero can render them | The Now-page hero renders with no logo and no station name because that data is absent from the config — the wizard did not capture/deliver it. (Surfaced during C1 hero mockup review, 2026-05-31.) | **Fix required** (separate deliverable, not C1). Verify the wizard has steps that capture the logo + site title and persist them to the branding config; add/repair as needed. C1 designs the hero to render them once supplied, with a "My Weather Station" fallback for the unset case. | First-run UX / branding |
 | 10 | Card-glass opacity too translucent | Cards must be readable over the global background; B3 made opacity an operator-configurable default | The B3 shipped defaults (light `rgba(255,255,255,0.72)`, dark `rgba(30,35,55,0.55)`) are too translucent against the global background — text is hard to read and contrast likely fails WCAG AA. (Surfaced during C1 mockup review, 2026-05-31.) | **Fix required** (cross-cutting, not C1-specific). Revisit the B3 default opacity (increase) and verify body-text contrast over the card-blended-over-background meets AA in both themes. Reopens the B3 opacity default. | A11y / WCAG |
 | 11 | Global background does not change with day/night | ADR-047 background is condition- AND day/night-keyed (`scene.daytime`); the background should visibly change between day and night | Observed in the C1 mockup: the background did not change when toggling light/dark (day/night). Needs end-to-end verification that the ADR-047 day/night scene keying actually swaps the rendered background in the real dashboard. (Surfaced 2026-05-31.) | **Verify, then fix if broken** (cross-cutting, not C1). Confirm the dashboard maps `scene.daytime` to day vs night assets and the background updates; if the mockup-observed staleness reflects a real wiring gap, repair it. | ADR-047 / background |
@@ -545,5 +546,6 @@ weewx-clearskies-stack/
 | # | Was | Resolution |
 |---|-----|-----------|
 | 7 | ADR-038 index entry incomplete | Renumbered to ADR-038a; added to INDEX.md |
-| 8 | Security baseline port numbers stale (8000/8001) | Fixed to 8765/8766 |
+| 8 (current) | Conditions text: night-sky fallback not wired | `provider_sky` IS passed to `build_weather_text()` via `compose_weather_text()`; `_cloud_pct_to_sky()` now day/night-aware (2026-06-08) |
+| 8 (original) | Security baseline port numbers stale (8000/8001) | Fixed to 8765/8766 |
 | 9 | ADR-030 port reference (8080) | Fixed to 8765 |
