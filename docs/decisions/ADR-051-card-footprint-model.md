@@ -291,3 +291,36 @@ on non-Now pages.
 - [ ] Token arithmetic holds: quarter × 2 = half, quarter × 4 = row, quarter × 8 = tall (both viewports).
 - [ ] Now page grid uses `md:auto-rows-[var(--card-quarter-row)]` (rigid tracks for operator-customizable layout).
 - [ ] All non-Now pages (via PageLayout) use `auto-rows-[auto]` — cards grow to fit content, with `min-h` from `rowSpan` preventing collapse.
+
+**8. Typography tokens are mandatory — no hardcoded font sizes in card components.**
+
+All `fontSize` values in card component inline styles MUST use `var(--text-*)` design tokens.
+No hardcoded pixel, rem, or em font sizes. No exceptions. No per-card overrides.
+
+The full typography token scale:
+
+| Token | Value | Role | Font |
+|---|---|---|---|
+| `--text-stat-hero` | 4.25rem | CC card temperature numeral | Outfit 700 |
+| `--text-stat-unit` | 1.9rem | unit beside hero stat / wind compass speed | Outfit |
+| `--text-hero-name` | 1.35rem | station name | Manrope 700 |
+| `--text-stat-tile` | 1.25rem | primary stat value on 1×1 tile cards | Outfit 600 |
+| `--text-stat-label` | 1rem | secondary stat value / large label on tiles | Outfit/Manrope |
+| `--text-section` | 0.95rem | section heading | Manrope |
+| `--text-body` | 0.9rem | body sentences | Manrope |
+| `--text-secondary` | 0.85rem | feels-like, hi/lo, supporting text | Manrope |
+| `--text-card-title` | 0.82rem | card title (semibold, NOT bold) | Manrope 600 |
+| `--text-chart-label` | 0.875rem | chart axis/tick/data labels | Lexend |
+| `--text-label` | 0.75rem | small labels | Manrope |
+| `--text-micro` | 0.7rem | uppercase micro-labels, minimum text size | Manrope |
+
+**Exception:** SVG `<text>` elements inside a `viewBox` coordinate system (sun arc, compass
+cardinal labels) use viewBox-unit font sizes, not CSS rem. These are a different coordinate
+system and tokens do not apply. Recharts `tick={{ fontSize }}` props use pixel values mapped
+to the `--text-chart-label` equivalent (14px ≈ 0.875rem).
+
+### Updated acceptance criteria (additive — typography)
+
+- [ ] Every `fontSize` in card component inline styles uses `var(--text-*)` — zero hardcoded values.
+- [ ] `--text-stat-tile` (1.25rem) and `--text-stat-label` (1rem) tokens exist in `index.css`.
+- [ ] No font size in any card component is smaller than `--text-micro` (0.7rem / ~11px).
