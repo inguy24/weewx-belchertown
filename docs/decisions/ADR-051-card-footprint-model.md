@@ -180,3 +180,91 @@ free-floating page-level content anywhere on the site.
 - Out of scope: the **customizable card grid** (engine, move/resize, persistence) — separate future plan per
   `docs/planning/UI-REDESIGN-PLAN.md` §"Out of scope here".
 - Plan: `docs/planning/UI-REDESIGN-PLAN.md` Track A4
+
+---
+
+## Amendment — 2026-06-13: Quarter-row track, mobile tokens, row-gap elimination
+
+**Status:** Accepted
+
+**Context:** The original ADR defines the half-row (5.5rem) as the base grid track. Implementation
+revealed three issues: (1) control strips (buttons, dropdowns) are functionally thinner than 5.5rem —
+they were hacked with `py-2` padding overrides to appear compact inside half-row cards; (2) 7 of 9 pages
+override the grid to `md:auto-rows-[auto]`, bypassing the track system entirely; (3) mobile responsive
+token values were added (card-row 13rem mobile / 11rem desktop) but never documented in the ADR. This
+amendment introduces a quarter-row base track, eliminates row-gap in favor of card margins, documents
+mobile token values, and adds the `--card-content-max` token.
+
+### Changes to the Decision
+
+**1. Grid base track becomes the quarter-row.**
+
+The grid's base row track changes from `--card-half-row` to `--card-quarter-row`. Row-span multiples
+adjust accordingly: strips span 1 track (quarter-row), headers span 2 tracks (half-row), data cards
+span 4 tracks (full row), tall cards span 8 tracks (double row).
+
+**2. Row-gap eliminated; vertical spacing via card margins.**
+
+The grid uses `gap-x` only (column gap = `--gap-grid`). Row gap is 0. Vertical spacing between cards
+comes from each card's `margin-bottom: var(--gap-grid)`. This eliminates gap-inflated row arithmetic
+where grid row-gap doubled the effective height of multi-track spans.
+
+**3. Quarter-row token added.**
+
+| Token | Mobile (<768px) | Desktop (md ≥768px) | Meaning |
+|---|---|---|---|
+| `--card-quarter-row` | `3.25rem` | `2.75rem` | **base grid row track**; control strips span 1 |
+
+**4. Mobile responsive token values documented.**
+
+All sizing tokens are responsive. Mobile values are proportionally larger to accommodate touch targets.
+
+| Token | Mobile (<768px) | Desktop (md ≥768px) |
+|---|---|---|
+| `--card-quarter-row` | `3.25rem` | `2.75rem` |
+| `--card-half-row` | `6.5rem` | `5.5rem` |
+| `--card-row` | `13rem` | `11rem` |
+| `--card-content-max` | `9rem` | `7rem` |
+
+Token arithmetic (desktop): `--card-quarter-row` × 2 = `--card-half-row` (2.75 × 2 = 5.5). `--card-quarter-row` × 4 = `--card-row` (2.75 × 4 = 11). `--card-quarter-row` × 8 = tall card (2.75 × 8 = 22).
+
+Token arithmetic (mobile): 3.25 × 2 = 6.5 ✓. 3.25 × 4 = 13 ✓. 3.25 × 8 = 26 ✓.
+
+**5. `--card-content-max` token added.**
+
+`--card-content-max: calc(var(--card-row) - 4rem)` — the maximum height for graphic containers (gauges,
+arcs, mini-charts) inside tile cards. Derives to 9rem mobile, 7rem desktop. Graphic containers
+self-constrain via `maxHeight: var(--card-content-max)` so they never overflow their card.
+
+**6. Updated row-span model.**
+
+| Card role | rowSpan | Track count (md+) | Desktop height | Mobile min-h |
+|---|---|---|---|---|
+| Control strip | `"quarter"` | 1 | 2.75rem | 3.25rem |
+| Page header | `"half"` | 2 | 5.5rem | 6.5rem |
+| Data card (default) | `1` | 4 | 11rem | 13rem |
+| Tall card | `2` | 8 | 22rem | 26rem |
+
+### Updated sizing tokens table (replaces original)
+
+| Token | Mobile (<768px) | Desktop (md ≥768px) | Meaning |
+|---|---|---|---|
+| `--gap-grid` | `1rem` | `1rem` | gutter between cards (column axis only; row gap = 0) |
+| `--container-max` | `80rem` | `80rem` | dashboard content cap |
+| `--card-quarter-row` | `3.25rem` | `2.75rem` | **base grid row track**; strips span 1 |
+| `--card-half-row` | `6.5rem` | `5.5rem` | page headers span 2 tracks |
+| `--card-row` | `13rem` | `11rem` | standard data row = 4 tracks |
+| `--card-content-max` | `9rem` | `7rem` | graphic container max-height = `calc(var(--card-row) - 4rem)` |
+| radius | `rounded-xl` (0.875rem) | `rounded-xl` (0.875rem) | from ADR-048 |
+
+### Updated acceptance criteria (additive)
+
+- [ ] `--card-quarter-row` token exists: 3.25rem mobile, 2.75rem desktop.
+- [ ] Grid base track is `--card-quarter-row` at md+; mobile stays `auto-rows-[auto]`.
+- [ ] Grid has `gap-y-0`; vertical card spacing comes from card `margin-bottom: var(--gap-grid)`.
+- [ ] Control strips render at quarter-row height via `rowSpan="quarter"` — no `py-2` padding hacks.
+- [ ] Page headers render at half-row height via `rowSpan="half"`.
+- [ ] `--card-content-max` token exists: `calc(var(--card-row) - 4rem)`.
+- [ ] Graphic containers (gauges, arcs, tile-card charts) self-constrain via `maxHeight: var(--card-content-max)`.
+- [ ] No ad-hoc Card className overrides for sizing (`py-2`, manual `min-h-[var(--card-half-row)]`) in route files.
+- [ ] Token arithmetic holds: quarter × 2 = half, quarter × 4 = row, quarter × 8 = tall (both viewports).
