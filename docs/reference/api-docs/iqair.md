@@ -7,7 +7,7 @@
 - https://github.com/bachya/pyairvisual (well-maintained Python client; used by Home Assistant — definitive auth + error-code evidence)
 - https://github.com/initialstate/airvisual/wiki/AirVisual-API (third-party wiki; definitive endpoint shape)
 
-**Last verified:** 2026-05-11 (IQAir api-docs SPA blocks WebFetch + WWW pages were rate-limiting at draft time; cross-validated against pyairvisual source code + multiple example-response sources. Paid-tier wire shape NOT verified at draft; flagged inline.)
+**Last verified:** 2026-05-11 (IQAir api-docs SPA blocks WebFetch + WWW pages were rate-limiting at draft time; cross-validated against pyairvisual source code + multiple example-response sources. Paid-tier wire shape NOT verified at draft; flagged inline.); 2026-06-13 (AQI scale coverage confirmed US+China only; paid-tier fields documented)
 
 ## Authentication
 
@@ -101,6 +101,50 @@ curl "https://api.airvisual.com/v2/nearest_city?lat=47.6062&lon=-122.3321&key=$I
 | City ranking | `/v2/city_ranking` | Top 10 most/least polluted cities globally; no location params. |
 | Countries / states / cities | `/v2/countries`, `/v2/states`, `/v2/cities` | Reference lookups; not data. |
 
+## AQI scales supported
+
+**Confirmed (2026-06-13): IQAir Cloud API v2 returns ONLY TWO AQI scales.** Every response, regardless of which country the station/city is in, returns both `aqius` (US EPA AQI) and `aqicn` (China MEP AQI). There is no `aqieu` field. There is no European CAQI. There is no Canadian AQHI. There is no Indian NAQI.
+
+Evidence:
+- IQAir's own AQI KB article says "Both US and Chinese AQI systems are available on the AirVisual app and Node." No other scales mentioned.
+- IQAir's commercial API plans page says "Overall AQI (US & China)" across all three tiers (Community, Startup, Enterprise).
+- The Microsoft Power Platform Connector schema lists exactly `aqius` and `aqicn` — no other AQI fields.
+- Home Assistant sensor.py configures `aqi{locale}` where locale is `"cn"` or `"us"` only.
+- Homebridge plugin `aqi_standard` accepts `"us"` or `"cn"` only.
+
+**Scales NOT returned (must compute client-side from concentrations if needed):**
+- European CAQI (Common Air Quality Index, 0–100)
+- Canadian AQHI (Air Quality Health Index, 1–10+)
+- Indian NAQI (National Air Quality Index, 0–500)
+- UK DAQI (Daily Air Quality Index, 1–10)
+- Australian AQI
+
+### US EPA AQI (`aqius`) — scale 0–500
+
+| Range | Category |
+|-------|----------|
+| 0–50 | Good |
+| 51–100 | Moderate |
+| 101–150 | Unhealthy for Sensitive Groups |
+| 151–200 | Unhealthy |
+| 201–300 | Very Unhealthy |
+| 301–500 | Hazardous |
+
+Computed from six criteria pollutants: PM2.5, PM10, O3, NO2, SO2, CO. IQAir states the US EPA scale "yields higher scores for AQI's under 200" compared to the Chinese scale.
+
+### China MEP AQI (`aqicn`) — scale 0–500
+
+| Range | Category |
+|-------|----------|
+| 0–50 | Excellent |
+| 51–100 | Good |
+| 101–150 | Lightly Polluted |
+| 151–200 | Moderately Polluted |
+| 201–300 | Heavily Polluted |
+| 301–500 | Severely Polluted |
+
+"Results of these two functions differ only in AQI scores of 200 and below" (IQAir KB). Above 200, US EPA and China MEP scales produce identical values.
+
 ## Pollutant code lookup (`mainus` / `maincn`)
 
 | Code | Pollutant | Canonical id |
@@ -112,7 +156,92 @@ curl "https://api.airvisual.com/v2/nearest_city?lat=47.6062&lon=-122.3321&key=$I
 | `s2` | SO2 | `SO2` |
 | `co` | CO | `CO` |
 
-The first three (`p1`, `p2`, `n2`) are confirmed via published examples and third-party documentation. `o3`, `s2`, `co` are inferred from naming conventions consistent with the IQAir AirVisual Pro device data export (where `p1_sum` / `p2_sum` are documented). One source rendered `co` as `c0` (likely OCR error from a similar-looking glyph); treat as `co` until real-capture says otherwise. **Real-capture should verify** — if a captured response surfaces `mainus = "co"` or `"o3"` or `"s2"`, the lookup is confirmed. If a different code appears, this table needs amendment.
+Confirmation status: `p2` confirmed via published examples, Pro Device API docs, Home Assistant, Homebridge, and multiple third-party docs. `p1` confirmed via Pro Device API docs (field `p1_sum`) and Home Assistant sensor definitions. `n2`, `o3`, `s2`, `co` confirmed via Home Assistant sensor.py pollutant unit mappings and Pro Device API docs.
+
+## Pollutant concentration fields (paid tiers)
+
+**Captured:** 2026-06-13. Status: **INFERRED** — synthesized from AirVisual Pro Device API, Homebridge plugin, Home Assistant integration, and IQAir plans page. NOT confirmed from a real Startup-tier API capture.
+
+On Startup and Enterprise tiers, each pollutant appears as a nested object inside `data.current.pollution`:
+
+```json
+"p2": {
+  "conc": 10,
+  "aqius": 41,
+  "aqicn": 14
+}
+```
+
+Fields per pollutant object:
+- `conc` — Concentration value (numeric)
+- `aqius` — Per-pollutant US EPA AQI sub-index (integer)
+- `aqicn` — Per-pollutant China MEP AQI sub-index (integer)
+
+### Concentration units
+
+From Home Assistant sensor.py pollutant unit mappings:
+
+| Code | Pollutant | Unit |
+|------|-----------|------|
+| `p1` | PM10 | ug/m3 |
+| `p2` | PM2.5 | ug/m3 |
+| `co` | CO | ppm |
+| `n2` | NO2 | ppb |
+| `o3` | O3 | ppb |
+| `s2` | SO2 | ppb |
+
+**Unit ambiguity note:** The Homebridge plugin includes a `ppb_units` config option, noting that "certain locations report pollutants in ppb rather than ug/m3" and supports conversion "for nitrogen dioxide, ozone, and sulfur dioxide only." This implies the API may return gas pollutants in **either** ppb or ug/m3 depending on the station's reporting convention.
+
+### Inferred Startup-tier response shape
+
+```json
+{
+  "status": "success",
+  "data": {
+    "city": "Nashville",
+    "state": "Tennessee",
+    "country": "USA",
+    "location": {
+      "type": "Point",
+      "coordinates": [-86.7386, 36.1767]
+    },
+    "current": {
+      "weather": { "ts": "...", "tp": 18, "hu": 88, "pr": 1012, "wd": 90, "ws": 3.1, "ic": "04d" },
+      "pollution": {
+        "ts": "2019-04-08T18:00:00.000Z",
+        "aqius": 41,
+        "mainus": "p2",
+        "aqicn": 14,
+        "maincn": "p2",
+        "p2": { "conc": 10, "aqius": 41, "aqicn": 14 },
+        "p1": { "conc": 18, "aqius": 17, "aqicn": 18 },
+        "o3": { "conc": 28, "aqius": 23, "aqicn": 14 },
+        "n2": { "conc": 5,  "aqius": 3,  "aqicn": 5  },
+        "s2": { "conc": 1,  "aqius": 1,  "aqicn": 1  },
+        "co": { "conc": 0.2,"aqius": 2,  "aqicn": 2  }
+      }
+    }
+  }
+}
+```
+
+**IMPORTANT:** This shape is inferred from the AirVisual Pro Device API `outdoor_station` object (which uses the exact `p2: { conc, aqius, aqicn }` structure, confirmed from IQAir official docs), the Homebridge plugin (which states "Startup/Enterprise API keys provide individual pollutant concentrations"), and the Home Assistant integration field mappings. A real API capture from a Startup-tier key is the definitive gate.
+
+### Available pollutants per tier
+
+| Tier | Pollutant concentrations available |
+|------|-----------------------------------|
+| Community (Free) | **NONE** — only aggregate AQI + main pollutant code |
+| Startup | PM2.5, PM10, O3, NO2, SO2, CO |
+| Enterprise | PM2.5, PM10, O3, NO2, SO2, CO (+ forecasts & history) |
+
+### Plan tiers & rate limits
+
+| Tier | Calls/min | Calls/day | Calls/month | Extra data |
+|------|-----------|-----------|-------------|------------|
+| Community (Free) | 5 | 500 | 10,000 | City-level AQI only |
+| Startup | 100 | 100,000 | 1,000,000 | + Station-level + pollutant concentrations |
+| Enterprise | 1,000 | 1,000,000 | 10,000,000 | + 7-day forecast + 48h history + city ranking |
 
 ## Rate limits (Community / free plan)
 
@@ -175,4 +304,4 @@ The HTTP status mapping above is best-guess — pyairvisual dispatches solely on
 - **`status` field is the primary error discriminator, not HTTP status.** A response can be HTTP 200 with `status: fail` in the body (LC27 precedent applies — same envelope-mapping pattern as Aeris). Wire validation must check `status` before consuming `data`.
 - **Two timestamps in the response.** `weather.ts` and `pollution.ts` may differ by an hour or more (different upstream sources). For canonical `observedAt`, use `pollution.ts`.
 - **City/state/country are strings as-is.** `data.city = "Nashville"`, `data.state = "Tennessee"`. Concatenation order for canonical `aqiLocation` is an operationalization question (`"Nashville, Tennessee"` vs `"Nashville TN"` vs `"Nashville/TN"`) — surface in the brief.
-- **Paid-tier wire-shape unverified at draft.** If/when paid-tier credentials become available, capture a real response and confirm: do PM2.5/PM10/O3/NO2/SO2/CO appear under `data.current.pollution.*` with field names `pm25`/`pm10`/`o3`/`no2`/`so2`/`co`? In what units (µg/m³ for all, like OWM? or ppb for gases, like Aeris?)? Current draft is conservative — CAPABILITY enumerates only the fields confirmed on free-tier wire.
+- **Paid-tier wire-shape inferred but not live-captured.** Per the "Pollutant concentration fields (paid tiers)" section above (added 2026-06-13), the Startup/Enterprise response likely uses `{ conc, aqius, aqicn }` nested objects keyed by pollutant code (`p2`, `p1`, `o3`, `n2`, `s2`, `co`). This is inferred from the AirVisual Pro Device API and client library implementations. A real API capture from a Startup-tier key remains the definitive gate. Units are likely: ug/m3 for particles, ppb for gases (NO2, O3, SO2), ppm for CO — per Home Assistant sensor.py mappings.

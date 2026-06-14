@@ -2,21 +2,25 @@
 # redeploy-weather-dev.sh — FULL redeploy of Clear Skies onto the weather-dev
 # LXD container.
 #
-# Fired from DILBERT (this workstation) after pushing commits to GitHub.
+# Fired from any workstation (DILBERT, CATBERT, etc.) after pushing commits
+# to GitHub. SSHes directly to weather-dev (not via ratbert lxc exec).
+#
 # Performs, in order:
 #   1. git pull --ff-only for all (or one) repo(s)        [delegates to sync-to-weather-dev.sh]
-#   2. restart the three systemd services                 (realtime, api, config)
+#   2. restart the systemd services                       (realtime, config)
 #   3. npm run build in the dashboard repo                 (Vite → dist/)
 #   4. rsync built dist/ → web root /var/www/clearskies/   (EXCLUDING the read-only webcam/ mount)
 #
-# Transport: ssh to the LXD host, then `lxc exec weather-dev`.
-#   - service restarts run as root (systemctl)
+# SSH config: uses the project-local config at .local/ssh/config so it works
+# from any machine that has the replicated project files.
+#
+# Transport: direct SSH to weather-dev as `claude` user.
+#   - service restarts use sudo (claude has NOPASSWD sudo)
 #   - git pull and npm build run as the `ubuntu` user (owns the repos)
 #   - rsync runs as the `ubuntu` user (owns /var/www/clearskies)
 #
-# Verified weather-dev facts (2026-05-29):
-#   - Units:    weewx-clearskies-realtime.service, weewx-clearskies-api.service,
-#               weewx-clearskies-config.service  (all loaded/active)
+# Verified weather-dev facts (2026-06-10):
+#   - Units:    weewx-clearskies-realtime.service, weewx-clearskies-config.service
 #   - Dashboard repo:  /home/ubuntu/repos/weewx-clearskies-dashboard
 #   - Build:    `npm run build` (tsc -b && vite build) → ./dist (default Vite outDir)
 #   - Web root: /var/www/clearskies (Caddy `root *`; owned ubuntu:ubuntu 775)
@@ -32,8 +36,6 @@
 
 set -euo pipefail
 
-SSH_HOST="ratbert"
-LXC_CONTAINER="weather-dev"
 CONTAINER_REPO_ROOT="/home/ubuntu/repos"
 DASHBOARD_REPO="weewx-clearskies-dashboard"
 DASHBOARD_PATH="${CONTAINER_REPO_ROOT}/${DASHBOARD_REPO}"
@@ -53,6 +55,16 @@ SERVICES=(
 WEBCAM_EXCLUDES=("webcam/" "webcam.json")
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SSH_CONFIG="${PROJECT_ROOT}/.local/ssh/config"
+
+if [ ! -f "$SSH_CONFIG" ]; then
+    echo "SSH config not found at ${SSH_CONFIG}" >&2
+    echo "Ensure .local/ssh/config exists (replicated via Nextcloud)." >&2
+    exit 1
+fi
+
+SSH_CMD="ssh -F ${SSH_CONFIG}"
 
 skip_pull="0"
 use_delete="1"
@@ -68,16 +80,16 @@ for arg in "$@"; do
     esac
 done
 
-# Helper: run a command inside the container as root.
+# Helper: run a command on weather-dev via sudo (for systemctl, etc.).
 run_root() {
-    ssh "$SSH_HOST" "lxc exec ${LXC_CONTAINER} -- bash -lc '$1'"
+    $SSH_CMD weather-dev "sudo bash -lc '$1'"
 }
-# Helper: run a command inside the container as the ubuntu user.
+# Helper: run a command on weather-dev as the ubuntu user (owns repos + web root).
 run_ubuntu() {
-    ssh "$SSH_HOST" "lxc exec ${LXC_CONTAINER} -- sudo -u ubuntu bash -lc '$1'"
+    $SSH_CMD weather-dev "sudo -u ubuntu bash -lc '$1'"
 }
 
-echo "=== Clear Skies full redeploy → ${LXC_CONTAINER} ==="
+echo "=== Clear Skies full redeploy → weather-dev ==="
 
 # --- Step 1: git pull (delegated to sync-to-weather-dev.sh) ---
 if [ "$skip_pull" = "1" ]; then
@@ -128,4 +140,4 @@ echo "=== Redeploy complete ==="
 echo "Verify:  curl -sI http://weather-dev/ | head -1   (expect 200)"
 echo "         curl -s  http://weather-dev/webcam/weather_cam.jpg -o /dev/null -w '%{http_code}\\n'"
 echo "         curl -s  http://weather-dev/webcam.json -o /dev/null -w '%{http_code}\\n'   (expect 200)"
-echo "         ssh ${SSH_HOST} \"lxc exec ${LXC_CONTAINER} -- systemctl is-active ${SERVICES[*]}\""
+echo "         $SSH_CMD weather-dev 'sudo systemctl is-active ${SERVICES[*]}'"

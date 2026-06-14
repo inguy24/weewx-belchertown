@@ -7,7 +7,7 @@
 - https://openweathermap.org/api/one-call-3 (One Call API 3.0)
 - https://openweathermap.org/api/air-pollution (Air Pollution API)
 
-**Last verified:** 2026-05-10 (Air Pollution section added 3b-11); 2026-04-30 (Current / Forecast / One Call 3.0)
+**Last verified:** 2026-05-10 (Air Pollution section added 3b-11); 2026-04-30 (Current / Forecast / One Call 3.0); 2026-06-13 (regional AQI scales confirmed documentation-only; NH3/NO retention policy changed)
 
 ## Authentication
 
@@ -280,9 +280,9 @@ OWM publishes a 5-level ordinal scale (1 = Good ... 5 = Very Poor), assembled by
 | 4     | Poor      | [250; 350) | [150; 200)| [100; 200) | [50; 75)    | [140; 180)| [12400; 15400)  |
 | 5     | Very Poor | ≥ 350      | ≥ 200     | ≥ 200      | ≥ 75        | ≥ 180     | ≥ 15400         |
 
-**NH₃ and NO** are reported (0.1–200 µg/m³ and 0.1–100 µg/m³ respectively) but do **not** affect the OWM index calculation. They have no EPA AQI equivalent either — drop during canonical translation.
+**NH₃ and NO** are reported (0.1–200 µg/m³ and 0.1–100 µg/m³ respectively) but do **not** affect the OWM index calculation. They have no EPA AQI equivalent. **However, they should NOT be dropped during canonical translation (FIX-003, 2026-06-13).** NH3 and NO are valid pollutant measurements that may be needed for non-EPA regional AQI calculations client-side, and discarding data the API provides serves no purpose.
 
-OWM also publishes regional variants (UK / Europe / USA / Mainland China) at https://openweathermap.org/air-pollution-index-levels; those are NOT returned in the API response.
+OWM also publishes regional variants (UK / Europe / USA / Mainland China) at https://openweathermap.org/air-pollution-index-levels; those are NOT returned in the API response — see "Regional AQI scales" section below for full reference tables.
 
 #### Forecast and History sub-endpoints
 
@@ -291,6 +291,101 @@ OWM also publishes regional variants (UK / Europe / USA / Mainland China) at htt
 | Forecast     | `/data/2.5/air_pollution/forecast`        | `lat`, `lon`, `appid`  | 4 days hourly; same shape as current. |
 | History      | `/data/2.5/air_pollution/history`         | `lat`, `lon`, `start`, `end`, `appid` | Unix UTC seconds for `start` / `end`; data available from 2020-11-27 onward. |
 
+#### Regional AQI scales — documentation-only reference (NOT in API response)
+
+**Captured:** 2026-06-13 from https://openweathermap.org/air-pollution-index-levels
+
+OWM publishes regional AQI breakpoint tables at the index-levels page for **four regions**: UK, Europe, USA, and Mainland China. **These are NOT returned by the API.** There is no parameter to select a regional scale, no field in the response containing a regional AQI value, and no change in response shape based on queried location. The regional scales are reference material for developers who want to convert the raw pollutant concentrations into a region-specific AQI client-side.
+
+##### UK Air Quality Index (DAQI) — 10-point scale
+
+4 bands: Low (1-3), Moderate (4-6), High (7-9), Very High (10). Pollutants: SO2, NO2, PM2.5, PM10, O3. All ug/m3.
+
+| Qualitative | Index | SO2 | NO2 | PM2.5 | PM10 | O3 |
+|---|---|---|---|---|---|---|
+| Low | 1 | 0-88 | 0-67 | 0-11 | 0-16 | 0-33 |
+| Low | 2 | 89-177 | 68-134 | 12-23 | 17-33 | 34-66 |
+| Low | 3 | 178-266 | 135-200 | 24-35 | 34-50 | 67-100 |
+| Moderate | 4 | 267-354 | 201-267 | 36-41 | 52-58 | 101-120 |
+| Moderate | 5 | 355-443 | 268-334 | 42-47 | 59-66 | 121-140 |
+| Moderate | 6 | 444-532 | 335-400 | 48-53 | 67-75 | 141-160 |
+| High | 7 | 533-710 | 401-467 | 54-58 | 76-83 | 161-187 |
+| High | 8 | 711-887 | 468-534 | 59-64 | 84-91 | 188-213 |
+| High | 9 | 888-1064 | 535-600 | 65-70 | 92-100 | 214-240 |
+| Very High | 10 | >= 1065 | >= 601 | >= 71 | >= 101 | >= 241 |
+
+##### European Air Quality Index — 5-level scale (0-100+)
+
+Pollutants: NO2, PM10, O3, PM2.5. All hourly ug/m3.
+
+| Qualitative | Index Range | NO2 | PM10 | O3 | PM2.5 |
+|---|---|---|---|---|---|
+| Very Low | 0-25 | 0-50 | 0-25 | 0-60 | 0-15 |
+| Low | 25-50 | 50-100 | 25-50 | 60-120 | 15-30 |
+| Medium | 50-75 | 100-200 | 50-90 | 120-180 | 30-55 |
+| High | 75-100 | 200-400 | 90-180 | 180-240 | 55-110 |
+| Very High | >100 | >400 | >180 | >240 | >110 |
+
+Note: This European scale on OWM's page differs from Open-Meteo's European AQI breakpoints. Open-Meteo's version has 6 categories (adds "Extremely Poor") and uses different concentration ranges. Multiple versions of the European AQI exist (EEA, CAMS, national variants).
+
+##### USA EPA AQI — 0-500 scale (+ OWM extension to 1000)
+
+Standard EPA 0-500 scale. OWM adds a 501-1000 "Very Hazardous" category beyond the standard table.
+
+| AQI Range | Category | Color |
+|---|---|---|
+| 0-50 | Good | Green |
+| 51-100 | Moderate | Yellow |
+| 101-150 | Unhealthy for Sensitive Groups | Orange |
+| 151-200 | Unhealthy | Red |
+| 201-300 | Very Unhealthy | Purple |
+| 301-500 | Hazardous | Maroon |
+| 501-1000 | Very Hazardous | Brown |
+
+EPA AQI formula: `I = ((I_high - I_low) / (C_high - C_low)) * (C - C_low) + I_low`
+
+Pollutants: O3 (8-hr and 1-hr), PM2.5 (24-hr), PM10 (24-hr), CO (8-hr), SO2 (1-hr), NO2 (1-hr).
+
+**EPA breakpoint concentration table:**
+
+| I_low-I_high | O3 8-hr (ppb) | O3 1-hr (ppb) | PM2.5 24-hr (ug/m3) | PM10 24-hr (ug/m3) | CO 8-hr (ppm) | SO2 1-hr (ppb) | NO2 1-hr (ppb) |
+|---|---|---|---|---|---|---|---|
+| 0-50 | 0-54 | -- | 0.0-12.0 | 0-54 | 0.0-4.4 | 0-35 | 0-53 |
+| 51-100 | 55-70 | -- | 12.1-35.4 | 55-154 | 4.5-9.4 | 36-75 | 54-100 |
+| 101-150 | 71-85 | 125-164 | 35.5-55.4 | 155-254 | 9.5-12.4 | 76-185 | 101-360 |
+| 151-200 | 86-105 | 165-204 | 55.5-150.4 | 255-354 | 12.5-15.4 | 186-304 | 361-649 |
+| 201-300 | 106-200 | 205-404 | 150.5-250.4 | 355-424 | 15.5-30.4 | 305-604 (24-hr) | 650-1249 |
+| 301-400 | -- | 405-504 | 250.5-350.4 | 425-504 | 30.5-40.4 | 605-804 (24-hr) | 1250-1649 |
+| 401-500 | -- | 505-604 | 350.5-500.4 | 505-604 | 40.5-50.4 | 805-1004 (24-hr) | 1650-2049 |
+
+Notes: O3 8-hr used for AQI 0-300; >200 ppb uses 1-hr only. O3 1-hr used for AQI 101-500. SO2 switches from 1-hr to 24-hr for AQI 201-500.
+
+##### Mainland China AQI (GB 3095-2012) — 0-500 scale
+
+| AQI Range | Level | Category |
+|---|---|---|
+| 0-50 | Level 1 | Excellent |
+| 51-100 | Level 2 | Good |
+| 101-150 | Level 3 | Lightly Polluted |
+| 151-200 | Level 4 | Moderately Polluted |
+| 201-300 | Level 5 | Heavily Polluted |
+| >300 | Level 6 | Severely Polluted |
+
+Pollutants: SO2, NO2, PM10, CO, O3, PM2.5. Uses the same linear interpolation formula as US EPA AQI.
+
+**China IAQI breakpoint table (units: ug/m3 except CO in mg/m3):**
+
+| IAQI | SO2 24-hr | NO2 24-hr | PM10 24-hr | CO 24-hr (mg/m3) | O3 1-hr | O3 8-hr | PM2.5 24-hr |
+|---|---|---|---|---|---|---|---|
+| 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 50 | 50 | 40 | 50 | 2 | 160 | 100 | 35 |
+| 100 | 150 | 80 | 150 | 4 | 200 | 160 | 75 |
+| 150 | 475 | 180 | 250 | 14 | 300 | 215 | 115 |
+| 200 | 800 | 280 | 350 | 24 | 400 | 265 | 150 |
+| 300 | 1600 | 565 | 420 | 36 | 800 | 800 | 250 |
+| 400 | 2100 | 750 | 500 | 48 | 1000 | -- | 350 |
+| 500 | 2620 | 940 | 600 | 60 | 1200 | -- | 500 |
+
 #### Air Pollution-specific gotchas
 
 - **OWM AQI 1–5 ≠ EPA AQI 0–500.** To produce a canonical EPA 0–500 AQI value, the normalizer must compute each pollutant's EPA sub-AQI from its concentration via the EPA breakpoint table (in `providers/aqi/_units.py`) — NOT use `main.aqi` directly.
@@ -298,7 +393,7 @@ OWM also publishes regional variants (UK / Europe / USA / Mainland China) at htt
 - **OWM does not differentiate averaging periods.** EPA AQI sub-tables are defined for 1-hr / 8-hr / 24-hr averages depending on pollutant; OWM returns a snapshot. The normalizer applies EPA breakpoints to the snapshot as an approximation (documented limitation — same pattern third-party AQI services use). Per Q1 Option A (2026-05-10): O3 uses the 8-hr table only and caps at sub-AQI 300 above 0.200 ppm; SO2 uses the 1-hr table only and caps at sub-AQI 200 above 0.304 ppm. Both caps reflect that the operationalization can't faithfully extend past the table's averaging-period top breakpoint for an instantaneous snapshot.
 - **No tier gating.** Air Pollution is on the Free tier per https://openweathermap.org/price; FREE-tier appid works without a One Call subscription. Distinct from the One Call 3.0 endpoint which requires a separate "One Call by Call" sub.
 - **No location label in the response.** Canonical `aqiLocation` stays null for this provider.
-- **NH₃ and NO are extras.** Present on the wire, not in EPA AQI, not on canonical AQIReading — dropped during translation.
+- **NH₃ and NO are extras but should be RETAINED (FIX-003).** Present on the wire, not in EPA AQI calculation, but should not be dropped during canonical translation. They are valid pollutant measurements that may be needed for non-EPA regional AQI calculations client-side.
 
 ### Weather Maps 1.0 (free)
 

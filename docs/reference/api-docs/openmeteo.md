@@ -2,7 +2,7 @@
 
 **Source:** https://open-meteo.com/en/docs
 
-**Last verified:** 2026-04-30
+**Last verified:** 2026-04-30; 2026-06-13 (AQI global availability verified, variable name correction, Europe-only variables documented)
 
 ## Authentication
 
@@ -241,7 +241,7 @@ wind_speed, wind_direction, geopotential_height
   |---|---|---|
   | `current` | — | CSV of current-condition AQI variables (see "Current variables" below) |
   | `hourly` | — | CSV of hourly AQI variables (see "Hourly variables" below) |
-  | `domains` | `auto` | `auto`, `cams_europe`, or `cams_global`. Picks regional model |
+  | `domains` | `auto` | `auto`, `cams_europe`, or `cams_global`. See `domains` behavior below |
   | `timeformat` | `iso8601` | `unixtime` |
   | `timezone` | `GMT` | IANA name or `auto` |
   | `past_days` | `0` | Range 0-92 |
@@ -314,6 +314,53 @@ curl "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=47.6062&lon
 
 (`hourly=` projections return parallel arrays under `hourly.{variable_name}` with `hourly.time` as the alignment index, identical column-oriented shape to the Forecast endpoint.)
 
+#### `domains` parameter behavior (live-tested 2026-06-13)
+
+| Value | Behavior | Resolution | Coverage |
+|---|---|---|---|
+| `auto` (default) | For European coordinates, merges CAMS Europe (higher-res) with CAMS Global. For non-European coordinates, uses CAMS Global only. | Varies | Global |
+| `cams_europe` | European domain only. **Returns error for non-European coordinates:** `{"error":true,"reason":"No data is available for this location"}` | 0.1 deg (~11 km) | Europe only |
+| `cams_global` | Global domain only | 0.4 deg (~45 km) | Global |
+
+The European and global domains are not coupled — they may show different values for the same location within Europe. Use `auto` for general-purpose queries.
+
+#### AQI scales: only two exist
+
+**Only two AQI scales are implemented: European AQI and US AQI.** No India, China, Canada, or other regional AQI indices exist. The Open-Meteo blog states: "As a first step only the European and U.S. AQI are implemented. Contributions are welcome for other indices as well." As of June 2026, no additional indices have been contributed.
+
+#### Global availability of AQI variables (live-tested 2026-06-13)
+
+**Both `us_aqi` and `european_aqi` (and all their sub-indices) work globally — they are NOT restricted to US or European coordinates.** The AQI indices are computed server-side by Open-Meteo from the underlying pollutant concentrations using the respective scale's breakpoint tables. They are not region-locked.
+
+Live test results:
+
+| Location | `us_aqi` | `european_aqi` | Notes |
+|---|---|---|---|
+| London (51.5N, -0.1W) | 29 | 20 | Both work. CAMS Europe data with `domains=auto` |
+| Seattle (47.6N, -122.3W) | 48 | 50 | Both work. CAMS Global data with `domains=auto` |
+| Shanghai (31.2N, 121.5E) | 58 | 32 | Both work. CAMS Global data with `domains=auto` |
+
+Data quality/resolution differs (CAMS Europe is 11 km for European locations, CAMS Global is 45 km elsewhere), but the AQI calculation itself works for any coordinate.
+
+#### Europe-only vs global variables
+
+**Europe-only (return `null` outside Europe):**
+- `ammonia`
+- All 6 pollen variables: `alder_pollen`, `birch_pollen`, `grass_pollen`, `mugwort_pollen`, `olive_pollen`, `ragweed_pollen`
+- `non_methane_volatile_organic_compounds`
+- `secondary_inorganic_aerosol`
+- `residential_elementary_carbon`, `total_elementary_carbon`
+- `pm2_5_total_organic_matter`
+
+**Global (work everywhere):**
+- All core pollutants: `pm10`, `pm2_5`, `carbon_monoxide`, `nitrogen_dioxide`, `sulphur_dioxide`, `ozone`
+- Both AQI scales and all sub-indices: `us_aqi`, `european_aqi`, and all `us_aqi_*`, `european_aqi_*` variants
+- `dust`, `aerosol_optical_depth`, `uv_index`, `uv_index_clear_sky`
+- `formaldehyde`, `glyoxal`, `peroxyacyl_nitrates`
+- `sea_salt_aerosol`, `nitrogen_monoxide`
+- `carbon_dioxide`, `methane`
+- `pm10_wildfires`
+
 #### Current variables (`current=`)
 
 The documentation states: "Every weather variable available in hourly data is available as current condition as well." Explicit current-supported variables:
@@ -323,16 +370,16 @@ The documentation states: "Every weather variable available in hourly data is av
 - `european_aqi` — European AQI scale (0-100+), pre-computed
 
 **Pollutant concentrations (raw):**
-- `pm10`, `pm2_5` — μg/m³
-- `carbon_monoxide` — μg/m³
-- `nitrogen_dioxide` — μg/m³
-- `sulphur_dioxide` — μg/m³
-- `ozone` — μg/m³
-- `dust` — μg/m³ (Saharan dust)
+- `pm10`, `pm2_5` — ug/m3
+- `carbon_monoxide` — ug/m3
+- `nitrogen_dioxide` — ug/m3
+- `sulphur_dioxide` — ug/m3
+- `ozone` — ug/m3
+- `dust` — ug/m3 (Saharan dust)
 - `aerosol_optical_depth` — dimensionless
 - `uv_index`, `uv_index_clear_sky`
-- `ammonia` — μg/m³ (Europe only)
-- `alder_pollen`, `birch_pollen`, `grass_pollen`, `mugwort_pollen`, `olive_pollen`, `ragweed_pollen` — grains/m³ (Europe, seasonal)
+- `ammonia` — ug/m3 (**Europe only** — returns null for non-European coordinates)
+- `alder_pollen`, `birch_pollen`, `grass_pollen`, `mugwort_pollen`, `olive_pollen`, `ragweed_pollen` — grains/m3 (**Europe only**, seasonal)
 
 #### Hourly variables (`hourly=`)
 
@@ -351,7 +398,7 @@ Superset of current. Adds:
 **Additional pollutants and aerosols:**
 - `formaldehyde`, `glyoxal`
 - `non_methane_volatile_organic_compounds`
-- `pm10_wildfire`
+- `pm10_wildfires`
 - `peroxyacyl_nitrates`
 - `secondary_inorganic_aerosol`
 - `residential_elementary_carbon`, `total_elementary_carbon`
