@@ -131,6 +131,28 @@ This rule applies project-wide — it governs the configuration UI's listener (p
 
 Note: SHA-pinning npm/PyPI packages is not standard practice — lockfiles are the equivalent guarantee. SHA-pinning is specifically for Docker images and GitHub Actions, where there's no lockfile.
 
+### Clear Skies API — security constraints
+
+1. **Never write files outside `/etc/weewx-clearskies/` or `/tmp`.** The API's filesystem write scope is limited to its config directory and temporary files. File paths from user input (setup endpoints) must be validated against an allowlist — normalize with `Path.resolve()` before any traversal check.
+
+2. **Never use the weewx DB connection for INSERT, UPDATE, or DELETE.** The API is a read-only consumer of the weewx archive. The startup write probe (`db/probe.py`) enforces this — if it detects write access, the service exits. MariaDB grants and SQLite `mode=ro` are the primary controls.
+
+3. **Only import `weewx.units` from the weewx package.** Never import `weewx.engine`, `weewx.drivers`, `weewx.manager`, or any other weewx module. The API reads metadata only — it never controls the station or modifies weewx state.
+
+4. **Every new endpoint must declare its auth level.** Public (no auth, rate-limited), proxy-trusted (`X-Clearskies-Proxy-Auth`), or setup-session (Bearer token from trust exchange). Document the level in the endpoint's docstring. Admin endpoints require auth checks at both the API level AND the Caddy proxy level (defense in depth).
+
+5. **All SQL queries use SQLAlchemy parameterized statements.** No f-string interpolation of user input into SQL. Column names from schema reflection are trusted constants — but validate them against `^[a-zA-Z_][a-zA-Z0-9_]*$` at reflection time as defense-in-depth.
+
+6. **SSE connections are capped.** `SSEEmitter` enforces a `max_subscribers` limit (default 500). New endpoint code that creates SSE-like long-lived connections must respect this pattern — never allow unbounded connection counts.
+
+7. **Rate limiter trusts `X-Forwarded-For` only from known proxy IPs.** Default trusted proxies: `127.0.0.1`, `::1`. When adding new IP-based logic (geo-restriction, logging), always use the rate limiter's resolved client IP, not raw headers.
+
+8. **Archive queries enforce time-range caps for raw mode.** Raw queries (`interval=raw`, no `aggregate_interval`) are capped at 366 days. Aggregated queries (hour/day) and grouped queries are bounded by GROUP BY cardinality. New query endpoints must enforce similar limits.
+
+9. **Docker containers run non-root with no capabilities.** `USER clearskies` in Dockerfile. Compose: `cap_drop: ALL`, `read_only: true`, `security_opt: [no-new-privileges:true]`, `tmpfs: [/tmp]`. Never add `privileged: true` or `cap_add` entries.
+
+10. **Uploaded files land in the config directory with restrictive permissions.** No executable MIME types. Never serve uploaded content from the web root — Caddy serves operator files from `/etc/weewx-clearskies/` via explicit routes.
+
 ---
 
 ## 2. Readability — code should self-document
