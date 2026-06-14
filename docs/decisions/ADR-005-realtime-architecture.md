@@ -1,9 +1,12 @@
 ---
-status: Accepted
+status: Superseded by ADR-058
 date: 2026-04-30
 deciders: shane
 amended-by: ADR-041
+superseded-by: ADR-058
 ---
+
+> **This ADR has been superseded by [ADR-058](ADR-058-fold-realtime-into-api.md). The realtime service has been merged into the API.**
 
 # ADR-005: Realtime supports both direct-read and MQTT subscriber modes
 

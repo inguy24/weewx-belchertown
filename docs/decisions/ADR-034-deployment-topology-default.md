@@ -1,10 +1,11 @@
 ---
-status: Accepted
+status: Accepted (amended 2026-06-14 — topology simplified per ADR-058)
 date: 2026-05-02
 revised: 2026-05-23
 deciders: shane
 supersedes:
 superseded-by:
+amended-by: ADR-058
 ---
 
 # ADR-034: Deployment topology default
@@ -75,6 +76,13 @@ Operators who want a topology beyond the two-host default (e.g., dashboard on a 
 - Multi-tenant deployment — out per [ADR-011](ADR-011-multi-station-scope.md).
 - Bundling weewx itself in a container — out of scope (separate project).
 
+## Amendment: topology simplified (ADR-058, 2026-06-14)
+
+Amended 2026-06-14: Per [ADR-058](ADR-058-fold-realtime-into-api.md), the realtime service has been merged into the API. The container inventory loses `clearskies-realtime`. Port 8766 and 8082 are removed from the port registry. The two-host default topology simplifies to: API on the weewx host (port 8765), dashboard + Caddy on the front-end host (no realtime container). Caddy routes `/api/v1/*` and `/sse` both directly to the API at port 8765.
+
+The `clearskies-realtime` Dockerfile, systemd unit (`weewx-clearskies-realtime.service`), and `realtime.conf` are deprecated. Realtime settings (input mode, SSE, unit conversion) fold into `api.conf`. The two install paths (container and native) remain; native install now covers API only (no separate realtime service).
+
 ## References
 
 - Related: [ADR-001](ADR-001-component-breakdown.md), [ADR-005](ADR-005-realtime-architecture.md), [ADR-008](ADR-008-auth-model.md), [ADR-011](ADR-011-multi-station-scope.md), [ADR-027](ADR-027-config-and-setup-wizard.md), [ADR-037](ADR-037-inbound-traffic-architecture.md), [ADR-039](INDEX.md) (distribution — Pinned).
+- Amended by: [ADR-058](ADR-058-fold-realtime-into-api.md) (fold realtime into API).

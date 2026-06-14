@@ -1,9 +1,10 @@
 ---
-status: Accepted
+status: Accepted (amended 2026-06-14 — BFF merged into API per ADR-058)
 date: 2026-05-26
 deciders: shane
 amends: ADR-005
 supersedes: ADR-019
+amended-by: ADR-058
 ---
 
 # ADR-041: Realtime service becomes BFF (Backend-for-Frontend)
@@ -115,9 +116,18 @@ retained only as historical context in git history (pre-stack-4334475).
 
 **Corrective action:** `/charts/wind-rose` deleted from the API. Direction × Beaufort binning moved to a dashboard utility (`wind-rose-binning.ts`) that reads the BFF-injected `beaufort` field from archive records. See [ARCHITECTURE.md Layer Responsibilities](../ARCHITECTURE.md#layer-responsibilities).
 
+## Amendment: BFF merged into API (ADR-058, 2026-06-14)
+
+Amended 2026-06-14: The BFF role has been merged into the API per [ADR-058](ADR-058-fold-realtime-into-api.md). The computation boundary (API = raw data, BFF = conversion) no longer exists as a service boundary — unit conversion, derived values, and enrichment now happen within the API. The principle still holds: observation data passes through the unit conversion pipeline before reaching the client.
+
+The `weewx-clearskies-realtime` repo is deprecated (archived, not deleted). Port 8766 and 8082 are removed from the port registry. All Caddy routing that previously pointed to the BFF at port 8766 now routes directly to the API at port 8765. The `[api] upstream_url` config section in `realtime.conf` is superseded — there is no BFF proxy and therefore no upstream URL to configure.
+
+The test from the computation boundary amendment (2026-06-05) still applies in its updated form: if a proposed API endpoint requires domain-specific computation, it belongs in the enrichment pipeline within the API, not as a raw data endpoint.
+
 ## References
 
 - Amends: [ADR-005](ADR-005-realtime-architecture.md) (realtime architecture)
 - Supersedes: [ADR-019](ADR-019-units-handling.md) (units handling — no server-side conversion)
+- Amended by: [ADR-058](ADR-058-fold-realtime-into-api.md) (fold realtime into API)
 - Related: [ADR-034](ADR-034-deployment-topology-default.md) (deployment topology), [ADR-037](ADR-037-inbound-traffic-architecture.md) (inbound traffic)
 - Research: [brief-realtime-audit.md](../planning/briefs/brief-realtime-audit.md), [brief-mqtt-field-names.md](../planning/briefs/brief-mqtt-field-names.md)

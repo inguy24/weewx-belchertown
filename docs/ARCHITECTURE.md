@@ -4,9 +4,9 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-06-08 (sky condition thresholds corrected for sensor accuracy, day/night display vocabulary added, Known gap #8 resolved).
+Last verified: 2026-06-14 (realtime service merged into API per ADR-058 — removed realtime/BFF service, collapsed BFF layer, updated ports, routing, topology, config).
 
-Previous: 2026-05-29 (B-1 fix: all three Caddyfiles now route /api/v1/* to realtime:8766 BFF instead of directly to the API; stack config/realtime.conf.example updated with [api] upstream_url section).
+Previous: 2026-06-08 (sky condition thresholds corrected for sensor accuracy, day/night display vocabulary added, Known gap #8 resolved).
 
 ---
 
@@ -14,8 +14,7 @@ Previous: 2026-05-29 (B-1 fix: all three Caddyfiles now route /api/v1/* to realt
 
 | Service | Repo | What it does | Technology | Main port | Health port |
 |---------|------|-------------|------------|-----------|-------------|
-| **API** | weewx-clearskies-api | REST API for weewx archive data, provider aggregation, setup endpoints | FastAPI (Python 3.12+), sync handlers, SQLAlchemy 2.x sync, uvicorn | 8765 | 8081 |
-| **Realtime (BFF)** | weewx-clearskies-realtime | BFF gateway — proxies API requests, serves SSE, applies unit conversion (ADR-041, ADR-042) | FastAPI (Python), sse-starlette, httpx, uvicorn | 8766 | 8082 |
+| **API** | weewx-clearskies-api | REST API + SSE for real-time data, unit conversion, enrichment pipeline, derived values. Queries weewx archive, aggregates provider data, serves setup endpoints. (ADR-058) | FastAPI (Python 3.12+), sync handlers, SQLAlchemy 2.x sync, sse-starlette, uvicorn | 8765 | 8081 |
 | **Dashboard** | weewx-clearskies-dashboard | Weather UI (static SPA, 9 pages + custom pages) | React 19, Vite 8, Tailwind CSS v4, shadcn/ui, Recharts, Leaflet, **Phosphor** (utility/nav/alert) + **inline Material Symbols SVG** (hero weather, ADR-049/050); Lucide retained for deferred glyph families only, i18next | None (init container) | — |
 | **Config UI** | weewx-clearskies-stack | Setup wizard (8 steps) + ongoing config admin | FastAPI, Jinja2, HTMX, Pico CSS (Python-only, no Node build step) | 9876 | — |
 | **Caddy** | upstream (caddy:2-alpine) | Reverse proxy, TLS termination (auto Let's Encrypt), static file server | Caddy | 80, 443 | — |
@@ -28,11 +27,10 @@ Computation boundaries between the three application layers. **No chart-specific
 
 | Layer | Responsibility | Does NOT do |
 |-------|---------------|-------------|
-| **API** | General-purpose data access: query the weewx archive, serve raw observation/aggregate values, host provider modules, expose setup endpoints. Returns raw values with `usUnits` declaring the unit system. | Unit conversion, derived-value computation (Beaufort, comfort index), chart-specific binning or aggregation, presentation formatting. (ADR-041 line 38: "The API still passes raw archive values to the BFF — the API itself does no conversion.") |
-| **BFF (Realtime)** | Transformation gateway: proxy API responses, apply unit conversion to all outbound data (REST + SSE), compute derived values (Beaufort scale, comfort index, barometer trend direction, cardinal wind directions), run the conditions-text engine, serve SSE stream. Single conversion authority (ADR-042). | Database access, provider API calls, chart-type awareness, presentation layout. |
-| **Dashboard** | Rendering + presentation-level computation: display converted values, client-side binning for visualizations (e.g., wind rose direction×Beaufort matrix from BFF-provided fields), LTTB downsampling, chart layout, theming, accessibility. | Unit conversion, Beaufort/comfort-index threshold logic, raw SQL queries, provider API calls. (ADR-042 line 71: "Dashboard does not carry Beaufort thresholds.") |
+| **API** | General-purpose data access AND transformation: query the weewx archive, serve raw observation/aggregate values, host provider modules, expose setup endpoints. Unit conversion, derived-value computation (Beaufort scale, comfort index, barometer trend direction, cardinal wind directions). Enrichment pipeline (conditions text, weather text, barometer trend, wind rolling window averages, scene descriptor). SSE streaming at `GET /sse`. Single conversion authority (ADR-042, ADR-058). | Chart-specific binning or aggregation, presentation formatting, chart-type awareness. |
+| **Dashboard** | Rendering + presentation-level computation: display converted values, client-side binning for visualizations (e.g., wind rose direction×Beaufort matrix from API-provided fields), LTTB downsampling, chart layout, theming, accessibility. | Unit conversion, Beaufort/comfort-index threshold logic, raw SQL queries, provider API calls. (ADR-042: "Dashboard does not carry Beaufort thresholds.") |
 
-**Why this boundary exists (2026-06-05):** Phase 4 of the configurable charts system placed a wind rose endpoint (`/charts/wind-rose`) in the API that duplicated the BFF's Beaufort classification — violating ADR-041 and ADR-042. The BFF's `UnitTransformer.transform_record()` already injects `beaufort` into every archive record. The API endpoint was redundant domain logic in the wrong layer. Corrected by deleting the API endpoint and moving binning to the dashboard (which reads the BFF-injected `beaufort` field). See ADR-041 amendment.
+**Why the computation boundary matters (ADR-041 amendment 2026-06-05, updated for ADR-058):** The API is the single conversion and enrichment authority. Chart-type-specific logic (binning, aggregation for a specific visualization) belongs in the dashboard. A proposed API endpoint that requires domain-specific computation — Beaufort classification, comfort index, conditions text — belongs in the API's enrichment pipeline, not as a raw data endpoint. The dashboard reads API-provided derived fields (like `beaufort.value`) but does not recompute them from raw observations.
 
 ## Authoritative port registry
 
@@ -42,13 +40,12 @@ Computation boundaries between the three application layers. **No chart-specific
 |------|----------|---------|------|---------|-------|
 | **80** | TCP | Caddy | front-end host | `0.0.0.0` | HTTP → public. Docker publishes as `80:80`. |
 | **443** | TCP+UDP | Caddy | front-end host | `0.0.0.0` | HTTPS + HTTP/3 → public. Docker publishes as `443:443` and `443:443/udp`. |
-| **8765** | TCP | API | weewx host | `0.0.0.0` | TLS always. BFF proxies here; not directly browser-accessible (ADR-041). |
+| **8765** | TCP | API | weewx host | `0.0.0.0` | TLS always. Serves `/api/v1/*` and `/sse` (SSE stream). Caddy proxies both paths here. |
 | **8081** | TCP | API health | weewx host | `127.0.0.1` | `/health/live`, `/health/ready`, `/metrics`. Loopback only. |
-| **8766** | TCP | Realtime (BFF) | front-end host | Docker network | BFF gateway. Caddy proxies `/api/v1/*` and `/sse` here (ADR-041). Not exposed to host. |
-| **8082** | TCP | Realtime health | front-end host | `127.0.0.1` | Loopback only. |
 | **9876** | TCP | Config UI | front-end host | Docker network | Wizard + admin. Caddy proxies `/wizard`, `/bootstrap`, `/login`, `/admin`, `/static` here. Not exposed to host. |
 | **6379** | TCP | Redis | weewx host | `127.0.0.1` | Cache (active). Loopback only. CLEARSKIES_CACHE_URL=redis://localhost:6379/0 in secrets.env. |
-| **1883** | TCP | MQTT broker | weewx host | varies | Only if MQTT mode. Realtime subscribes here. |
+
+> **Removed ports (ADR-058, 2026-06-14):** Port 8766 (Realtime BFF main) and 8082 (Realtime BFF health) are eliminated. The realtime service has been merged into the API. Port 1883 (MQTT broker) is removed — MQTT input mode is eliminated per ADR-058.
 
 ## Container inventory
 
@@ -56,11 +53,12 @@ Each repo builds its own container image independently (ADR-034). A dashboard CS
 
 | Container | Image source | Lifecycle | Runs on (two-host default) |
 |-----------|-------------|-----------|---------------------------|
-| `api` | `weewx-clearskies-api/Dockerfile` | Long-running. TLS always enabled (Ed25519 self-signed by default). | weewx host |
-| `realtime` | `weewx-clearskies-realtime/Dockerfile` | Long-running | front-end host |
+| `api` | `weewx-clearskies-api/Dockerfile` | Long-running. TLS always enabled (Ed25519 self-signed by default). Serves `/api/v1/*` and `/sse`. | weewx host |
 | `dashboard` | `weewx-clearskies-dashboard/Dockerfile` | **Init container** — multi-stage Node 22 build, copies `dist/` to `/dist` volume, exits | front-end host |
 | `caddy` | `caddy:2-alpine` | Long-running | front-end host |
 | `redis` | `redis:7-alpine` | Long-running | weewx host |
+
+> **Removed container (ADR-058, 2026-06-14):** `clearskies-realtime` is deprecated. The realtime service has been merged into the API (`clearskies-api`). The `weewx-clearskies-realtime` repo is archived.
 
 > **Config UI is NOT containerized.** It has no Dockerfile and is not in any compose file. It is distributed as a pip package (`weewx-clearskies-config`) and run manually by the operator. ADR-027 says "bundled compose adds a `config` service" — this is an unimplemented requirement. See Known gaps.
 
@@ -68,39 +66,39 @@ Each repo builds its own container image independently (ADR-034). A dashboard CS
 >
 > **API startup time: ~2 minutes.** After `systemctl restart weewx-clearskies-api`, the service runs a cache warmer that makes outbound API calls to configured providers (Aeris, NWS, etc.) before uvicorn binds to port 8765. The service is not ready to serve requests until the cache warm completes. When scripting restarts, wait at least 120 seconds before hitting endpoints — `sleep 10` is not enough.
 
-> **Native dashboard / dev deploy (2026-05-29):** On the `weather-dev` LXD container the dashboard is NOT run as a Docker init container. Instead the source is pulled to `/home/ubuntu/repos/weewx-clearskies-dashboard`, built natively with `npm run build` (Vite → `dist/`), and the built `dist/` is rsync'd into the Caddy web root `/var/www/clearskies/` (excluding the read-only `webcam/` bind-mount). Realtime, API, and Config UI run as systemd units (`weewx-clearskies-{realtime,api,config}.service`). The full redeploy is automated by `scripts/redeploy-weather-dev.sh`; source-only refresh by `scripts/sync-to-weather-dev.sh`. Procedure: [procedures/deploy-clearskies.md](procedures/deploy-clearskies.md). The Docker init-container model above is the compose deployment path.
+> **Native dashboard / dev deploy (2026-05-29):** On the `weather-dev` LXD container the dashboard is NOT run as a Docker init container. Instead the source is pulled to `/home/ubuntu/repos/weewx-clearskies-dashboard`, built natively with `npm run build` (Vite → `dist/`), and the built `dist/` is rsync'd into the Caddy web root `/var/www/clearskies/` (excluding the read-only `webcam/` bind-mount). API and Config UI run as systemd units (`weewx-clearskies-{api,config}.service`). The full redeploy is automated by `scripts/redeploy-weather-dev.sh`; source-only refresh by `scripts/sync-to-weather-dev.sh`. Procedure: [procedures/deploy-clearskies.md](procedures/deploy-clearskies.md). The Docker init-container model above is the compose deployment path.
 
-## Default topology: two-host split (ADR-034)
+## Default topology: two-host split (ADR-034, amended ADR-058)
 
 ```
 weewx host                          front-end host
 +-----------------------+           +----------------------------------+
 | api :8765 (TLS)       |           | caddy :80/:443                   |
 |   health :8081 (lo)   |  network  |   serves dashboard static files  |
-|   reads weewx.conf    |<--------->|   proxies /api/v1/* to BFF       |
-|   reads weewx archive |           |   proxies /sse to BFF            |
+|   reads weewx.conf    |<--------->|   proxies /api/v1/* to API :8765 |
+|   reads weewx archive |           |   proxies /sse to API :8765      |
 |   serves /api/v1/*    |           |                                  |
-|   serves /setup/*     |           | realtime (BFF) :8766             |
-|   NOT browser-facing  |           |   proxies /api/v1/* to API       |
-|                       |           |   serves /sse (MQTT→SSE)         |
-| redis :6379 (optional)|           |   applies unit conversion        |
-|   loopback only       |           |   health :8082 (lo)              |
-+-----------------------+           |                                  |
-                                    | dashboard (init)                 |
-                                    |   builds SPA, copies to volume   |
-                                    +----------------------------------+
+|   serves /sse (SSE)   |           | dashboard (init)                 |
+|   serves /setup/*     |           |   builds SPA, copies to volume   |
+|   unit conversion     |           +----------------------------------+
+|   enrichment pipeline |
+|   derived values      |
+|                       |
+| redis :6379 (optional)|
+|   loopback only       |
++-----------------------+
 ```
 
-**Single-host alternative:** All services on one machine. Caddy proxies to local Docker network names (`realtime:8766` for both `/api/v1/*` and `/sse`). Realtime BFF proxies to `api:8765`. Realtime uses direct mode (Unix socket to weewx engine, no MQTT broker needed).
+**Single-host alternative:** All services on one machine. Caddy proxies to local Docker network name `api:8765` for both `/api/v1/*` and `/sse`. API uses direct mode (Unix socket to weewx engine).
 
 ## Caddy routing
 
-All three Caddyfile variants (frontend-host, single-host, examples/reverse-proxy) route both `/api/v1/*` and `/sse` to the realtime BFF. The BFF proxies `/api/v1/*` onward to the upstream API and applies unit conversion before returning responses. `realtime.conf [api] upstream_url` must be set to the upstream API address — see topology notes below the table.
+All three Caddyfile variants (frontend-host, single-host, examples/reverse-proxy) route both `/api/v1/*` and `/sse` directly to the API at port 8765. There is no BFF proxy hop — the API serves both REST and SSE directly (ADR-058).
 
 | Path pattern | Destination | What it serves |
 |-------------|-------------|----------------|
-| `/api/v1/*` | `realtime:8766` BFF — BFF proxies to upstream API and applies unit conversion | Weather data JSON endpoints (unit-converted by BFF) |
-| `/sse` | `realtime:8766` BFF | Server-Sent Events stream (unit-converted by BFF) |
+| `/api/v1/*` | `api:8765` — API serves directly, applies unit conversion | Weather data JSON endpoints (unit-converted by API) |
+| `/sse` | `api:8765` — API serves SSE stream directly | Server-Sent Events stream (unit-converted by API) |
 | `/wizard*` | `config:9876` (local Docker network) | Setup wizard (7-step flow) |
 | `/bootstrap*` | `config:9876` | First-run admin credential setup |
 | `/login*`, `/logout*` | `config:9876` | Admin auth |
@@ -113,15 +111,17 @@ All three Caddyfile variants (frontend-host, single-host, examples/reverse-proxy
 
 Security headers on all responses: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Server` header removed.
 
-**`[api] upstream_url` per topology** (set in `realtime.conf` — REQUIRED; omitting it makes every `/api/v1/*` request return 503):
+**API address per topology** (set in Caddyfile — points to port 8765):
 
-| Topology | `upstream_url` value | Notes |
-|----------|---------------------|-------|
-| frontend-host (compose) | `https://<weewx-host-address>:8765` | API is on the remote weewx host; `$CLEARSKIES_API_URL` from the old Caddyfile belongs here instead |
-| single-host (compose) | `https://api:8765` | Both services are compose services; use the Docker network service name |
-| native / reverse-proxy | `https://localhost:8765` | Both services are systemd units on the same host |
+| Topology | API address in Caddyfile | Notes |
+|----------|--------------------------|-------|
+| frontend-host (compose) | `https://<weewx-host-address>:8765` | API is on the remote weewx host |
+| single-host (compose) | `https://api:8765` | Docker network service name |
+| native / reverse-proxy | `https://localhost:8765` | Both services are on the same host |
 
 `tls_verify = false` applies in all three cases when the API uses its default self-signed certificate.
+
+> **Removed (ADR-058, 2026-06-14):** The `[api] upstream_url` config section in `realtime.conf` is eliminated. There is no BFF proxy — the API serves all endpoints directly. Caddy routes to the API; no intermediate service.
 
 ## Webcam
 
@@ -172,7 +172,7 @@ Wizard step 7 (apply)
 | Path | Method | Purpose |
 |------|--------|---------|
 | `/api/v1/station` | GET | Station metadata (singleton). The `name` field is the operator's configured display location, read from `weewx.conf [Station] location` at startup. |
-| `/api/v1/current` | GET | Most recent observation. The `weatherText` field is always null in the API response; the BFF enrichment pipeline (`enrich_weather_text`) injects the composed conditions string before serving the dashboard (ADR-041, ADR-044). |
+| `/api/v1/current` | GET | Most recent observation. The `weatherText` field is produced by the API's enrichment pipeline (`enrich_weather_text`) — the conditions-text engine runs within the API and injects the composed conditions string before the response leaves the API (ADR-044, ADR-058). |
 | `/api/v1/archive` | GET | Historical archive records with pagination/filtering. Optional `agg` param (`min`/`max`/`avg`/`sum`/`count`) overrides per-field default aggregation for `interval=day` and `interval=hour`. Optional `aggregate_interval` (seconds, ≥60) groups records into fixed-width time buckets via `FLOOR(dateTime/N)*N` for proportional scaling. Optional `agg_map` (`field:func,...`) applies per-field SQL aggregation within custom-interval buckets; defaults to AVG. Supported functions: `avg`, `max`, `min`, `sum`, `count`, `sumcumulative`. `sumcumulative` applies SUM per bucket then accumulates into a running total (for cumulative rain, etc.). |
 | `/api/v1/archive/grouped` | GET | Categorical aggregation grouped by calendar period (`group_by=month\|day\|hour\|year`). `fields` param accepts `field:agg_type` or `field:agg_type:avg_type` specs (e.g. `outTemp:avg:max` = avg of daily highs, `rain:sum` = period total). Optional `from`/`to` epoch bounds; optional `force_full_period` to fill missing slots with null. Response: `{data:{labels,series},generatedAt}`. Used by `xAxis_groupby` charts (Average Climate, monthly averages). Replaces the former `/climatology/monthly` endpoint. |
 | `/api/v1/records` | GET | Section-grouped highs and lows |
@@ -199,6 +199,12 @@ Wizard step 7 (apply)
 | `/api/v1/branding` | GET | Operator branding (accent, logos, theme defaults) — **Deprecated** (branding moves to static file via Caddy `/branding.json`, see ADR-022 amendment 2026-06-10) |
 | `/api/v1/radar/providers/{id}/frames` | GET | Radar frame index |
 | `/api/v1/radar/providers/{id}/tiles/{z}/{x}/{y}` | GET | Binary tile proxy (keyed providers) |
+
+### SSE endpoint (merged from realtime service per ADR-058)
+
+| Port | Path | Purpose |
+|------|------|---------|
+| 8765 | `GET /sse` | Server-Sent Events stream — events with `type: "loop"`, data = unit-converted JSON. 15-second keepalive comments. Caddy proxies `/sse` to this endpoint. |
 
 OpenAPI docs: `/api/v1/docs` (Swagger), `/api/v1/redoc`, `/api/v1/openapi.json`.
 
@@ -239,27 +245,16 @@ Additionally, `GET /health` exists on the main port (8765) returning `{"status":
 
 All errors returned as RFC 9457 `application/problem+json`.
 
-## Realtime (BFF) endpoints
-
-| Port | Path | Purpose |
-|------|------|---------|
-| 8766 | `/api/v1/*` | Catch-all proxy to upstream API. Applies unit conversion to JSON responses (ADR-041, ADR-042). |
-| 8766 | `/sse` | SSE stream — events with `type: "loop"`, data = unit-converted JSON. 15-second keepalive comments. |
-| 8082 (lo) | `/health/live` | Liveness probe |
-| 8082 (lo) | `/health/ready` | Readiness probe (checks adapter connection + upstream API connectivity) |
-
-OpenAPI disabled on realtime (no docs/redoc endpoints).
-
 ### Conditions text engine (ADR-044)
 
-The realtime service hosts a multi-module, stateful conditions-text engine that produces the `weatherText` field on every `GET /api/v1/current` response.
+The API hosts a multi-module, stateful conditions-text engine that produces the `weatherText` field on every `GET /api/v1/current` response. (Formerly in the realtime service; merged into the API per ADR-058.)
 
 | Module | Role |
 |--------|------|
-| `weewx_clearskies_realtime/conditions_text.py` | Stateless composer — assembles the `weatherText` string from per-component labels |
-| `weewx_clearskies_realtime/sky_condition.py` | Stateful classifier — 30-min rolling kc-buffer, produces the sky label |
-| `weewx_clearskies_realtime/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
-| `weewx_clearskies_realtime/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict |
+| `weewx_clearskies_api/sse/conditions_text.py` | Stateless composer — assembles the `weatherText` string from per-component labels |
+| `weewx_clearskies_api/sse/sky_condition.py` | Stateful classifier — 30-min rolling kc-buffer, produces the sky label |
+| `weewx_clearskies_api/sse/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
+| `weewx_clearskies_api/sse/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict |
 
 **Inputs:** smoothed loop-packet fields via `enrichment/input_smoother.py` — `rainRate` (2 min), `windSpeed`/`windGust` (5 min), `appTemp`/`dewpoint`/`outTemp`/`heatindex`/`windchill` (10 min), `radiation`+`maxSolarRad` (30 min kc rolling window). No database access.
 
@@ -267,34 +262,35 @@ The realtime service hosts a multi-module, stateful conditions-text engine that 
 
 **Transport:** REST only. `weatherText` is NOT included in the SSE loop-packet field map (`WEEWX_TO_OBSERVATION`) and is NOT updated via SSE. The conditions sentence updates at the REST poll interval, not at loop-packet frequency.
 
-**Registration:** `__main__.py` registers `enrich_weather_text` against the `"current"` endpoint key. Every `GET /api/v1/current` response is enriched before being returned to the browser.
+**Registration:** The API's `__main__.py` registers `enrich_weather_text` against the `"current"` endpoint key. Every `GET /api/v1/current` response is enriched before being returned to the browser.
 
 **Sky classification thresholds (ADR-044, amended 2026-06-08):** σ(kc) threshold = 0.08, hysteresis ±0.03. Low sigma: Clear ≥0.85, Mostly Clear ≥0.70, Partly Cloudy ≥0.50, Mostly Cloudy ≥0.30, Cloudy <0.30. High sigma: Mostly Clear ≥0.85, Partly Cloudy ≥0.60, Mostly Cloudy <0.60. Display vocabulary: "Sunny"/"Mostly Sunny" during day, "Clear"/"Mostly Clear" at night per NWS standard.
 
 **Startup behavior:** The solar kc-buffer requires approximately 3 minutes of loop packets before the sky classifier can produce a result. During this warm-up window, `weatherText` may be `null`. Once data accumulates, the engine produces output continuously. When solar analysis is unavailable (night, twilight, no pyranometer), the engine falls back to provider cloud cover via `_cloud_pct_to_sky()` in `enrichment/weather_text.py`, which maps cloud cover percentage to the sky label with day/night vocabulary awareness.
 
-## Realtime modes (ADR-005)
+## Input mode (ADR-058)
+
+The API connects to weewx via direct mode only. MQTT input is eliminated per ADR-058.
 
 | Mode | Config | When | Transport | Broker needed |
 |------|--------|------|-----------|--------------|
-| **Direct** | `[input] mode = direct` (default) | weewx on same host | Unix socket at `[input.direct] socket_path` (default `/var/run/weewx-clearskies/loop.sock`) | No |
-| **MQTT** | `[input] mode = mqtt` | weewx on different host | paho-mqtt subscriber (optional install extra) | Yes |
+| **Direct** | `[input] mode = direct` (the only mode) | weewx co-located on same host (ADR-056) | Unix socket at `[input.direct] socket_path` (default `/var/run/weewx-clearskies/loop.sock`) | No |
 
-MQTT settings: `broker_host`, `broker_port` (1883), `topic` (weewx/loop), `client_id`, `username`, `password_env` (env var reference), `tls`, `qos` (0), `keepalive` (60).
+The API is the only component that touches the database. The direct adapter reads loop packets from weewx; it does not read the database.
 
-Neither mode reads the database. The API is the only component that touches the database.
+> **Historical note (ADR-005, superseded):** MQTT subscriber mode (`mode = mqtt`, `paho-mqtt` optional install extra) was supported in the former realtime service. MQTT is eliminated per ADR-058. Operators using MQTT for other consumers (Home Assistant, Node-RED) are unaffected — weewx's own MQTT extension is separate from the deleted MQTT adapter. Those operators can also subscribe to the API's SSE endpoint at `GET /sse`.
 
-## Unit conversion (ADR-042)
+## Unit conversion (ADR-042, updated for ADR-058)
 
-The BFF converts all outbound data (both proxied REST responses and SSE events) from the source unit system to the operator's configured display units. The dashboard receives `{value, label, formatted}` objects and has zero unit knowledge.
+The API converts all outbound data (both REST responses and SSE events) from the source unit system to the operator's configured display units. The dashboard receives `{value, label, formatted}` objects and has zero unit knowledge.
 
-**REST path:** API returns raw archive values with `usUnits` declaring the unit system → BFF looks up each field's group → converts to operator display unit → attaches label and formatted string.
+**REST path:** API queries archive values with `usUnits` declaring the unit system → looks up each field's group → converts to operator display unit → attaches label and formatted string.
 
-**SSE path:** MQTT field names carry unit suffixes (e.g., `outTemp_F`) → BFF strips suffix using known-suffix map from weewx's `UNIT_REDUCTIONS` → identifies source unit → converts to display unit → attaches label.
+**SSE path:** Direct adapter delivers loop packets with weewx unit system → API strips any unit suffixes → identifies source unit → converts to display unit → attaches label.
 
-**Derived values:** Beaufort scale and comfort index (wind chill vs heat index) computed by BFF. Dashboard does not carry thresholds.
+**Derived values:** Beaufort scale and comfort index (wind chill vs heat index) computed by the API's enrichment pipeline. Dashboard does not carry thresholds.
 
-**Config:** `realtime.conf` `[units]` section — `[[groups]]` (display unit per group), `[[string_formats]]` (decimal places), `[[labels]]` (display symbols), `[[ordinates]]` (compass directions), `[[time_formats]]`, `[[degree_days]]`, `[[trend]]`. Mirrors weewx skin.conf `[Units]` subsection names. Supports all 14 weewx unit groups.
+**Config:** `api.conf` `[units]` section (formerly `realtime.conf`) — `[[groups]]` (display unit per group), `[[string_formats]]` (decimal places), `[[labels]]` (display symbols), `[[ordinates]]` (compass directions), `[[time_formats]]`, `[[degree_days]]`, `[[trend]]`. Mirrors weewx skin.conf `[Units]` subsection names. Supports all 14 weewx unit groups.
 
 ## Config UI routes (verified from code)
 
@@ -321,8 +317,8 @@ Config UI is a standalone FastAPI app, run via `weewx-clearskies-config` CLI on 
 | `/wizard/step/3` | POST | Column mapping |
 | `/wizard/step/4` | GET/POST | Station identity |
 | `/wizard/step/4/timezone` | POST | Timezone lookup |
-| `/wizard/step/5` | GET | MQTT / input mode |
-| `/wizard/step/5/test` | POST | Test MQTT connection |
+| `/wizard/step/5` | GET | Input mode (formerly MQTT / input mode — MQTT eliminated per ADR-058; wizard update pending) |
+| `/wizard/step/5/test` | POST | Test MQTT connection (MQTT eliminated per ADR-058; wizard update pending) |
 | `/wizard/step/6` | POST | Provider selection + API keys |
 | `/wizard/step/6/key-fields/{domain}/{id}` | GET | Inline key entry fields |
 | `/wizard/step/6/test-key/{id}` | POST | Test provider connectivity |
@@ -336,7 +332,7 @@ Config UI is a standalone FastAPI app, run via `weewx-clearskies-config` CLI on 
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/admin/config` | GET | Config dashboard (all sections) |
-| `/admin/config/{component}/{section}` | GET/POST | Section edit form (component = api/realtime/stack) |
+| `/admin/config/{component}/{section}` | GET/POST | Section edit form (component = api/stack — realtime removed per ADR-058; wizard update pending) |
 | `/admin/config/column-mapping` | GET/POST | Column mapping editor |
 | `/admin/config/test-provider` | POST | Test provider connectivity |
 
@@ -366,8 +362,8 @@ All config in `/etc/weewx-clearskies/` (search order: `CLEARSKIES_CONFIG` env va
 
 | File | Used by | Contains | Exists in examples? |
 |------|---------|----------|-------------------|
-| `api.conf` | API | Server bind, DB connection, providers, logging, TLS | Yes (`config/api.conf.example`) |
-| `realtime.conf` | Realtime (BFF) | Input mode, MQTT settings, socket path, SSE bind, health bind, upstream API URL, unit conversion config | Yes (`config/realtime.conf.example`) |
+| `api.conf` | API | Server bind, DB connection, providers, logging, TLS, input mode, socket path, SSE bind, unit conversion config (absorbs former `realtime.conf` settings per ADR-058) | Yes (`config/api.conf.example`) |
+| `realtime.conf` | **DEPRECATED** — realtime service merged into API per ADR-058 | Input mode, MQTT settings, socket path, SSE bind, health bind, upstream API URL, unit conversion config | Yes (`config/realtime.conf.example`) — deprecated |
 | `stack.conf` | Config UI | UI bind/port, TLS, `[ui] enabled` flag | **No — does not exist** |
 | `secrets.env` | All (mode 0600) | DB password, API keys, admin credentials, proxy secret | No (generated by wizard) |
 | `charts.conf` | API | Chart groups, charts, series (ConfigObj/INI, migrated from Belchertown `graphs.conf`) | No (generated by `clearskies-migrate-charts`) |
@@ -378,9 +374,9 @@ All config in `/etc/weewx-clearskies/` (search order: `CLEARSKIES_CONFIG` env va
 
 **Secret naming:** `WEEWX_CLEARSKIES_<DOMAIN>_<FIELD>` (e.g., `WEEWX_CLEARSKIES_DB_PASSWORD`, `WEEWX_CLEARSKIES_AERIS_CLIENT_ID`).
 
-**Secret-leak guard:** API and realtime scan `.conf` at startup; any key matching `(?i)_(KEY|SECRET|TOKEN|PASSWORD)$` is a fatal startup error. Secrets belong in `secrets.env` only.
+**Secret-leak guard:** The API scans `.conf` at startup; any key matching `(?i)_(KEY|SECRET|TOKEN|PASSWORD)$` is a fatal startup error. Secrets belong in `secrets.env` only.
 
-**Startup behavior when config missing:** Both API and realtime raise `FileNotFoundError` and exit non-zero. Neither starts in an "unconfigured" mode.
+**Startup behavior when config missing:** The API raises `FileNotFoundError` and exits non-zero if `api.conf` is absent. It does not start in an "unconfigured" mode.
 
 ## Charts configuration
 
@@ -394,15 +390,15 @@ The charts system is operator-configurable via `charts.conf`, a ConfigObj/INI fi
 
 **Grouped aggregation (`xAxis_groupby` charts):** Charts that group data by calendar period — such as Average Climate (monthly averages) — set `xAxis_groupby` in `charts.conf` and do NOT use `GET /api/v1/archive`. Instead the dashboard calls `GET /api/v1/archive/grouped` with `group_by=month|day|hour|year`. Series that need two-level aggregation (e.g., average of daily highs) specify both `aggregate_type` and `average_type` in `charts.conf`; the dashboard encodes these as `field:agg_type:avg_type` in the `fields` parameter (e.g., `outTemp:avg:max`). There is no `/climatology/*` endpoint; the former `/climatology/monthly` endpoint was removed and its use cases are fully covered by `/archive/grouped`.
 
-**BFF archive conversion (2026-06-07):** The BFF proxy now applies `UnitTransformer.transform_record()` to `/archive` responses. It infers `usUnits` from the response envelope's `units` label block (same as `/current`), converts each record, injects derived fields (`beaufort`, `comfortIndex`), and flattens ConvertedValue dicts to full-precision scalars. The `beaufort` field is kept as a `{value, label, formatted}` dict (not flattened) so the wind rose binning can read it via `extractNumber()`.
+**API archive conversion (2026-06-07, updated for ADR-058):** The API applies `UnitTransformer.transform_record()` to `/archive` responses. It infers `usUnits` from the response envelope's `units` label block (same as `/current`), converts each record, injects derived fields (`beaufort`, `comfortIndex`), and flattens ConvertedValue dicts to full-precision scalars. The `beaufort` field is kept as a `{value, label, formatted}` dict (not flattened) so the wind rose binning can read it via `extractNumber()`.
 
-**Wind rose:** uses client-side binning from the BFF-injected `beaufort` field (per ADR-041 computation boundary amendment, ADR-042). The dashboard makes a **separate raw archive fetch** (no `aggregate_interval`) for wind rose data, with `fields=windSpeed,windDir` and a high limit. This preserves the actual wind speed distribution for correct Beaufort classification — aggregated (AVG'd) wind speeds would smooth out higher categories. The dashboard reads `beaufort.value` from these raw records and bins into a 16-direction × 7-Beaufort-speed matrix. No Beaufort computation in the dashboard — the BFF is the single Beaufort authority.
+**Wind rose:** uses client-side binning from the API-injected `beaufort` field (per ADR-041 computation boundary amendment, ADR-042, ADR-058). The dashboard makes a **separate raw archive fetch** (no `aggregate_interval`) for wind rose data, with `fields=windSpeed,windDir` and a high limit. This preserves the actual wind speed distribution for correct Beaufort classification — aggregated (AVG'd) wind speeds would smooth out higher categories. The dashboard reads `beaufort.value` from these raw records and bins into a 16-direction × 7-Beaufort-speed matrix. No Beaufort computation in the dashboard — the API is the single Beaufort authority.
 
 **Special series types:** The charts system recognizes three series names that trigger automatic rendering behavior — the dashboard switches chart component and data-fetching strategy without any additional operator config:
 
 | Series name | Rendering | Data strategy | Automatic behaviors |
 |-------------|-----------|---------------|---------------------|
-| `windRose` | Custom SVG polar chart (16 directions × 7 Beaufort speed bands) | Separate raw (unaggregated) archive fetch for `windSpeed`+`windDir`; no `aggregate_interval` | Uses BFF-injected `beaufort` field for speed classification. Default Beaufort colors: `#7cb5ec, #b2df8a, #f7a35c, #8c6bb1, #dd3497, #e4d354, #268bd2`. Operator can override via `beauford0`–`beauford6` keys in `charts.conf`. |
+| `windRose` | Custom SVG polar chart (16 directions × 7 Beaufort speed bands) | Separate raw (unaggregated) archive fetch for `windSpeed`+`windDir`; no `aggregate_interval` | Uses API-injected `beaufort` field for speed classification. Default Beaufort colors: `#7cb5ec, #b2df8a, #f7a35c, #8c6bb1, #dd3497, #e4d354, #268bd2`. Operator can override via `beauford0`–`beauford6` keys in `charts.conf`. |
 | `weatherRange` | Recharts arearange (when `area_display = 1`) or columnrange (default). Polar only when `polar = true` is explicitly set. | Dual archive fetches: `agg=min` and `agg=max` with `aggregate_interval=86400` (daily) | JS applies 15-band temperature color zones (deep blue ≤0°F → red-orange ≤90°F → pink-red >110°F; Celsius equivalents for metric stations). Per Belchertown wiki: default is columnrange, NOT polar. |
 | `haysChart` | Recharts arearange, `polar=true` (always — this is a circular 24-hour wind chart by design) | Queries `windSpeed` (max) and `windGust` (max) with auto-calculated `aggregate_interval` | Emulates Mount Washington Observatory circular wind chart: hour of day on circle, wind speed as radius. `yAxis_softMax` config controls radial scale. |
 
@@ -461,7 +457,7 @@ Per-provider TTLs: forecast 30 min, alerts 5 min, AQI 15 min, radar metadata 5 m
 | Repo | Local path | Branch | Language | Has Dockerfile |
 |------|-----------|--------|----------|----------------|
 | weewx-clearskies-api | `repos/weewx-clearskies-api` | main | Python 3.12+ | Yes |
-| weewx-clearskies-realtime | `repos/weewx-clearskies-realtime` | main | Python | Yes |
+| weewx-clearskies-realtime | `repos/weewx-clearskies-realtime` | main | Python | Yes — **DEPRECATED — merged into API per ADR-058. Repo archived.** |
 | weewx-clearskies-dashboard | `repos/weewx-clearskies-dashboard` | main | TypeScript/React | Yes (init container) |
 | weewx-clearskies-stack | `repos/weewx-clearskies-stack` | main | Python (config UI) + YAML/Caddyfile (orchestration) | **No** |
 | weewx-clearskies-design-tokens | `repos/weewx-clearskies-design-tokens` | main | — | No (Phase 6+ placeholder) |
@@ -475,7 +471,7 @@ weewx-clearskies-stack/
 │   ├── docker-compose.yml      # api + redis
 │   └── .env.example
 ├── frontend-host/
-│   ├── docker-compose.yml      # caddy + dashboard (init) + realtime
+│   ├── docker-compose.yml      # caddy + dashboard (init) — realtime removed (ADR-058)
 │   ├── Caddyfile
 │   └── .env.example
 ├── single-host/
@@ -484,7 +480,7 @@ weewx-clearskies-stack/
 │   └── .env.example
 ├── config/
 │   ├── api.conf.example
-│   └── realtime.conf.example
+│   └── realtime.conf.example   # DEPRECATED — realtime merged into API (ADR-058); settings now in api.conf
 ├── examples/
 │   └── reverse-proxy/Caddyfile # bare-metal Caddy example
 ├── archive/                    # pre-split monolithic files (historical)
@@ -511,7 +507,7 @@ weewx-clearskies-stack/
 | Tech stack | ADR-002 |
 | Deployment topology | ADR-034 |
 | API | ADR-010 (data model), ADR-012 (DB access), ADR-018 (versioning) |
-| Realtime (BFF) | ADR-005, ADR-041 (BFF), ADR-042 (units) |
+| Realtime (historical — merged into API) | ADR-058 (fold realtime into API), ADR-005 (superseded), ADR-041 (amended), ADR-042 (units — now API authority) |
 | Dashboard | ADR-002, ADR-009 (design), ADR-024 (page taxonomy) |
 | Config UI / Wizard | ADR-027 (wizard), ADR-038a-wizard-api-channel (wizard-to-API channel) |
 | Auth | ADR-008, ADR-037 (inbound traffic) |
@@ -535,7 +531,7 @@ weewx-clearskies-stack/
 | 1 | Config UI not in compose/Caddy | ADR-027: "bundled compose adds a `config` service", "accessible at `/admin` through the reverse proxy" | No Dockerfile, not in any compose file, not proxied by Caddy | **Fix required.** Config UI is part of the site UI (like WordPress `/wp-admin`), not a standalone service. Add to compose, add Caddy proxy rules for `/wizard`, `/bootstrap`, `/login`, `/admin`. Operator should never think about it as separate. | First-run UX |
 | 2 | API crashes without api.conf | API must be running for wizard (ADR-038a: wizard calls `/setup/*`) | `FileNotFoundError` at startup | **Fix required.** API needs a "life-support mode" — start without config, serve health port with `{"configured": false}` status, serve `/setup/*` endpoints. Dashboard and wizard use health port to detect unconfigured state. | Wizard flow |
 | 3 | Dashboard shows error wall when unconfigured | Should detect unconfigured state and redirect to `/wizard` | Shows "Unable to load" on every tile; first-run redirect still missing | **Partially fixed.** Global `ErrorBoundary` added (`src/components/error-boundary.tsx`) — blank-page crash on render errors resolved. Remaining: dashboard checks API health port on load; if `configured: false`, redirect to `/wizard`. | First-run UX |
-| 4 | Realtime crashes without realtime.conf | Same pattern as API | `FileNotFoundError` at startup | Lower priority — wizard configures API first; realtime config written during wizard apply step. Consider same life-support pattern. | Wizard flow |
+| 4 | ~~Realtime crashes without realtime.conf~~ | **Resolved by ADR-058 (2026-06-14).** The realtime service is eliminated — there is no `realtime.conf` and no realtime process. Gap #4 no longer applies. | — | — | — |
 | 5 | No stack.conf example | ADR-027 references `stack.conf` | Does not exist | Deferred — CLI flags sufficient for v0.1. | Low |
 | 6 | ADR-034 container table incomplete | ADR-027 adds config service | ADR-034 lists only 4 containers | Amend ADR-034 to add config UI row after gap #1 is implemented. | ADR consistency |
 | 7 | Config UI imports API code directly | ADR-038a: wizard talks to API via HTTP | `wizard/schema.py` and `wizard/routes.py` import `STOCK_COLUMN_MAP` from `weewx_clearskies_api.db.reflection` — forces API source into config UI Docker build | Eliminate after first-run UX ships. Get stock column map from `/setup/schema` endpoint instead. | Code coupling |
@@ -549,5 +545,5 @@ weewx-clearskies-stack/
 |---|-----|-----------|
 | 7 | ADR-038 index entry incomplete | Renumbered to ADR-038a; added to INDEX.md |
 | 8 (current) | Conditions text: night-sky fallback not wired | `provider_sky` IS passed to `build_weather_text()` via `compose_weather_text()`; `_cloud_pct_to_sky()` now day/night-aware (2026-06-08) |
-| 8 (original) | Security baseline port numbers stale (8000/8001) | Fixed to 8765/8766 |
+| 8 (original) | Security baseline port numbers stale (8000/8001) | Fixed to 8765/8766 at time; port 8766 subsequently removed per ADR-058 (2026-06-14) |
 | 9 | ADR-030 port reference (8080) | Fixed to 8765 |
