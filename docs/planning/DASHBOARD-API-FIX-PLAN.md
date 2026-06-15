@@ -2,7 +2,7 @@
 
 **Goal:** (1) Restore unit label display on dashboard cards and pages where prior agent rewrites or the ADR-058 merge stripped them, (2) wire API enrichment (AQI category, records conversion) that was lost during the merge, (3) fix ADR-042 violations (hardcoded units instead of API-supplied labels).
 
-**Status:** Not started.
+**Status:** Complete (2026-06-14). All phases deployed and verified.
 
 **Source:** Live dashboard regression observed 2026-06-14 after Phase 2A deployment. Multiple cards show values without units. AQI card shows null category. Other pages have missing or hardcoded units.
 
