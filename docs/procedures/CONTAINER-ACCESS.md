@@ -53,11 +53,11 @@ ssh ratbert "lxc exec cloud -- tail -f /var/log/apache2/access.log"
 | Service | Container | Access | Purpose |
 |---------|-----------|--------|---------|
 | Weewx engine + DB + **Clear Skies API** | `weewx` | `ssh ratbert "lxc exec weewx -- bash"` | Weather data collection, storage, archiving, REST API (port 8765) |
-| Clear Skies frontend (BFF + dashboard + config) | `weather-dev` | `ssh ratbert "lxc exec weather-dev -- bash"` | Dashboard SPA, BFF gateway (port 8766), config wizard, Caddy |
+| Clear Skies frontend (API + dashboard + config) | `weather-dev` | `ssh ratbert "lxc exec weather-dev -- bash"` | Dashboard SPA, API gateway (port 8766), config wizard, Caddy |
 | Web server (legacy) | `cloud` | `ssh ratbert "lxc exec cloud -- bash"` | Nextcloud + weather.shaneburkhardt.com (Belchertown skin) |
 | Ratbert host (LXD) | N/A (host) | `ssh ratbert` | Container orchestration, reverse proxy, firewall |
 
-**Two-host split (Clear Skies):** The API runs on `weewx`, everything else on `weather-dev`. The BFF on weather-dev proxies `/api/v1/*` to the API on weewx (`https://weewx.shaneburkhardt.com:8765`). See [../ARCHITECTURE.md](../ARCHITECTURE.md) for the full topology.
+**Two-host split (Clear Skies):** The API runs on `weewx`, everything else on `weather-dev`. The realtime service on weather-dev proxies `/api/v1/*` to the API on weewx (`https://weewx.shaneburkhardt.com:8765`). See [../ARCHITECTURE.md](../ARCHITECTURE.md) for the full topology.
 
 ## SSH key setup (if not already configured)
 

@@ -325,7 +325,7 @@ These are NOT defaults — they're the operator's actual configuration:
 | 10-color default palette | Belchertown 10-color FALLBACK_PALETTE | CLOSED (2026-06-07) — T-A4 |
 | Theme-responsive colors | `ensureChartContrast()` on all series | CLOSED (2026-06-07) — T-A4 |
 | Date buttons inside card | Inside Card after CardHeader | CLOSED (2026-06-07) — T-B1 |
-| Wind rose rendering | BFF injects beaufort; separate raw fetch | CLOSED (2026-06-07) — T-C1 + BFF fix |
+| Wind rose rendering | API injects beaufort; separate raw fetch | CLOSED (2026-06-07) — T-C1 + API fix |
 | No fixed text artifacts | sr-only tables wrapped in div | CLOSED (2026-06-07) — T-C3 |
 | Proportional data scaling | `aggregate_interval` + `agg_map` API params | CLOSED (2026-06-07) — matches Belchertown |
 | Per-field aggregation in rolling ranges | `agg_map` passes operator's `aggregate_type` per series | CLOSED (2026-06-07) |

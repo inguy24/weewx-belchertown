@@ -45,7 +45,7 @@ superseded-by:
 
 ### Storage and delivery
 
-Branding configuration is a static JSON file served by Caddy — the same pattern as `webcam.json` ([ARCHITECTURE.md](../ARCHITECTURE.md)). The API and BFF have no branding awareness.
+Branding configuration is a static JSON file served by Caddy — the same pattern as `webcam.json` ([ARCHITECTURE.md](../ARCHITECTURE.md)). The API has no branding awareness.
 
 | Concern | Mechanism |
 |---------|-----------|
@@ -73,11 +73,9 @@ Branding configuration is a static JSON file served by Caddy — the same patter
 
 **Why not the API?** The API is a weather data access layer — archive queries, provider aggregation, setup endpoints. Branding is site presentation config with no relationship to weather data. The API may run on a different host than the front-end (two-host topology, ADR-034). Serving branding from the API couples a presentation concern to a data service and forces a cross-host round-trip for static config the front-end host already has on disk.
 
-**Why not the BFF?** The BFF is a data transformation gateway — unit conversion, derived values, SSE. Branding is static config, not transformed data.
-
 ### Runtime mechanism
 
-1. Dashboard fetches `branding.json` from Caddy at boot (static file, no API or BFF involvement).
+1. Dashboard fetches `branding.json` from Caddy at boot (static file, no API involvement).
 2. Theme provider sets variables via `style.setProperty('--brand-primary-light', ...)`,
    `style.setProperty('--brand-primary-dark', ...)`,
    `style.setProperty('--brand-primary-fg-light', ...)`, and
@@ -128,9 +126,9 @@ No Cheetah `*.inc` hooks (Belchertown precedent dropped — not portable to Reac
 
 ### 2026-06-10 — Branding moves from API to static file via Caddy
 
-**Previous:** Branding config stored in `api.conf [branding]`, served by the API at `GET /api/v1/branding`, proxied through the BFF to the dashboard.
+**Previous:** Branding config stored in `api.conf [branding]`, served by the API at `GET /api/v1/branding`, proxied through the former realtime service to the dashboard.
 
-**New:** Branding config stored in `/etc/weewx-clearskies/branding.json`, served directly by Caddy as a static file at `/branding.json`. The wizard writes the file on apply. The API and BFF have no branding awareness.
+**New:** Branding config stored in `/etc/weewx-clearskies/branding.json`, served directly by Caddy as a static file at `/branding.json`. The wizard writes the file on apply. The API has no branding awareness.
 
 **Rationale:** The API is a weather data access layer (ADR-010). Branding is site presentation config — accent colors, logos, theme mode, social URLs, analytics IDs, privacy regions. In a two-host topology (ADR-034), the API runs on the weewx host while the front-end host already has the branding config on disk. Routing branding through the API forces a cross-host round-trip for static config. The `webcam.json` pattern (wizard writes, Caddy serves) is proven and simpler.
 

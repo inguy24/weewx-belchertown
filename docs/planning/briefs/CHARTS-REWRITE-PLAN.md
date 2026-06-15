@@ -259,7 +259,7 @@ The migration tool must bridge the gap between what Belchertown derives at runti
 - MonthlyAveragesCard quality bar: each chart must look as good as the Almanac version
 
 ### Gate 3 — Architecture + ADR compliance
-- ADR-041/042: No unit conversion in dashboard. All derived values from BFF.
+- ADR-041/042: No unit conversion in dashboard. All derived values from API.
 - ADR-010: No chart-specific API endpoints added.
 - ARCHITECTURE.md layer responsibilities respected.
 

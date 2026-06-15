@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Planet Viewing Quality Index** — per-planet viewing quality ratings (Excellent/Good/Fair/Poor/Not Visible) computed from 7Timer atmospheric seeing forecast combined with planet altitude, cloud cover, and special-case rules for Mercury (elongation gate), Uranus/Neptune (moon penalty), and close lunar conjunctions
 - **7Timer seeing forecast provider** — new keyless provider module (`providers/seeing/seven_timer.py`) fetching 72-hour astronomical seeing/transparency/cloud forecasts from 7Timer ASTRO product
 - **`GET /almanac/seeing-forecast` endpoint** — serves cached 7Timer seeing forecast data with 3-hour cache warming
-- **BFF planet viewing enrichment** — new enrichment module in realtime service computes and injects per-planet viewing quality fields into `/almanac/planets` responses
+- **Planet viewing enrichment** — new enrichment processor in the API computes and injects per-planet viewing quality fields into `/almanac/planets` responses
 - **Expanded planet data** — `/almanac/planets` now returns all 7 planets (Mercury through Neptune), with transit time, RA/Dec, solar elongation, and apparent magnitude
 - **Dashboard viewing quality badges** — color-coded per-planet rating badges with best viewing time and clear window display on the Almanac page
 

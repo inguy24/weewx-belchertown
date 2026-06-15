@@ -9,9 +9,9 @@
 
 ## Context
 
-The units module and all enrichment processors are ported. What's missing: the actual unit conversion step in the response pipeline. Currently the API returns raw archive values — the BFF used to convert them. Now the API must convert them itself.
+The units module and all enrichment processors are ported. What's missing: the actual unit conversion step in the response pipeline. Currently the API returns raw archive values — the API used to convert them. Now the API must convert them itself.
 
-The BFF's conversion logic lives in `proxy.py` — specifically `_apply_conversion()` and its helpers. We need to port this code faithfully into the API (not rewrite it) and wire it into the REST and SSE response paths.
+The API's conversion logic lives in `proxy.py` — specifically `_apply_conversion()` and its helpers. We need to port this code faithfully into the API (not rewrite it) and wire it into the REST and SSE response paths.
 
 ## Scope
 
@@ -39,15 +39,15 @@ The BFF's conversion logic lives in `proxy.py` — specifically `_apply_conversi
 
 ## Key design decisions (lead calls)
 
-1. **Port `_apply_conversion()` from proxy.py faithfully.** Do not rewrite. The BFF's conversion handles multiple response shapes correctly. Port the logic, update imports, change module-level `_transformer` to use the existing `configure()` pattern.
+1. **Port `_apply_conversion()` from proxy.py faithfully.** Do not rewrite. The API's conversion handles multiple response shapes correctly. Port the logic, update imports, change module-level `_transformer` to use the existing `configure()` pattern.
 
-2. **Conversion order: convert BEFORE enrich.** The BFF converted first, then applied enrichments. Enrichment functions expect already-converted data. Insert conversion between `model_dump()` and `apply_enrichments()`.
+2. **Conversion order: convert BEFORE enrich.** The API converted first, then applied enrichments. Enrichment functions expect already-converted data. Insert conversion between `model_dump()` and `apply_enrichments()`.
 
 3. **SSE path uses `transform_record()` + `add_derived_fields()`.** The transformer's `add_derived_fields(record)` method (ported in 3BC-1) handles SSE-specific derived values (beaufort, comfortIndex, weatherText, windSpeedAvg10m, windGustMax10m, lightningStrikeHistory). Verify its lazy imports resolve to the 3BC-2 enrichment modules.
 
 4. **`us_units` from station metadata.** The API has direct access to the station's unit system — no need to infer from labels. But port `_infer_us_units()` as a fallback for robustness.
 
-5. **Flattening strategy matches the BFF:**
+5. **Flattening strategy matches the API:**
    - `/current`: ConvertedValue → display-precision scalar (via `_flatten_converted_value()` which parses the formatted string)
    - `/archive`: ConvertedValue → full-precision `val["value"]` (for chart rendering)
    - `/archive`: `beaufort` kept as ConvertedValue dict (wind rose reads it)

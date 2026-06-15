@@ -4,7 +4,28 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-06-14 (realtime service merged into API per ADR-058 — removed realtime/BFF service, collapsed BFF layer, updated ports, routing, topology, config).
+Last verified: 2026-06-14 (realtime service merged into API per ADR-058 — removed separate service, updated ports, routing, topology, config).
+
+---
+
+## Vocabulary — canonical component names
+
+One name per component. Code class names (`DirectAdapter`, `UnitTransformer`, `ClearSkiesLoopRelay`) appear only in code and code-adjacent docs. Everywhere else, use the canonical name. Banned terms may appear in historical context (archived docs, "Historical note" callouts) but must not be used as if the component still exists or still goes by that name.
+
+| Canonical name | What it is | Repo | Banned terms |
+|---|---|---|---|
+| **API** | Backend service — REST endpoints, SSE stream, unit conversion, enrichment pipeline, derived values. The single backend for the dashboard. | `weewx-clearskies-api` | ~~BFF~~, ~~Backend-for-Frontend~~, ~~realtime service~~, ~~realtime/BFF~~, ~~BFF gateway~~, ~~backend gateway~~, ~~dashboard gateway~~ |
+| **Dashboard** | React SPA — the weather UI that site visitors see. | `weewx-clearskies-dashboard` | ~~frontend~~ (ambiguous with front-end host) |
+| **Loop relay** | weewx extension that relays loop packets to a Unix socket for the API to read. Code class: `ClearSkiesLoopRelay`. | `weewx-clearskies-extension` | ~~the extension~~ (too vague when other extensions exist) |
+| **Socket reader** | Component inside the API that connects to the loop relay's Unix socket and reads packets. Code class: `DirectAdapter`. | (part of API) | ~~DirectAdapter~~ as a component name, ~~API DirectAdapter~~ |
+| **Config UI** | Setup wizard + ongoing admin interface. Contains the **wizard** (7-step first-run flow) and the **admin** (ongoing config management). | `weewx-clearskies-stack` | ~~config wizard~~, ~~wizard~~ when meaning the whole config UI |
+| **Caddy** | Reverse proxy, TLS termination, static file server — entry point for all browser traffic. | upstream `caddy:2-alpine` | ~~web server~~ as a proper name |
+| **Enrichment pipeline** | Processors inside the API that add derived values (Beaufort, comfort index, conditions text, barometer trend, wind averages) to data before it reaches the dashboard. | (part of API) | ~~enrichment modules~~, ~~BFF enrichment~~ |
+| **Unit converter** | Component inside the API that transforms raw observation values to operator display units. Code class: `UnitTransformer`. | (part of API) | ~~conversion layer~~, ~~BFF conversion~~ |
+| **weewx host** | Server running the weewx engine, the API, and Redis. | — | ~~API host~~ |
+| **Front-end host** | Server running Caddy, dashboard static files, and optionally the config UI. Always hyphenated. | — | ~~frontend host~~ (no hyphen) |
+| **Operator** | Person who installs, configures, and maintains Clear Skies. | — | ~~site owner~~ |
+| **Visitor** | Person viewing the weather dashboard in a browser. | — | ~~user~~ alone (ambiguous), ~~end user~~ when meaning visitor |
 
 Previous: 2026-06-08 (sky condition thresholds corrected for sensor accuracy, day/night display vocabulary added, Known gap #8 resolved).
 
@@ -95,7 +116,7 @@ weewx host                          front-end host
 
 ## Caddy routing
 
-All three Caddyfile variants (frontend-host, single-host, examples/reverse-proxy) route both `/api/v1/*` and `/sse` directly to the API at port 8765. There is no BFF proxy hop — the API serves both REST and SSE directly (ADR-058).
+All three Caddyfile variants (frontend-host, single-host, examples/reverse-proxy) route both `/api/v1/*` and `/sse` directly to the API at port 8765. There is no intermediate proxy — the API serves both REST and SSE directly (ADR-058).
 
 | Path pattern | Destination | What it serves |
 |-------------|-------------|----------------|
@@ -123,7 +144,7 @@ Security headers on all responses: `X-Content-Type-Options: nosniff`, `X-Frame-O
 
 `tls_verify = false` applies in all three cases when the API uses its default self-signed certificate.
 
-> **Removed (ADR-058, 2026-06-14):** The `[api] upstream_url` config section in `realtime.conf` is eliminated. There is no BFF proxy — the API serves all endpoints directly. Caddy routes to the API; no intermediate service.
+> **Removed (ADR-058, 2026-06-14):** The `[api] upstream_url` config section in `realtime.conf` is eliminated. There is no intermediate proxy — the API serves all endpoints directly. Caddy routes to the API; no intermediate service.
 
 ## Webcam
 

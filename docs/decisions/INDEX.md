@@ -10,7 +10,7 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-002](ADR-002-tech-stack.md) | Tech stack | Accepted | 2026-04-30 |
 | [ADR-003](ADR-003-license.md) | License = GPL v3 | Accepted | 2026-04-30 |
 | [ADR-004](ADR-004-repo-naming.md) | Repo naming convention | Accepted | 2026-04-30 |
-| [ADR-005](ADR-005-realtime-architecture.md) | Realtime supports direct + MQTT modes | Accepted | 2026-04-30 |
+| [ADR-005](ADR-005-realtime-architecture.md) | Realtime supports direct + MQTT modes | Superseded by ADR-058 | 2026-04-30 |
 | [ADR-006](ADR-006-compliance-model.md) | End-user-managed compliance for third-party APIs | Accepted | 2026-04-30 |
 | [ADR-007](ADR-007-forecast-providers.md) | Forecast providers — day-1 set | Accepted | 2026-04-30 |
 | [ADR-008](ADR-008-auth-model.md) | Auth model | Accepted | 2026-05-04 |
@@ -47,8 +47,8 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-038a](ADR-038a-wizard-api-channel.md) | Wizard-to-API secure channel & API-mediated configuration (amends ADR-027, ADR-008) | Accepted | 2026-05-20 |
 | [ADR-039](ADR-039-distribution-installation-mechanism.md) | Distribution / installation — PyPI + container registry + GitHub Releases; Linux native or Docker; macOS native or Docker; Windows = Docker Desktop; no bespoke OS installers | Accepted | 2026-05-04 |
 | [ADR-040](ADR-040-earthquake-providers.md) | Earthquake providers — day-1 set: usgs/geonet/emsc/renass; single source per deploy; setup wizard suggests by region; USGS provides global fallback | Accepted | 2026-05-05 |
-| [ADR-041](ADR-041-realtime-bff.md) | Realtime service as BFF — proxies API, serves SSE, applies unit conversion; single dashboard gateway (amends ADR-005, supersedes ADR-019) | Accepted | 2026-05-26 |
-| [ADR-042](ADR-042-unit-system.md) | Unit system — full weewx compatibility; 14 unit groups; BFF converts to operator display units; dashboard has zero unit knowledge | Accepted | 2026-05-26 |
+| [ADR-041](ADR-041-realtime-bff.md) | Unit conversion and enrichment authority (historical: realtime BFF, merged into API per ADR-058); proxies API, serves SSE, applies unit conversion; single dashboard gateway (amends ADR-005, supersedes ADR-019) | Accepted | 2026-05-26 |
+| [ADR-042](ADR-042-unit-system.md) | Unit system — full weewx compatibility; 14 unit groups; API converts to operator display units; dashboard has zero unit knowledge | Accepted | 2026-05-26 |
 | [ADR-043](ADR-043-skinconf-compliance.md) | skin.conf compliance — keep/replace/ignore per section; wizard imports existing skin.conf for migration | Accepted | 2026-05-26 |
 | [ADR-044](ADR-044-sky-condition-classification.md) | Current conditions text — sky (kc + σ variability via Ineichen-Perez/pvlib, provider cloud cover primary), precipitation (rain gauge + wet-bulb filter), wind (Beaufort/WMO), comfort (dewpoint/NWS), composition rules, day/night, sensor fusion priorities | Accepted | 2026-05-26 |
 | [ADR-045](ADR-045-background-cache-warming.md) | Background cache warming — daemon thread pre-computes slow endpoints on configurable intervals; reuses ADR-017 CacheBackend | Proposed | 2026-05-27 |
@@ -60,7 +60,7 @@ Every locked architecture or process decision for the Clear Skies project lives 
 | [ADR-051](ADR-051-card-footprint-model.md) | Card footprint model & grid-compatible sizing (A4) — 4-col footprints (tile/wide/panel/full + row-span), min-footprint per card, half-row track w/ zero-waste packing, universal card discipline (page-header/hero + controls cards, no free-floating content); foundation for the future operator drag-and-drop grid | Accepted | 2026-05-30 |
 | [ADR-052](ADR-052-geography-correct-alert-model.md) | Geography-correct alert severity model — replaces US-centric `advisory\|watch\|warning` with `severityLevel` (1–4 int) + `severityLabel` (native system name); captures Aeris `dataSource`/`localLanguages`/`color`/`cat`; fixes NWS provider bug (CAP→event tier); OWM passthrough mode; 5 new Material Symbols alert icons; amends ADR-010/016/050 | Accepted | 2026-06-01 |
 | [ADR-053](ADR-053-almanac-visibility-rankings.md) | Almanac visibility ranking system — unified 5-tier color scale (green/lime/yellow/orange/red) for solar eclipses (obscuration), lunar eclipses (altitude), meteor showers (radiant+moon), planet viewing (7Timer seeing). Data provenance: AstronomyAPI.com, Skyfield, 7Timer, IMO/AMS. | Accepted | 2026-06-04 |
-| [ADR-054](ADR-054-configurable-charts.md) | Operator-configurable charts system — `charts.conf` (ConfigObj/INI), 3-level nesting, self-hide pruning, custom SQL security model, wind rose as client-side SVG, weather range chart, migration tool, proportional `aggregate_interval` scaling, per-field `agg_map`, BFF archive conversion; defers UI editor | Accepted | 2026-06-07 |
+| [ADR-054](ADR-054-configurable-charts.md) | Operator-configurable charts system — `charts.conf` (ConfigObj/INI), 3-level nesting, self-hide pruning, custom SQL security model, wind rose as client-side SVG, weather range chart, migration tool, proportional `aggregate_interval` scaling, per-field `agg_map`, API archive conversion; defers UI editor | Accepted | 2026-06-07 |
 | [ADR-055](ADR-055-client-data-refresh-policy.md) | Client data refresh policy — stale-while-revalidate in `useApiQuery`; no skeleton flash during background refetches; theme initialization gated on real scene data; amends ADR-033 (CLS) and ADR-047 (scene default scoping) | Accepted | 2026-06-10 |
 
 > **Note:** This list is not assumed complete. The user has explicitly flagged that decisions get missed. New Pinned slots are added as they're identified, before the corresponding work begins.

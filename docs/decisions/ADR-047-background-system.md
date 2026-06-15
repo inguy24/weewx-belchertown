@@ -66,7 +66,7 @@ date-range overrides) folds into the operator-replaceable set as future config s
 4. **Precipitation overlay = rain | snow | none**, independent of the background bucket (rain can ride
    on a cloudy *or* storm photo). It turns on the moment precip is detected and **lingers for 15
    minutes after the last detection** (wet/frosted glass doesn't vanish instantly), computed in the
-   **realtime service**. Snow wins over rain when both qualify.
+   **API**. Snow wins over rain when both qualify.
 
 5. **Day/night = real sun position** (almanac sunrise/sunset — the same signal the dashboard already
    computes for auto-sunrise-sunset theming), NOT the theme toggle.
@@ -75,7 +75,7 @@ date-range overrides) folds into the operator-replaceable set as future config s
    the background's daytime flag follows the theme toggle (Light → day variant, Dark → night
    variant). System mode follows almanac as before. Sky and overlay fields always reflect actual
    weather conditions regardless of theme choice. This override is applied client-side in
-   `AppLayout` — the BFF still emits the almanac-based `scene.daytime` unchanged.
+   `AppLayout` — the API still emits the almanac-based `scene.daytime` unchanged.
 
 6. **Server emits a small structured `scene` descriptor; the dashboard just maps it to assets.** No
    client-side string-parsing of the conditions sentence, no weather logic in the dashboard. Shape:
@@ -90,7 +90,7 @@ date-range overrides) folds into the operator-replaceable set as future config s
 
 ## Consequences
 
-- **Realtime service** grows: a `scene` builder (sky-bucket + provider snow/storm + sun day/night),
+- **API** grows: a `scene` builder (sky-bucket + provider snow/storm + sun day/night),
   the 15-minute precip-linger timer (server state), and new `scene` fields on the `/current` payload
   + SSE stream.
 - **Dashboard** grows: a global background layer (blurred base + screen-blended overlay) behind the
@@ -137,6 +137,6 @@ date-range overrides) folds into the operator-replaceable set as future config s
 - Asset-prep scripts: [scripts/asset-prep/](../../scripts/asset-prep/).
 - Reconciles: [ADR-009 §Hero/§Color](ADR-009-design-direction.md).
 - Inputs/honors: [ADR-044](ADR-044-sky-condition-classification.md) (sky labels, precip),
-  [ADR-041](ADR-041-realtime-bff.md) (BFF computes, dashboard renders),
+  [ADR-041](ADR-041-realtime-bff.md) (API computes, dashboard renders),
   [ADR-023](ADR-023-light-dark-mode-mechanism.md) (almanac day/night),
   [ADR-033](ADR-033-performance-budget.md) (image weight), [ADR-026](ADR-026-accessibility-commitments.md).

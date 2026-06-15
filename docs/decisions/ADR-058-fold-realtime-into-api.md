@@ -30,7 +30,7 @@ Phase 0 research confirmed feasibility:
 
 ## Decision
 
-The realtime/BFF service merges into the API. The API becomes a push/pull service: REST for queries, SSE for real-time. MQTT support is eliminated.
+The former realtime/BFF service is merged into the API. The API becomes a push/pull service: REST for queries, SSE for real-time. MQTT support is eliminated.
 
 **What moves into the API (migration manifest from T0.1):**
 
@@ -67,7 +67,7 @@ The realtime/BFF service merges into the API. The API becomes a push/pull servic
 ## Consequences
 
 - **Supersedes ADR-005:** Direct + MQTT input modes replaced by direct-only within the API. MQTT is no longer supported.
-- **Amends ADR-041:** The BFF role merges into the API. The computation boundary (API = raw data, BFF = conversion) collapses — the API does both. The "test" from the ADR-041 amendment still applies: if a proposed endpoint requires domain-specific computation, it belongs in the enrichment pipeline, not as a raw data endpoint.
+- **Amends ADR-041:** The former BFF role is merged into the API. The computation boundary (API = raw data, former BFF = conversion) collapses — the API does both. The "test" from the ADR-041 amendment still applies: if a proposed endpoint requires domain-specific computation, it belongs in the enrichment pipeline, not as a raw data endpoint.
 - **Amends ADR-034:** Topology simplifies. Container inventory loses `clearskies-realtime`. Port registry loses 8766 and 8082. Two-host default becomes: API on weewx host, dashboard + Caddy on front-end host.
 - **Caddy routing changes:** `/api/v1/*` and `/sse` both route to the API (port 8765) instead of realtime (port 8766).
 - **Single config file:** `realtime.conf` settings (unit conversion, SSE, direct adapter) fold into `api.conf`. One config file for one service.
@@ -113,7 +113,7 @@ Key files in the API to modify:
 ## References
 
 - Supersedes: [ADR-005](ADR-005-realtime-architecture.md) (realtime direct + MQTT modes)
-- Amends: [ADR-041](ADR-041-realtime-bff.md) (BFF role), [ADR-034](ADR-034-deployment-topology-default.md) (deployment topology)
+- Amends: [ADR-041](ADR-041-realtime-bff.md) (unit conversion and enrichment authority), [ADR-034](ADR-034-deployment-topology-default.md) (deployment topology)
 - Related: [ADR-042](ADR-042-unit-system.md) (unit system), [ADR-056](ADR-056-api-weewx-co-location.md) (co-location), [ADR-057](ADR-057-api-weewx-application-layer.md) (application layer)
 - Research: T0.1 findings (realtime inventory), T0.2 findings (API extensibility)
 - Backlog: FIX-007

@@ -126,7 +126,7 @@ Documented in full in the archived `PLANET-VIEWING-QUALITY-PLAN.md`. Summary:
 - Solar/lunar tier computation goes in the API endpoint handlers (not the client class — the client returns raw data, the endpoint computes the tier).
 - Meteor tier computation goes in `compute_meteor_showers()` in `services/almanac.py`.
 - Dashboard color mapping: use CSS classes `.vc-excellent` (#22c55e), `.vc-good` (#84cc16), `.vc-fair` (#eab308), `.vc-poor` (#f97316), `.vc-none` (#ef4444) — already defined in the mockup CSS.
-- Planet viewing quality is already implemented — do not re-implement. Reference the BFF enrichment module.
+- Planet viewing quality is already implemented — do not re-implement. Reference the API's enrichment pipeline.
 - Type badge click modals (Total/Annular/Partial definitions) are a dashboard-only UI feature, not an API concern.
 - **AstronomyAPI.com obscuration scale:** The API returns `extraInfo.obscuration` as a 0–1 fraction (NOT 0–100 percentage). Multiply by 100 before comparing against the tier thresholds above.
 - **AstronomyAPI.com is location-filtered:** The API only returns eclipses visible from the observer's location. If an eclipse's shadow does not reach the observer, it is omitted entirely. There is no global/unfiltered mode. The "Not Visible" tier therefore never appears for eclipses (only for meteor showers where radiant altitude < 0°).

@@ -53,9 +53,9 @@ Running list of issues found during manual testing. Items marked with a plan ref
 - **Found:** 2026-06-11
 - **Severity:** Functional (HIGH)
 - **Description:** The AQI card only shows expanded pollutant detail if the primary AQI provider supplies it. But the data can come from multiple sources — e.g. IQAir provides the headline AQI index but no per-pollutant breakdown, while the operator's weewx database has OWM air pollution data (NO2, O3, PM2.5, CO, etc.) via a weewx plugin with columns mapped in the wizard. The card should detect that pollutant concentration fields have values in the canonical response (regardless of which source populated them) and render the expanded view accordingly.
-- **Key principle:** The UI/BFF is provider-agnostic. The AQI card should never ask "which provider gave me this" — it should ask "do I have pollutant concentration values?" If yes, show them. The data may come from the AQI provider, from weewx-mapped DB columns, or from a mix of both. Mapped columns are a first-class data source, not a fallback.
+- **Key principle:** The UI and API are provider-agnostic. The AQI card should never ask "which provider gave me this" — it should ask "do I have pollutant concentration values?" If yes, show them. The data may come from the AQI provider, from weewx-mapped DB columns, or from a mix of both. Mapped columns are a first-class data source, not a fallback.
 - **Scope:**
-  - **API/BFF:** The canonical AQI response must merge pollutant data from all available sources (provider API response + weewx-mapped DB columns). If IQAir gives AQI=52 with no pollutants, but mapped columns have PM2.5=12.3 and O3=45.0, the response should include both the AQI and the pollutant values.
+  - **API:** The canonical AQI response must merge pollutant data from all available sources (provider API response + weewx-mapped DB columns). If IQAir gives AQI=52 with no pollutants, but mapped columns have PM2.5=12.3 and O3=45.0, the response should include both the AQI and the pollutant values.
   - **Dashboard AQI card:** Expand/detail view should render whenever any pollutant concentration fields are non-null, not only when the primary AQI provider supplied them.
 - **Expected:** An operator using IQAir for headline AQI + weewx OWM plugin for pollutant detail sees both the AQI summary and the expanded pollutant breakdown on the same card.
 
@@ -362,18 +362,18 @@ Running list of issues found during manual testing. Items marked with a plan ref
 
 - **Relates to:** FIX-005 (co-location creates the risk), FIX-006 (API scope expansion increases attack surface), FIX-007 (SSE consolidation means one service to secure, not two)
 
-- **BFF / reverse proxy layer (Caddy) is part of this audit:**
-  - The BFF sits between the public internet and the API — it's the actual front door. If Caddy is misconfigured, none of the API-level mitigations matter.
+- **Caddy / reverse proxy layer is part of this audit:**
+  - Caddy sits between the public internet and the API — it's the actual front door. If Caddy is misconfigured, none of the API-level mitigations matter.
   - TLS configuration — are we enforcing modern TLS (1.2+ minimum)? HSTS headers?
-  - Path-based routing — does the BFF expose only the intended API paths, or does it proxy everything blindly?
-  - Admin endpoints — does the BFF block public access to wizard/config routes, or does it rely on the API to enforce auth? (Defense in depth: both should enforce it.)
+  - Path-based routing — does Caddy expose only the intended API paths, or does it proxy everything blindly?
+  - Admin endpoints — does Caddy block public access to wizard/config routes, or does it rely on the API to enforce auth? (Defense in depth: both should enforce it.)
   - Static asset serving — the dashboard is static files served by Caddy. Can path traversal in asset requests reach outside the served directory?
   - Request size limits — does Caddy enforce max request body size before it reaches the API?
   - WebSocket/SSE — does the proxy properly handle long-lived SSE connections? Timeout behavior, max connection count at the proxy level?
-  - Headers — is the BFF adding security headers (X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy)?
-  - Logging — does the BFF log enough to detect and investigate attacks, but not so much that it captures sensitive data?
+  - Headers — is Caddy adding security headers (X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy)?
+  - Logging — does Caddy log enough to detect and investigate attacks, but not so much that it captures sensitive data?
 
-- **ADR impact:** Needs a security ADR that establishes the threat model, the trust boundaries (internet → BFF → API → weewx, with each layer enforcing its own constraints), and the mandatory mitigations. Existing security-related ADRs need review against the new co-location architecture.
+- **ADR impact:** Needs a security ADR that establishes the threat model, the trust boundaries (internet → Caddy → API → weewx, with each layer enforcing its own constraints), and the mandatory mitigations. Existing security-related ADRs need review against the new co-location architecture.
 
 ### FIX-009: Wizard "Appearance" step is overloaded — split into focused steps
 

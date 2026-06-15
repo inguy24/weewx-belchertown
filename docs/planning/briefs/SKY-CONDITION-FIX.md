@@ -23,7 +23,7 @@ On 2026-06-08, a visibly clear blue sky (963.3 W/m², webcam confirms) is classi
 
 | Repo | Local path | Branch |
 |------|-----------|--------|
-| Realtime (BFF) | `repos/weewx-clearskies-realtime` | main |
+| Realtime (API) | `repos/weewx-clearskies-realtime` | main |
 | Meta (plans, ADRs) | `.` (root) | master |
 
 **Read before acting:** `CLAUDE.md`, `rules/coding.md`, `rules/clearskies-process.md`, `docs/decisions/ADR-044-sky-condition-classification.md`, `docs/ARCHITECTURE.md`

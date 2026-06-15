@@ -93,4 +93,4 @@ useEffect(() => {
 ## References
 
 - Amends: [ADR-033](ADR-033-performance-budget.md) (CLS enforcement), [ADR-047](ADR-047-background-system.md) (scene default scoping)
-- Related: [ADR-023](ADR-023-light-dark-mode-mechanism.md) (theme mechanism), [ADR-041](ADR-041-realtime-bff.md) (BFF / SSE)
+- Related: [ADR-023](ADR-023-light-dark-mode-mechanism.md) (theme mechanism), [ADR-041](ADR-041-realtime-bff.md) (unit conversion / SSE)

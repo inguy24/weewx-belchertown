@@ -1280,11 +1280,11 @@ components:
         windSpeedAvg10m:
           type: number
           nullable: true
-          description: BFF-derived 10-minute sustained average wind speed (in operator display units)
+          description: API-derived 10-minute sustained average wind speed (in operator display units)
         windGustMax10m:
           type: number
           nullable: true
-          description: BFF-derived 10-minute maximum gust (in operator display units)
+          description: API-derived 10-minute maximum gust (in operator display units)
         barometer: { type: number, nullable: true }
         pressure: { type: number, nullable: true }
         altimeter: { type: number, nullable: true }
@@ -1810,7 +1810,7 @@ components:
           type: number
           nullable: true
           description: Angular distance from the Sun in degrees.
-        # BFF-enriched fields (Task 3 — planet viewing quality)
+        # API-enriched fields (Task 3 — planet viewing quality)
         viewingQuality:
           type: string
           nullable: true

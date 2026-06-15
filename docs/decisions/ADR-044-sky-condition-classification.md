@@ -13,7 +13,7 @@ The dashboard displays a `weatherText` field describing current conditions (e.g.
 
 The existing implementation (`local_conditions.py` in the API repo) uses naive single-reading thresholds for sky condition and lacks night/day handling. Testing revealed it reports "Clear" when conditions are overcast — the clearness index Kt cannot distinguish thin uniform overcast from partly cloudy skies on a single reading (Duchon & O'Malley 1999). This ADR documents the scientifically backed methodology for the entire conditions statement.
 
-**Current location of logic:** API repo (`services/local_conditions.py`). Per ADR-041, display-facing transformations belong in the BFF. This ADR governs the methodology regardless of which service hosts it.
+**Current location of logic:** API repo (`services/local_conditions.py`). Per ADR-041 (amended by ADR-058), display-facing transformations belong in the API's enrichment pipeline. This ADR governs the methodology regardless of which service hosts it.
 
 ## Decision
 

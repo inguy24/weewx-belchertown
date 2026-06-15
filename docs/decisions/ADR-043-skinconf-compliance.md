@@ -29,11 +29,11 @@ Clear Skies documents a keep/replace/ignore disposition for each skin.conf secti
 
 | Section | Disposition | Where it lands |
 |---|---|---|
-| `[Units][[Groups]]` | **KEEP** | BFF `realtime.conf` `[units][[groups]]` — wizard unit config step |
-| `[Units][[StringFormats]]` | **KEEP** | BFF `realtime.conf` `[units][[string_formats]]` |
-| `[Units][[Labels]]` | **KEEP** | BFF `realtime.conf` `[units][[labels]]` |
-| `[Units][[Ordinates]]` | **KEEP** | BFF `realtime.conf` `[units][[ordinates]]` |
-| `[Units][[TimeFormats]]` | **KEEP** | BFF `realtime.conf` `[units][[time_formats]]` |
+| `[Units][[Groups]]` | **KEEP** | API `api.conf` `[units][[groups]]` — wizard unit config step |
+| `[Units][[StringFormats]]` | **KEEP** | API `api.conf` `[units][[string_formats]]` |
+| `[Units][[Labels]]` | **KEEP** | API `api.conf` `[units][[labels]]` |
+| `[Units][[Ordinates]]` | **KEEP** | API `api.conf` `[units][[ordinates]]` |
+| `[Units][[TimeFormats]]` | **KEEP** | API `api.conf` `[units][[time_formats]]` |
 | `[Units][[DegreeDays]]` | **KEEP** | API `api.conf` (affects calculations) |
 | `[Units][[Trend]]` | **KEEP** | API `api.conf` (affects barometer trend) |
 | `[Units][[TimeZone]]` | **KEEP** | Pre-fills wizard station step |
@@ -44,7 +44,7 @@ Clear Skies documents a keep/replace/ignore disposition for each skin.conf secti
 | `[Extras]` — provider config | **INGEST** | Map API keys to provider config where key patterns match |
 | `[Extras]` — social | **KEEP** | Wizard social config step, footer component |
 | `[Extras]` — PWA/manifest | **KEEP** | Generate manifest.json from config |
-| `[Extras]` — MQTT | **KEEP** | Already handled in wizard step 5 |
+| `[Extras]` — MQTT | **IGNORE** | MQTT eliminated per ADR-058; wizard no longer has an MQTT step |
 | `[Almanac]` — moon_phases | **KEEP** | Feed 8 lunar phase labels into i18n system |
 | `[Generators]` | **IGNORE** | Cheetah-specific — silently skip |
 | `[CheetahGenerator]` | **IGNORE** | Cheetah-specific — silently skip |
@@ -65,7 +65,7 @@ Clear Skies documents a keep/replace/ignore disposition for each skin.conf secti
 - New dependency: `configobj` in stack repo (already used by weewx itself).
 - `[Extras]` key mapping is Belchertown-specific. Operators migrating from other skins (e.g., Seasons, WeeWX-WD) will get partial imports — Units and Labels sections work universally, but Extras keys may not map.
 - Labels import depends on i18n infrastructure (ADR-021) being in place.
-- DegreeDays and Trend values route to API config, not BFF config — the wizard writes to both config files on apply.
+- DegreeDays and Trend values route to API config — the wizard writes to `api.conf` on apply.
 
 ## Implementation guidance
 
@@ -81,7 +81,7 @@ Clear Skies generates and maintains its own skin.conf at `/etc/weewx/skins/Clear
 
 **Contents:** The generated skin.conf includes `[Units]` (all subsections), `[Labels][[Generic]]`, `[Extras]` (branding, social, feature toggles), and `[Almanac]`. Cheetah sections are omitted (Clear Skies has no Cheetah dependency).
 
-**Runtime config:** The BFF reads unit preferences from `realtime.conf [units]` (unchanged). The wizard writes both files atomically — skin.conf is the portable/canonical copy, realtime.conf is the BFF's runtime config. They cannot drift because only the wizard writes them.
+**Runtime config:** The API reads unit preferences from `api.conf [units]`. The wizard writes both files atomically — skin.conf is the portable/canonical copy, `api.conf` is the API's runtime config. They cannot drift because only the wizard writes them.
 
 **Single-host (majority):** Wizard writes skin.conf directly to the local filesystem.
 

@@ -32,7 +32,7 @@ Phase 3 design** — so *layout/treatment is the open part, the card inventory m
 
 **The data flow and overall architecture are settled and proven.** Phases 1–4 + the Config-UI/deploy
 phase are complete ([CLEAR-SKIES-PLAN.md](../planning/CLEAR-SKIES-PLAN.md)); the API, the realtime
-BFF, the provider modules, unit conversion (ADR-042), SSE live updates, the `/api/v1/*` endpoint
+API, the provider modules, unit conversion (ADR-042), SSE live updates, the `/api/v1/*` endpoint
 surface, and the `/pages` config model all exist and passed a phase-boundary ADR-compliance sweep
 (26 gaps, all resolved 2026-05-22). **This redesign is a presentation-layer effort only.**
 
@@ -40,7 +40,7 @@ Operating rules that follow from that:
 - **Respect how data is obtained.** The redesign changes how existing data is *displayed, composed,
   and styled* — not how it is fetched, converted, or wired. The dashboard's data hooks
   (`useRealtimeObservation`, `useForecast`, `useAlmanac`, …), the ConvertedValue contract (ADR-042),
-  and the BFF-computed fields (`weatherText`/`comfortIndex`/`beaufort`, ADR-044) are inputs to design,
+  and the API-computed fields (`weatherText`/`comfortIndex`/`beaufort`, ADR-044) are inputs to design,
   not things to re-architect. No new endpoints or data-flow changes inside Track C.
 - **"Not built" ≠ "redesign builds it from new data."** Where a candidate card needs data that does
   not exist today (per-pollutant AQI depth, expandable-forecast-column detail, month-to-date
@@ -188,7 +188,7 @@ For each page: **B** = current Belchertown · **CS** = existing Clear Skies buil
 | ⬚ Station header / freshness strip | Station identity + last-updated/online (Belchertown parity) | `/station`, `/branding`, SSE state |
 
 - **Flags:** card set + data wiring locked by ADR-024 (layout open); `weatherText`/`comfortIndex`/
-  `beaufort` are BFF-computed (044/041) — consume verbatim; values are ConvertedValue (042) — no
+  `beaufort` are API-computed (044/041) — consume verbatim; values are ConvertedValue (042) — no
   client unit math; EPA/UV colors WCAG-adjusted (026) — preserve; wind = enhance existing SVG, not
   replace; condition-keyed/operator-photo background is direction, not wired.
 - **Open Qs:** Webcam/Timelapse/Radar one-tabbed-tile vs split? Consolidate the locked-8 obs into one

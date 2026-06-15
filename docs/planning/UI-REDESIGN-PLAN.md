@@ -23,12 +23,12 @@ file:line so these can't be hand-waved as "probably fine."
 
 | # | Blocker | Reality (verified) | Fix | Repos |
 |---|---|---|---|---|
-| **B-1** ✅ **DONE — verified live 2026-05-29** | **Traffic does not go through the BFF.** All `/api/v1/*` requests bypassed the realtime BFF and hit the API directly, so no server-side unit conversion happened. | `frontend-host/Caddyfile`, `single-host/Caddyfile`, `examples/reverse-proxy/Caddyfile` all routed `/api/v1/*` direct to API. | **Fixed:** all 3 Caddyfiles now route `/api/v1/*` → `realtime:8766` (commits stack `4334475`, realtime `5f52eac`, meta `02f4ada`). **Verified end-to-end on weather-dev:** BFF `:8766` returns `outTemp 68.2 °F` vs raw upstream `68.22576…°F` — BFF actively transforms (also fixes UAT #10 significant-figures). Lead re-ran realtime suite: 366 passed/10 skipped/0 failed. | stack, realtime, meta docs |
+| **B-1** ✅ **DONE — verified live 2026-05-29** | **Traffic does not go through the API.** All `/api/v1/*` requests bypassed the realtime service and hit the API directly, so no server-side unit conversion happened. | `frontend-host/Caddyfile`, `single-host/Caddyfile`, `examples/reverse-proxy/Caddyfile` all routed `/api/v1/*` direct to API. | **Fixed:** all 3 Caddyfiles now route `/api/v1/*` → `realtime:8766` (commits stack `4334475`, realtime `5f52eac`, meta `02f4ada`). **Verified end-to-end on weather-dev:** API `:8766` returns `outTemp 68.2 °F` vs raw upstream `68.22576…°F` — API actively transforms (also fixes UAT #10 significant-figures). Lead re-ran realtime suite: 366 passed/10 skipped/0 failed. | stack, realtime, meta docs |
 | ~~**B-1b**~~ ✅ **NOT A GAP (verified)** | ~~Wizard must write `[api] upstream_url`.~~ The B-1 agent claimed the wizard doesn't write `realtime.conf`; **that was wrong.** `config_writer.py:466` (`write_all`) calls `write_realtime_conf()` which writes `[api] upstream_url = state.api_address` in a MANAGED REGION. Confirmed by the live weather-dev `realtime.conf` matching that writer's exact format. No action needed. | — | — |
 | **B-2** ✅ **DONE — verified 2026-05-29** | **"and Gusty" conditions qualifier never implemented** (ADR-044 §4 mandates it). | `conditions_text.py` had no `wind_gust` param and no gusty logic; `windGust` sat in a ring-buffer, never consumed. | **Fixed** (commit realtime `eafb706`): `wind_gust`/`wind_gust_unit` added to `build_weather_text()` + wired through `compose_weather_text()`; fires when `gust_mph ≥ speed_mph+12` AND `gust_mph ≥ 18` (both converted to mph from declared units); Calm-suppressed. **Verified:** lead re-ran suite (375 passed/10 skipped/0) + exercised the function directly (fires at 20/5 & exact 18/6; not at 15/5; knots path correct; calm+gust → empty). 8 new tests. | realtime |
-| **B-3a** ✅ **DONE — verified 2026-05-29** | barometer trend classified client-side (±0.01 inHg in `barometer.ts`). | raw float + hardcoded threshold. | **Fixed** (realtime `cafb6b2`): BFF emits `barometerTrendDirection ∈ {rising,falling,steady,null}`, classified in inHg via authoritative configured unit (label-override safe, never crashes). Verified: 390 tests pass + diff reviewed. **Dashboard consumer = B-3b-baro (in dash batch).** | realtime |
-| **B-3b-baro** ✅ **DONE — verified 2026-05-29** | dashboard must consume `barometerTrendDirection` + drop its ±0.01 threshold. | `barometer.ts:11-18`. | **Fixed** (dashboard `6161f2f`): `barometer.ts` now maps the BFF direction string; ±0.01 threshold deleted; threaded through `CurrentResponse` type + hooks. Verified: tsc 0 errors + build ✓ + diff. (Behavioral test didn't run — local test infra missing `@testing-library/dom`.) | dashboard |
-| **B-3b-winddir** ✅ **DONE — verified 2026-05-29** | `windDirLabel()` recomputed compass client-side (English-hardcoded, formula disagreed with BFF). | `now.tsx`, `forecast.tsx`. | **Fixed** (realtime `3500659`, dashboard `7340408`): BFF emits canonical `windDirCardinal`/`windGustDirCardinal` (16 codes) on `/current` **and** the live SSE path (shared `_degrees_to_index`; operator `[[ordinates]]` override preserved separately). Dashboard renders via i18n `directions.*` (ADR-21, en-seeded + fallback); forecast uses a shared `cardinalFromDegrees` with the **same formula** (44 tests prove parity); `windDirLabel` deleted. Verified: realtime 419 tests, dashboard tsc+build+diff, grep clean. **Deferred:** non-en translation of `directions.*` → tracked translation pass. | realtime+dashboard |
+| **B-3a** ✅ **DONE — verified 2026-05-29** | barometer trend classified client-side (±0.01 inHg in `barometer.ts`). | raw float + hardcoded threshold. | **Fixed** (realtime `cafb6b2`): API emits `barometerTrendDirection ∈ {rising,falling,steady,null}`, classified in inHg via authoritative configured unit (label-override safe, never crashes). Verified: 390 tests pass + diff reviewed. **Dashboard consumer = B-3b-baro (in dash batch).** | realtime |
+| **B-3b-baro** ✅ **DONE — verified 2026-05-29** | dashboard must consume `barometerTrendDirection` + drop its ±0.01 threshold. | `barometer.ts:11-18`. | **Fixed** (dashboard `6161f2f`): `barometer.ts` now maps the API direction string; ±0.01 threshold deleted; threaded through `CurrentResponse` type + hooks. Verified: tsc 0 errors + build ✓ + diff. (Behavioral test didn't run — local test infra missing `@testing-library/dom`.) | dashboard |
+| **B-3b-winddir** ✅ **DONE — verified 2026-05-29** | `windDirLabel()` recomputed compass client-side (English-hardcoded, formula disagreed with API). | `now.tsx`, `forecast.tsx`. | **Fixed** (realtime `3500659`, dashboard `7340408`): API emits canonical `windDirCardinal`/`windGustDirCardinal` (16 codes) on `/current` **and** the live SSE path (shared `_degrees_to_index`; operator `[[ordinates]]` override preserved separately). Dashboard renders via i18n `directions.*` (ADR-21, en-seeded + fallback); forecast uses a shared `cardinalFromDegrees` with the **same formula** (44 tests prove parity); `windDirLabel` deleted. Verified: realtime 419 tests, dashboard tsc+build+diff, grep clean. **Deferred:** non-en translation of `directions.*` → tracked translation pass. | realtime+dashboard |
 | **B-4** ✅ **DONE — verified 2026-05-29** | **Timezone display bugs** (violate ADR-020 "always station TZ"). | seismic popup, records date (UTC), radar frame time all ignored station TZ. | **Fixed** (dashboard `6161f2f`): records `formatDate` takes `tz` plumbed from `useStation`; seismic popup uses `formatTime(...station tz)`; radar-map gains `stationTz` prop from now.tsx. All → station TZ. Verified: tsc + build + diff. | dashboard |
 | **B-5** ✅ **DONE — verified 2026-05-29** | **a11y + i18n gaps** (violate ADR-026 / ADR-021). | sr-only chart cell omitted unit; `weather` ns unregistered; 5 hardcoded footer aria-labels. | **Fixed** (dashboard `6161f2f`): sr-only homepage chart cell now includes `tempUnit`; `weather` ns registered; footer aria-labels → i18n (`common.json` en). Verified: tsc + build + diff. **Deferred:** full non-en translation of `weather.json` + new `footer.*` keys (en fallback works) → separate translation-pass task. | dashboard |
 | **B-6** ✅ **DONE — verified 2026-05-29** | **Logo alt text not enforced** (ADR-022 + coding §5.5 mandate required alt). | `LogoBranding.alt` defaulted to `''`; no `logo_alt` in wizard payload. | **Fixed** (api `3c04620`, meta `b182014` OpenAPI): `logo_alt` plumbed through BrandingSettings/BrandingApplyConfig/current-config round-trip; non-empty fallback (`"<site_title> logo"` / `"Weather station logo"`) so `alt=""` never emitted. **Verified:** 16 new tests pass; lead proved **0 regressions** (33 suite failures identical at parent `db177a6`). | api |
@@ -36,7 +36,7 @@ file:line so these can't be hand-waved as "probably fine."
 > **Dashboard gate:** the dashboard repo currently has an **uncommitted** `src/api/openapi-v1.yaml` edit +
 > untracked `test-results/`. Resolve that before dispatching any dashboard fix (B-3b, B-4, B-5).
 
-**Fix order:** B-1 first (it's the root cause — wiring the BFF makes B-3a/b the correct fix rather than
+**Fix order:** B-1 first (it's the root cause — wiring the API makes B-3a/b the correct fix rather than
 patching client hacks), then B-2 / B-3 / B-4 / B-5 / B-6 in parallel where repos don't collide.
 
 > **Surfaced debt (NOT a UI blocker; tracked here so it isn't lost):** the **clearskies-api test suite
@@ -286,7 +286,7 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   Approved mockup: [mockups/C2-current-wind.html](../design/mockups/C2-current-wind.html). Tick-rim
   info-container dial modeled on img-17; 72 ticks, accent-highlighted direction indicator, bearing+cardinal+
   speed+10-min-avg+max-gust all inside the circle; `ph:wind` in title and readout block; 1 decimal place on
-  all wind values; Outfit 3rem speed (not 4.75rem — that's C1 temperature only). BFF-derived fields:
+  all wind values; Outfit 3rem speed (not 4.75rem — that's C1 temperature only). API-derived fields:
   `windSpeedAvg10m` / `windGustMax10m` (10-min true-wall-clock rolling window, 60s min coverage).
   **Commits:** realtime `38962a1` (wind_rolling_window.py + registrations + SSE/REST + 19 tests; suite
   497/0), contract `3770c44`+`d5e37d0` (OpenAPI both copies), dashboard `f86f6f3` (WindCompassCard.tsx +
@@ -347,8 +347,8 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   two files; extract 4 inline cards (E/F/G/H) to standalone component files; re-skin all 8 with
   design-system tokens (typography, colors, Phosphor icons, Card primitive with `footprint` prop).
   ADR-050 deferred icon sub-families all resolved (see ADR-050 amendment 2026-06-01).
-  **Data layer change (corrects prior claim of "no new BFF fields"):** new `LightningStrikeBuffer`
-  module in the BFF — 24h rolling window of per-strike `(timestamp, distance)` pairs, emitted as
+  **Data layer change (corrects prior claim of "no new API fields"):** new `LightningStrikeBuffer`
+  module in the API — 24h rolling window of per-strike `(timestamp, distance)` pairs, emitted as
   `lightningStrikeHistory` on `/current` REST and SSE. Same pattern as the C2 wind rolling window.
   **Data:** `/current` (rain/barometer/radiation/UV/lightning + `lightningStrikeHistory` NEW),
   `/aqi/current`, `/almanac` (sun/moon), `/earthquakes` (first TWO records), `/forecast` (UV peak).
@@ -459,8 +459,8 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
     readability over dark photo backgrounds.
   - **Dark mode basemap** (`8573386`/`0045cc4`): radar map switches to CartoDB dark tiles in
     dark theme; canonical CARTO attribution string.
-  - **Theme sync via BFF** (`efa15ac`): dashboard dark/light mode syncs with background scene's
-    `daytime` field from the BFF, not just the CSS media query.
+  - **Theme sync via API** (`efa15ac`): dashboard dark/light mode syncs with background scene's
+    `daytime` field from the API, not just the CSS media query.
   - **Visual polish:** photo credit moved to footer (`fdac474`), light mode `--border` to
     `rgba(0,0,0,0.12)` per mockup (`6e7b820`), webcam `object-contain` instead of `object-cover`
     (`9cccb53`), webcam tab pills match forecast style (`f3351de`), main temp + feels-like show
@@ -472,7 +472,7 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   Seven surfaces delivered: **(A)** PageHeaderCard; **(B)** Sun & Moon combined card — 3-column layout
   (sun data | enlarged dual arc SVG with dasharray traveled-arc | moon data), today+tomorrow two-column
   tables, moon phase circle with crescent shadow, moon name badges, solstice/equinox footer;
-  **(C)** Planet Timeline — planet columns with NASA thumbnails + viewing quality badges (BFF-enriched
+  **(C)** Planet Timeline — planet columns with NASA thumbnails + viewing quality badges (API-enriched
   via 7Timer seeing forecast) + SVG Gantt sunset→sunrise timeline with sky gradient; **(D)** Monthly
   Averages — Recharts ComposedChart with theme-aware colors (`var(--temp-hi)`/`var(--temp-lo)` CSS
   variables) and systemic chart contrast correction (`ensureChartContrast` utility);
@@ -486,7 +486,7 @@ content fits the box (`overflow:hidden`), the box does not grow to the content.
   Mostly Clear/Partly Cloudy tiers to low-sigma branch, raised threshold from 0.70→0.78); nav rail
   width reduction + 4-second auto-hide.
 
-  **Data:** `/almanac` (today+tomorrow), `/climatology/monthly`, `/almanac/planets` (BFF-enriched),
+  **Data:** `/almanac` (today+tomorrow), `/climatology/monthly`, `/almanac/planets` (API-enriched),
   `/almanac/moon-names`, `/almanac/eclipses/lunar`, `/almanac/eclipses/solar` (AstronomyAPI.com),
   `/almanac/meteor-showers`, `/almanac/seeing-forecast` (7Timer).
   **Deferred:** year-long sunrise/sunset chart, daylight chart, moon-phase calendar (require
@@ -728,7 +728,7 @@ push + deploy to weather-dev + live verification (Gate 3 visual + Gate 4 a11y).
 
 **C4 — Now-page stat tiles: CODE-COMPLETE (2026-06-01).** Execution brief at
 [briefs/C4-STAT-TILES-PLAN.md](briefs/C4-STAT-TILES-PLAN.md). Phase 0 mockup approved, Phase 1 doc
-corrections done, Phase 2 implementation done (BFF lightning strike buffer 497 tests pass; contract
+corrections done, Phase 2 implementation done (API lightning strike buffer 497 tests pass; contract
 updated; 8 dashboard tile components created + wired into now.tsx; tsc 0 errors; vite build clean;
 19 i18n keys added). Pending push + deploy + live verification (batched with C1–C6).
 
@@ -768,7 +768,7 @@ work will be pushed + deployed + tested in one pass. The verification pass cover
 - Deploy to weather-dev (all services)
 - Gate 3: visual verification both themes + responsive (4→2→1 col) on every Now-page card
 - Gate 4: axe-core on `/` and `/forecast`, keyboard Tab walkthrough, screen reader spot-check
-- Gate 5: live data verification — BFF `/current` carries `lightningStrikeHistory`, all 8 stat
+- Gate 5: live data verification — API `/current` carries `lightningStrikeHistory`, all 8 stat
   tiles render with real data, Solar/UV charts show today's archive, gauges show real pressure/AQI,
   Sun & Moon arcs show correct station-TZ times, precipitation card shows dewpoint + humidity
 - Color-blindness simulation pass (protanopia, deuteranopia, tritanopia, achromatopsia)

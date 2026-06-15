@@ -59,7 +59,7 @@ ADR-024 **does not mention a station-logo/station-name page-header card** for No
 
 ### ADR-047 — Background system (Accepted, 2026-05-30)
 
-**Decision:** Global, condition-keyed photographic background behind every page. Two layers: blurred scene photo (clear/cloudy/storm × day/night) + optional on-glass precip overlay (rain = `overlay` blend at 75%/25% day/night; snow = `screen`). Server (realtime BFF) emits `scene: { sky, daytime, overlay }` descriptor; dashboard maps it to assets. No client-side weather logic. Operator-replaceable over shipped defaults.
+**Decision:** Global, condition-keyed photographic background behind every page. Two layers: blurred scene photo (clear/cloudy/storm × day/night) + optional on-glass precip overlay (rain = `overlay` blend at 75%/25% day/night; snow = `screen`). Server (API) emits `scene: { sky, daytime, overlay }` descriptor; dashboard maps it to assets. No client-side weather logic. Operator-replaceable over shipped defaults.
 
 **Consequence for C1:**
 - The current-conditions card and the page-header hero both sit over the ADR-047 background layer.
@@ -145,7 +145,7 @@ The "Station header / freshness strip" candidate in C0 maps to ADR-051's page-he
 
 **Flags:**
 - Card set + data wiring locked by ADR-024 (layout open); layout open = C1's job.
-- `weatherText`/`comfortIndex`/`beaufort` are BFF-computed (ADR-044/041) — consume verbatim.
+- `weatherText`/`comfortIndex`/`beaufort` are API-computed (ADR-044/041) — consume verbatim.
 - Values are ConvertedValue (ADR-042) — no client unit math.
 - EPA/UV colors WCAG-adjusted (ADR-026) — preserve (already in `now.tsx` with verified contrast ratios).
 

@@ -58,7 +58,7 @@ Clear Skies is a from-scratch modern weather UI replacing the Belchertown weewx 
 Side-by-side visual comparison of deployed Clear Skies charts vs Belchertown revealed 13 rendering defects (documented in CHARTS-FIXIT.md as F1–F13). Root cause: the renderer was built without studying Belchertown's `belchertown.js.tmpl` plotOptions — the hardcoded Highcharts defaults that make charts look good regardless of operator config. Research into `belchertown.js.tmpl` and `belchertown.py` extracted every rendering default (documented in `docs/reference/belchertown-chart-defaults.md`).
 
 **Design decisions (from operator dialog 2026-06-06):**
-- **Colors:** Belchertown's 10-color palette stays (already in charts.conf, flows through API). Dashboard adapts for theme contrast via `ensureChartContrast()`. No separate color config file. No API/BFF changes — colors are presentation, dashboard-only.
+- **Colors:** Belchertown's 10-color palette stays (already in charts.conf, flows through API). Dashboard adapts for theme contrast via `ensureChartContrast()`. No separate color config file. No API changes — colors are presentation, dashboard-only.
 - **Special axis handling:** Barometer 2-decimal precision, rain yAxisMin=0, windDir tickInterval=90 — injected into charts.conf by migration tool so operator can edit.
 - **Chart type default:** Stays `"line"` (matches Belchertown). Operator overrides via charts.conf `type = spline`.
 - **Almanac MonthlyAveragesCard:** Refactored to use same `ensureChartContrast()` instead of inline `isDark ?` ternaries.
@@ -363,7 +363,7 @@ All Phase A tasks modify the same repo. Single agent handles A1–A5 together. A
 ### Gate 3 — Architecture compliance
 - ADR-010: No chart-specific API endpoints. Colors are presentation (dashboard-only).
 - ADR-041/042: No unit conversion in dashboard.
-- ARCHITECTURE.md layer responsibilities: API = data, BFF = transformation, Dashboard = presentation.
+- ARCHITECTURE.md layer responsibilities: API = data and transformation, Dashboard = presentation.
 
 ### Gate 4 — Accessibility (WCAG 2.1 AA)
 - `ensureChartContrast()` guarantees 3:1 non-text contrast in both themes
@@ -381,7 +381,7 @@ For each chart, screenshot Clear Skies and Belchertown side by side. Verify:
 - [x] F6: Charts don't overflow container — phantom right axis width=60, uniform margins, overflow:hidden
 - [x] F7: No markers on wind speed/gust; windDir is scatter dots — dot={false}, scatter dot r=2
 - [x] F8: windDir dots visible in both themes — ensureChartContrast on all colors
-- [x] F9: Wind rose shows colored data wedges — BFF injects beaufort on archive; separate raw fetch
+- [x] F9: Wind rose shows colored data wedges — API injects beaufort on archive; separate raw fetch
 - [x] F10: No fixed-position text artifacts — sr-only tables wrapped in div
 - [x] F11: No markers on rain lines — dot={false} default
 - [x] F12: Barometer: auto-scale Y-axis, 2-decimal ticks, no markers — resolveTickDecimals + yAxisTickDecimals
@@ -441,7 +441,7 @@ For each chart, screenshot Clear Skies and Belchertown side by side. Verify:
 - `src/api/client.ts` — no API client changes
 - `src/hooks/useWeatherData.ts` — no data hook changes
 - `src/utils/wind-rose-binning.ts` — binning algorithm is correct
-- Any BFF/realtime code — colors are dashboard presentation
+- Any realtime/API code — colors are dashboard presentation
 - Any Caddy/stack code — no routing changes
 
 ---
@@ -478,7 +478,7 @@ For each chart, screenshot Clear Skies and Belchertown side by side. Verify:
 | Feature | Why excluded |
 |---------|-------------|
 | New color config file | Operator dialog: existing charts.conf colors + ensureChartContrast is sufficient |
-| API/BFF color changes | Colors are presentation — dashboard only (ADR-010) |
+| API color changes | Colors are presentation — dashboard only (ADR-010) |
 | Highcharts zoomType | No Recharts equivalent; deferred (Brush component future) |
 | Area threshold/softThreshold | Minor visual difference; defer unless operator flags it |
 | Wind rose Beaufort colors | Already in charts.conf via beaufort0-beaufort6 keys |

@@ -22,7 +22,7 @@
 
 2. **Dashboard regression discovered (same session):** After deploying the ConvertedValue shape change, multiple dashboard cards lost unit labels. Root cause analysis found two separate problems:
    - **Precipitation card:** Commit `282cf9f` ("hotfix card regressions") stripped the unit label rendering that commit `b357d01` had added. The card uses `.formatted` (number only) and never reads `.label` (unit suffix). This was a prior-session agent rewrite that removed working code.
-   - **Multiple endpoints missing BFF enrichment:** The old BFF (realtime service) enriched ALL responses before they reached the dashboard. When merged into the API (ADR-058), `apply_conversion()` was only wired on `/current` and `/archive`. Records, forecast, AQI, and other endpoints send raw data. Additionally, `epa_category()` exists but is never called — AQI cards show null category.
+   - **Multiple endpoints missing API enrichment:** The former realtime service (merged into API per ADR-058) enriched ALL responses before they reached the dashboard. When merged into the API (ADR-058), `apply_conversion()` was only wired on `/current` and `/archive`. Records, forecast, AQI, and other endpoints send raw data. Additionally, `epa_category()` exists but is never called — AQI cards show null category.
 
 3. **Other pages audited:** Forecast page hourly strip has no unit designation on temperatures ("66°" not "66°F"). Forecast daily hi/lo missing suffix (tempSuffix defined but unused). Reports page has no units on any numeric value. Lightning card hardcodes "km". Seismic page hardcodes "km" for depth.
 
@@ -102,7 +102,7 @@
 
 ### AQI enrichment gap
 
-`epa_category()` at `providers/aqi/_units.py:141-158` maps AQI 0-500 → category name. **Never called in production.** IQAir and OpenMeteo both return `aqiCategory=None`. The old BFF computed this.
+`epa_category()` at `providers/aqi/_units.py:141-158` maps AQI 0-500 → category name. **Never called in production.** IQAir and OpenMeteo both return `aqiCategory=None`. The former realtime service (merged into API per ADR-058) computed this.
 
 ---
 

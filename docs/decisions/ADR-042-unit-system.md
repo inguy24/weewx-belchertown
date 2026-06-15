@@ -12,20 +12,22 @@ Clear Skies is a weewx skin but has no unit system. Traditional weewx skins get 
 
 weewx defines 14 unit groups with specific valid units for each. Operators expect per-group unit selection. The current dashboard has 45+ hardcoded unit strings (`"°F"`, `"mph"`, `"inHg"`) and Beaufort/comfort-index thresholds in US units.
 
-MQTT field names arrive with unit suffixes (`outTemp_F`, `windSpeed_mph`) that encode the source unit. The BFF (ADR-041) needs to identify the source unit, convert to the operator's display unit, and attach the correct label.
+The API (ADR-041) needs to identify the source unit, convert to the operator's display unit, and attach the correct label.
+
+> **Historical note:** MQTT field names previously arrived with unit suffixes (`outTemp_F`, `windSpeed_mph`) encoding the source unit. MQTT is eliminated per ADR-058; the API now reads loop packets via the socket reader. The suffix-stripping logic described below was part of the former realtime service (then called "BFF"), which has been merged into the API.
 
 ## Options considered
 
 | Option | Verdict |
 |---|---|
-| A. Full weewx compatibility in BFF (14 groups, all valid units) | **Selected.** One conversion layer, compatible with skin.conf migration. |
+| A. Full weewx compatibility in API (14 groups, all valid units) | **Selected.** One conversion layer, compatible with skin.conf migration. |
 | B. Partial compatibility (top 5 groups only) | Violates "weewx skin" positioning. Non-US operators hit gaps immediately. |
 | C. Client-side conversion in dashboard | Duplicates logic for REST and SSE paths. Every component needs unit knowledge. |
 | D. Force operators to set weewx `target_unit` to desired display | Breaks mixed-unit preferences (e.g., metric temp + imperial rain). Per-field overrides are the norm in skin.conf. |
 
 ## Decision
 
-Clear Skies implements full weewx unit system compatibility. The BFF (ADR-041) is the single conversion authority.
+Clear Skies implements full weewx unit system compatibility. The API (ADR-041) is the single conversion authority.
 
 ### Unit groups (complete, from weewx 5.x docs)
 
@@ -49,9 +51,9 @@ Clear Skies implements full weewx unit system compatibility. The BFF (ADR-041) i
 
 ### How conversion works
 
-**REST path:** API returns raw archive values with `usUnits` declaring the unit system. BFF reads `usUnits`, looks up each field's group, converts from archive unit to operator display unit, attaches label and formatted string.
+**REST path:** API returns raw archive values with `usUnits` declaring the unit system. The API's enrichment pipeline reads `usUnits`, looks up each field's group, converts from archive unit to operator display unit, attaches label and formatted string.
 
-**SSE path:** MQTT field names carry unit suffixes (e.g., `outTemp_F`). BFF strips the suffix using a mapping derived from weewx's `UNIT_REDUCTIONS` dict, identifies the source unit, converts to display unit, attaches label.
+**SSE path:** Loop packets arrive via the socket reader from the loop relay. The API identifies the source unit system from the packet's `usUnits` field, converts each observation to the operator's display unit, and attaches label.
 
 **Output format:** `{ "value": 22.5, "label": "°C", "formatted": "22.5" }` — the dashboard renders this directly with zero unit math.
 
@@ -68,8 +70,8 @@ Clear Skies implements full weewx unit system compatibility. The BFF (ADR-041) i
 
 ### Derived values
 
-- **Beaufort scale:** BFF computes from wind speed (any source unit) and emits the Beaufort number + label. Dashboard does not carry Beaufort thresholds.
-- **Comfort index selector:** `comfortIndex` is a plain string field the BFF adds to every
+- **Beaufort scale:** API computes from wind speed (any source unit) and emits the Beaufort number + label. Dashboard does not carry Beaufort thresholds.
+- **Comfort index selector:** `comfortIndex` is a plain string field the API adds to every
   converted record. It selects which comfort metric applies at the current temperature:
   `"windChill"` (outTemp ≤ 50 °F), `"heatIndex"` (outTemp ≥ 80 °F), or `"none"` (moderate
   range). The dashboard uses this value to choose which of `windChill` or `heatIndex` to
@@ -79,10 +81,10 @@ Clear Skies implements full weewx unit system compatibility. The BFF (ADR-041) i
 ## Consequences
 
 - Dashboard stripped of ALL unit awareness — simpler components, no hardcoded strings.
-- **As-built (confirmed):** `barometerTrendDirection` is classified by the BFF's
+- **As-built (confirmed):** `barometerTrendDirection` is classified by the API's
   `enrichment/barometer_trend.py` and emitted as a direction string
   (commits realtime cafb6b2, dashboard 6161f2f). `windDirCardinal` and
-  `windGustDirCardinal` are BFF-computed 16-point codes emitted by `proxy.py`
+  `windGustDirCardinal` are API-computed 16-point codes emitted by `proxy.py`
   alongside every converted current-conditions record
   (commits realtime 3500659, dashboard 7340408). The dashboard performs zero
   client-side unit or direction math for these fields.
@@ -90,25 +92,24 @@ Clear Skies implements full weewx unit system compatibility. The BFF (ADR-041) i
 - Floating-point precision handled by `StringFormats` rounding at format time — no accumulated error in display.
 - Config format mirrors skin.conf `[Units]` subsection names for operator familiarity.
 - Wizard can pre-fill unit config from imported skin.conf (ADR-043) or detected archive `usUnits`.
-- MQTT suffix stripping uses a known-suffix map (not "split on last underscore") because some field names contain underscores and some suffixes are ambiguous (e.g., `_count` for dimensionless values).
+- **Historical (MQTT eliminated per ADR-058):** MQTT suffix stripping previously used a known-suffix map (not "split on last underscore") because some field names contained underscores. In direct mode (the only mode post-ADR-058), loop packets use weewx's native field names without suffixes.
 
 ## Implementation guidance
 
-### File layout in realtime repo
+### File layout in API repo
 
 ```
-weewx_clearskies_realtime/
+weewx_clearskies_api/
 ├── units/
 │   ├── __init__.py
 │   ├── groups.py        # Group definitions, valid units, field→group mapping
 │   ├── conversion.py    # Conversion factors (from weewx source)
 │   ├── labels.py        # Display symbols per unit
 │   ├── transformer.py   # Applies conversion + formatting to data dicts
-│   └── derived.py       # BFF-computed derived fields: beaufort(), comfort_index()
-├── mqtt_fields.py       # Suffix→unit mapping, field name normalization
+│   └── derived.py       # API-computed derived fields: beaufort(), comfort_index()
 ```
 
-### Config in `realtime.conf`
+### Config in `api.conf`
 
 ```ini
 [units]
@@ -145,11 +146,11 @@ weewx_clearskies_realtime/
 
 - Custom unit definitions beyond weewx's documented set.
 - Mixed units within a single group (weewx doesn't support this either).
-- `[[time_formats]]` and `[[degree_days]]` config blocks: acknowledged as weewx config surface for operator familiarity, but BFF behavior is not wired in v0.1 — there is no dashboard consumer (degree-days reach the UI via the NOAA monthly-report text, already computed upstream; timestamps are formatted client-side per locale and station timezone per ADR-020/021).
+- `[[time_formats]]` and `[[degree_days]]` config blocks: acknowledged as weewx config surface for operator familiarity, but API behavior is not wired in v0.1 — there is no dashboard consumer (degree-days reach the UI via the NOAA monthly-report text, already computed upstream; timestamps are formatted client-side per locale and station timezone per ADR-020/021).
 
 ## References
 
 - weewx unit system docs: https://weewx.com/docs/5.1/reference/units/
 - weewx source: `weewx/units.py` (conversion factors, UNIT_REDUCTIONS)
-- Related: [ADR-041](ADR-041-realtime-bff.md) (BFF), [ADR-010](ADR-010-canonical-data-model.md) (data model), [ADR-043](ADR-043-skinconf-compliance.md) (skin.conf)
+- Related: [ADR-041](ADR-041-realtime-bff.md) (realtime service / API), [ADR-010](ADR-010-canonical-data-model.md) (data model), [ADR-043](ADR-043-skinconf-compliance.md) (skin.conf)
 - Research: [brief-weewx-units.md](../planning/briefs/brief-weewx-units.md), [brief-mqtt-field-names.md](../planning/briefs/brief-mqtt-field-names.md), [brief-dashboard-unit-audit.md](../planning/briefs/brief-dashboard-unit-audit.md)

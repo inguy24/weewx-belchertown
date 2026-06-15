@@ -25,7 +25,7 @@ per the tasking.
 
 The C1 current-conditions surface is fed exclusively by `GET /api/v1/current` (→ `ObservationResponse`
 wrapping an `Observation`). The `Observation` model is the full stock weewx archive row plus a
-`weatherText` field populated by the BFF blending engine (ADR-041, ADR-044). Provider modules do NOT
+`weatherText` field populated by the API blending engine (ADR-041, ADR-044). Provider modules do NOT
 supply fields directly into `/current` — the weewx archive is the sole source. Provider data appears
 in the `weatherText` field only (blending engine output).
 
@@ -43,7 +43,7 @@ first-class fields; only the card-relevant subset is called out as "primary disp
 | `appTemp` | number \| null | °F / °C / °C | Conditional | `/current` | Apparent temperature (wview_extended). Alternative feels-like. |
 | `humidex` | number \| null | °F / °C / °C | Conditional | `/current` | Canadian humidex (wview_extended). Another feels-like variant. |
 | `outHumidity` | number \| null | % / % / % | Conditional | `/current` | Relative humidity 0–100. |
-| `weatherText` | string \| null | — | Conditional | `/current` | **Condition sentence.** BFF conditions engine output (ADR-041/044). Always null in the API response (by design, ADR-041). The BFF enrichment pipeline injects the composed conditions string before serving the dashboard. Not from weewx archive — produced by the BFF conditions engine (`conditions_text.py`). Non-null when the BFF is running and has at least ~3 minutes of loop packet data. A forecast provider is only needed for night-time sky classification; daytime classification and all other components (precip, wind, comfort) are local-sensor-only. |
+| `weatherText` | string \| null | — | Conditional | `/current` | **Condition sentence.** API conditions engine output (ADR-041/044). Always null in the raw API response (by design, ADR-041). The API enrichment pipeline injects the composed conditions string before serving the dashboard. Not from weewx archive — produced by the API conditions engine (`conditions_text.py`). Non-null when the API is running and has at least ~3 minutes of loop packet data. A forecast provider is only needed for night-time sky classification; daytime classification and all other components (precip, wind, comfort) are local-sensor-only. |
 | `cloudcover` | number \| null | % / % / % | Conditional | `/current` | 0–100. wview_extended; sensor or extension dependent. |
 | `cloudbase` | number \| null | foot / meter / meter | Conditional | `/current` | Calculated from temp/dewpoint/altitude (wview_extended). |
 | `radiation` | number \| null | W/m² / W/m² / W/m² | Conditional | `/current` | Solar irradiance. Sensor-gated. |
@@ -72,7 +72,7 @@ first-class fields; only the card-relevant subset is called out as "primary disp
 
 **Provider supply into `/current`:** Forecast providers do NOT supply fields directly into the
 `/current` endpoint. The `weatherText` field is the only provider-touched field — it is populated
-by the BFF blending engine (ADR-041, ADR-044) using the configured forecast provider's current
+by the API blending engine (ADR-041, ADR-044) using the configured forecast provider's current
 conditions data. This is a post-processing step, not a direct provider field mapping. None of the
 forecast provider `CAPABILITY.supplied_canonical_fields` declarations reference `/current`-specific
 field names — they enumerate fields for `/forecast` (HourlyForecastPoint / DailyForecastPoint).
@@ -199,7 +199,7 @@ live check.
 | `humidex` | wview_extended column; Canadian humidex calculation (not all stations) | Is `humidex` non-null? |
 | `cloudcover` | wview_extended; sensor or extension-supplied | Is `cloudcover` non-null? |
 | `cloudbase` | wview_extended; computed from temp/dewpoint/altitude | Is `cloudbase` non-null? |
-| `weatherText` | BFF blending engine — requires a forecast provider configured | Is blending engine "on" and `weatherText` non-null? If yes, what string does it return? |
+| `weatherText` | API blending engine — requires a forecast provider configured | Is blending engine "on" and `weatherText` non-null? If yes, what string does it return? |
 | `windchill` | Computed by weewx from windSpeed + outTemp; null when temp ≥ 60°F or windSpeed < 3 mph (threshold-dependent) | Is `windchill` populated seasonally, or null in warm months? |
 | `heatindex` | Computed by weewx; null when conditions not met | Same question seasonally. |
 
@@ -214,21 +214,21 @@ are available for the "Feels" toggle variant.
 ### 1. `weatherText` in `Observation` — contract vs OpenAPI
 
 **Finding:** The `Observation` Pydantic model in `weewx_clearskies_api/models/responses.py` contains
-a `weatherText: str | None = None` field (added for the BFF blending engine, ADR-041). However, the
+a `weatherText: str | None = None` field (added for the API blending engine, ADR-041). However, the
 OpenAPI `openapi-v1.yaml` `Observation` schema does **not** include `weatherText` as a listed property.
 
 The `responses.py` docstring notes: *"Current conditions text from the blending engine (ADR-0B Phase 0B). None when conditions engine is 'off' or no provider is configured."* The endpoint docstring
-confirms: *"weatherText is always null in API responses per ADR-041; the BFF enrichment pipeline
+confirms: *"weatherText is always null in raw API responses per ADR-041; the API enrichment pipeline
 populates it before serving the dashboard."*
 
 **Classification:** The OpenAPI schema is the authoritative wire-shape source (per the data model
 doc's priority order: "when this document and openapi-v1.yaml disagree, the OpenAPI wins for
 wire-shape questions"). `weatherText` is a field that the as-built code adds to the response JSON
 but is not declared in the published OpenAPI schema. This is either:
-- An intentional omission (the field is "internal BFF" and not meant to be in the public contract), or
+- An intentional omission (the field is "internal API enrichment" and not meant to be in the public contract), or
 - A gap in the OpenAPI spec that should be filled.
 
-The BFF enrichment pipeline is fully built and running (`conditions_text.py`, `sky_condition.py`, `enrichment/weather_text.py`). The API always returns null; the BFF replaces it. This is intentional-by-design (ADR-041), not a future step. The OpenAPI omission question remains valid independently: does the published `openapi-v1.yaml` need to list `weatherText` on the Observation schema if the BFF always populates it before the browser sees it? That is a contract question for the lead to resolve — the engine itself is not the issue.
+The API enrichment pipeline is fully built and running (`conditions_text.py`, `sky_condition.py`, `enrichment/weather_text.py`). The raw API endpoint always returns null; the enrichment pipeline replaces it. This is intentional-by-design (ADR-041), not a future step. The OpenAPI omission question remains valid independently: does the published `openapi-v1.yaml` need to list `weatherText` on the Observation schema if the API enrichment pipeline always populates it before the browser sees it? That is a contract question for the lead to resolve — the engine itself is not the issue.
 
 ### 2. `aqiScale` in `AQIReading` — code vs OpenAPI
 
@@ -277,9 +277,9 @@ C3 scope (forecast discussion). Not a gap for C1.
 
 **Current-conditions fields (for the hero card):**
 - 25 first-class fields enumerated above; the card-primary ones are `outTemp`, `weatherText`
-  (BFF-computed), and one of `windchill` / `heatindex` / `appTemp` / `humidex` as the feels-like value.
+  (API-computed), and one of `windchill` / `heatindex` / `appTemp` / `humidex` as the feels-like value.
 - All come from `GET /api/v1/current` → `Observation`.
-- `weatherText` is produced by the BFF conditions engine and injected into every `/current` response. It may be null during the ~3 minute startup window (insufficient solar kc data) or when no BFF is configured. Design for the null state as a brief/edge case, not the normal state.
+- `weatherText` is produced by the API conditions engine and injected into every `/current` response. It may be null during the ~3 minute startup window (insufficient solar kc data) or when the API enrichment pipeline is not running. Design for the null state as a brief/edge case, not the normal state.
 - "Always present" fields: only `timestamp`, `source`, `extras`, and the `units`/`generatedAt`/`source`
   envelope fields. Everything else is nullable (conditional on station sensors).
 

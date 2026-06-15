@@ -63,7 +63,7 @@ Inputs: [C1-prior-decisions.md](C1-prior-decisions.md) (step 0) · [C1-data-inve
 
 ## 3. Data inventory — condensed (full detail in C1-data-inventory.md)
 
-- **Source of every current-conditions field:** `GET /api/v1/current` → `Observation`. Providers do **not** feed `/current` directly; the weewx archive is the sole source, except `weatherText` (BFF blend).
+- **Source of every current-conditions field:** `GET /api/v1/current` → `Observation`. Providers do **not** feed `/current` directly; the weewx archive is the sole source, except `weatherText` (API enrichment blend).
 - **Card-primary fields:** `outTemp` (primary), `weatherCode`→icon, `weatherText`→sentence, one feels-like (`windchill`/`heatindex`/`appTemp`/`humidex`).
 - **`weatherText` update cadence:** `weatherText` updates at REST poll cadence only, not at SSE/loop-packet frequency. It is not in the `WEEWX_TO_OBSERVATION` field map and is not included in SSE loop packets. The conditions sentence may lag real-time sensor changes by up to the REST poll interval.
 - **Always-present:** only `timestamp`, `source`, `extras`, and envelope (`units`/`generatedAt`). **Every numeric observation is nullable** → the card must handle nulls everywhere.
@@ -73,7 +73,7 @@ Inputs: [C1-prior-decisions.md](C1-prior-decisions.md) (step 0) · [C1-data-inve
 
 ## 4. Mismatches & data-reality flags (need your awareness/decision)
 
-1. **`weatherText` (the condition *sentence*) IS produced by the BFF conditions engine** and injected into every `/current` response. It may be null only during the ~3 minute startup window (insufficient solar kc data) or when the BFF is not running. Design for the null state as a brief/edge case. The icon (`weatherCode`) comes from the daily forecast provider's `DailyForecastPoint.weatherCode` — it is absent if no forecast provider is configured.
+1. **`weatherText` (the condition *sentence*) IS produced by the API conditions engine** and injected into every `/current` response. It may be null only during the ~3 minute startup window (insufficient solar kc data) or when the API enrichment pipeline is not running. Design for the null state as a brief/edge case. The icon (`weatherCode`) comes from the daily forecast provider's `DailyForecastPoint.weatherCode` — it is absent if no forecast provider is configured.
 2. **`weatherText` is in the API's Pydantic model but absent from the published OpenAPI schema** — contract-hygiene gap in the API repo. **Not C1-blocking;** recommend tracking as a separate api-repo item, not fixing inside C1.
 3. **`STOCK_COLUMN_MAP` lists extended-sensor columns (`dewpoint1`, `extraTemp4–8`, `extraHumid3–8`) the `Observation` model has no slots for → silently dropped at runtime** for stations that have them. **Out of C1 scope** (none are current-conditions fields); recommend tracking as a separate api-repo item.
 

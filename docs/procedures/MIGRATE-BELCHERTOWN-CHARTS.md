@@ -128,7 +128,7 @@ The migration tool handles three series types with automatic behavior that must 
 
 | Series name | Migration tool action | Rendering |
 |-------------|----------------------|-----------|
-| `windRose` | Preserved as-is; no config changes needed | Client-side SVG polar chart, 16 directions × 7 Beaufort bands, uses BFF-injected `beaufort` field |
+| `windRose` | Preserved as-is; no config changes needed | Client-side SVG polar chart, 16 directions × 7 Beaufort bands, uses API-injected `beaufort` field |
 | `weatherRange` | Preserved as-is; `area_display` and `polar` keys passed through | Recharts arearange (default or when `area_display = 1`) or columnrange. Only polar when `polar = true`. 15-band temperature color zones applied automatically. |
 | `haysChart` | Preserved as-is | Always polar Recharts arearange; circular 24-hour wind chart |
 | `rainTotal` (series name) | Auto-promoted: `aggregate_type` changed from `sum` to `sumcumulative`; `observation_type = rain` injected | Cumulative running total computed server-side via SUM-per-bucket then accumulation |
@@ -143,7 +143,7 @@ These series names are detected at render time by the dashboard. No additional c
 
 3. **`[[[[states]]]]` sections:** Belchertown allows Highcharts-specific per-state styling hooks. These have no equivalent in Recharts and are ignored.
 
-4. **Wind rose rendering:** Belchertown renders the wind rose server-side via Highcharts. Clear Skies renders it client-side as a custom SVG, using the BFF-injected `beaufort` field for speed classification. The visual layout (16 directions × 7 Beaufort bands) is equivalent.
+4. **Wind rose rendering:** Belchertown renders the wind rose server-side via Highcharts. Clear Skies renders it client-side as a custom SVG, using the API-injected `beaufort` field for speed classification. The visual layout (16 directions × 7 Beaufort bands) is equivalent.
 
 5. **Custom SQL queries:** Both systems support operator-defined SQL. Clear Skies adds startup validation (`EXPLAIN`), read-only transaction enforcement, a 10-second timeout, and a DDL keyword blocklist — security controls Belchertown did not have.
 

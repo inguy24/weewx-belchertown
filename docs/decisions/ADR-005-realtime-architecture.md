@@ -105,4 +105,8 @@ mode = direct  # direct | mqtt
 
 ## Amendment: BFF responsibility (ADR-041, 2026-05-26)
 
-[ADR-041](ADR-041-realtime-bff.md) adds Backend-for-Frontend (BFF) responsibility to the realtime service: it proxies REST requests to the upstream API and applies unit conversion to all outbound data (both proxied REST responses and SSE events). The input mode decision in this ADR (direct vs MQTT, operator-selectable) is unchanged. The BFF role is additive — the service still does everything described above, plus proxying and unit conversion.
+[ADR-041](ADR-041-realtime-bff.md) added Backend-for-Frontend (BFF) responsibility to the realtime service: it proxied REST requests to the upstream API and applied unit conversion to all outbound data (both proxied REST responses and SSE events). The input mode decision in this ADR (direct vs MQTT, operator-selectable) was unchanged. The BFF role was additive — the service still did everything described above, plus proxying and unit conversion.
+
+**Amendment: BFF merged into API (ADR-058, 2026-06-13)**
+
+[ADR-058](ADR-058-fold-realtime-into-api.md) subsequently merged the former BFF (realtime service) into the API. The API now handles SSE delivery, unit conversion, and the full enrichment pipeline directly. The separate realtime process and MQTT support have been eliminated. This ADR is superseded in full by ADR-058.

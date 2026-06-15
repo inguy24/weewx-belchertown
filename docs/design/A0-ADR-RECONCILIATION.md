@@ -34,7 +34,7 @@ still-valid ADR), which are NOT ADR edits — they go to a code-fix backlog for 
 | 023 | Light/dark | DRIFTED | tailwind v4, nav-rail, no-flash, 3-state, midnight | — | minor |
 | 026 | Accessibility | DRIFTED (ADR accurate) | **none** | **sr-only chart unit** | no |
 | 040 | Earthquake providers | DRIFTED | MMI/flynn_region canonical | — | no |
-| 041 | Realtime BFF | DRIFTED | proxy-optional, direct-mode, LOC | — | **YES — Caddy routing intent** |
+| 041 | Realtime service (formerly BFF) | DRIFTED | proxy-optional, direct-mode, LOC | — | **YES — Caddy routing intent** |
 | 042 | Unit system | DRIFTED | beaufort, group_uv, derived.py, comfortIndex, config | **barometerTrend; windDirLabel** | yes |
 | 044 | Sky condition | DRIFTED | casing, startup ~3min, §8 360 | — | **YES — gusty/noise/rain boundary** |
 
@@ -68,10 +68,10 @@ Three as-built departures from ADR-024:
   **keep or drop the "Today" column?** and **lock sorting/year-selector as dropped, or defer as enhancements?**
 
 ### A3. ADR-041 — was the Caddy routing left direct-to-API on purpose?
-The BFF proxy is fully built and tested, but all three Caddyfiles in `weewx-clearskies-stack` still route
-`/api/v1/*` **directly to the API**, not through `realtime:8766` (only `/sse` goes to the BFF). So the ADR's
+The realtime service proxy is fully built and tested, but all three Caddyfiles in `weewx-clearskies-stack` still route
+`/api/v1/*` **directly to the API**, not through `realtime:8766` (only `/sse` goes to the realtime service). So the ADR's
 "dashboard has one connection point / API stays internal" is **not true yet**.
-- **If staged-rollout (intentional):** ADR consequences get reworded to "BFF routing is opt-in via `[api] upstream_url`; Caddy bypasses the BFF by default."
+- **If staged-rollout (intentional):** ADR consequences get reworded to "API routing is opt-in via `[api] upstream_url`; Caddy bypasses the realtime service by default."
 - **If unfinished step:** the Caddyfiles need updating (a stack-repo code change), and the ADR stays aspirational with a "pending" note.
 - **Lead recommendation:** treat as **pending/unfinished** and add a "not yet applied" note to the ADR now (the proposed edit
   does this); decide separately whether to actually flip the Caddy routing. I don't want to bless a half-done topology as "done."
@@ -145,7 +145,7 @@ The audit checked ADR→code *and* code→ADR; these are places the **code viola
 | 6 | 021 | 5 hardcoded English aria-labels in footer ShareRow | `footer.tsx:82,91,100,109,117` |
 | 7 | 022 | Logo alt text not required/enforced (ADR + coding §5.5 mandate it) | `responses.py:950`, `setup.py:239-251` |
 | 8 | 042 | `barometerTrend` raw float + dashboard hardcodes ±0.01 inHg threshold (client unit knowledge) | `barometer_trend.py:162`, `barometer.ts:11-18` |
-| 9 | 042 | `windDirLabel()` recomputes compass client-side, disagrees with BFF `windDir.label` at sector boundaries | `now.tsx:49-52`, `forecast.tsx:16-19` vs `transformer.py:302-307` |
+| 9 | 042 | `windDirLabel()` recomputes compass client-side, disagrees with API `windDir.label` at sector boundaries | `now.tsx:49-52`, `forecast.tsx:16-19` vs `transformer.py:302-307` |
 
 **Secondary doc bugs (trivial):** `generated-types.ts:67` stale comment still mentions InsideTemp+custom;
 `providers/alerts/__init__.py:3-4` docstring still calls aeris/owm "future rounds."

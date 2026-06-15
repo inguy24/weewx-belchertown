@@ -14,7 +14,7 @@ Through the process of building Clear Skies, the API has accumulated capabilitie
 
 weewx excels at one thing: ingesting hardware data and writing it to a database. Everything above that — unit conversion, derived calculations (xtypes), aggregations, time-bounded queries, real-time delivery — weewx only exposes to skins running inside its own process via Python objects and Cheetah template tags. There is no external API. There is no HTTP interface. External applications cannot access these capabilities.
 
-We've been treating the API as "the Clear Skies backend" — a BFF for our dashboard. But what we're actually building is the weewx API that weewx never shipped. One that any frontend, any integration, any automation could talk to.
+We've been treating the API as "the Clear Skies backend" — a backend for our dashboard. But what we're actually building is the weewx API that weewx never shipped. One that any frontend, any integration, any automation could talk to.
 
 This reframing matters because it changes the API's completeness bar. We're not just building "enough API for our dashboard." We're building the canonical programmatic interface to a weewx station's data and capabilities.
 
@@ -35,7 +35,7 @@ The Clear Skies API is the weewx application-layer API. It encapsulates everythi
 | Category | weewx skin capability | API status |
 |---|---|---|
 | Raw observations | Archive records, loop packets | Covered (REST + SSE after Phase 3) |
-| Unit conversion | 14 unit groups, per-group display unit selection | Covered (BFF, moving to API in Phase 3) |
+| Unit conversion | 14 unit groups, per-group display unit selection | Covered (merged into API per ADR-058) |
 | Derived observations (xtypes) | windchill, heatindex, dewpoint, appTemp, humidex, ET, pressure reductions, beaufort, wind run | Partially covered (beaufort, comfort index). Remaining: future phase |
 | Aggregation system | min/max/avg/sum/count over time spans | Covered (`/archive` with `agg` and `aggregate_interval`) |
 | Time-bounded queries | Date range filtering | Covered (`from`/`to` params) |
@@ -92,6 +92,6 @@ The gap analysis table should be updated as capabilities are added in future pha
 
 ## References
 
-- Related: [ADR-010](ADR-010-canonical-data-model.md) (data model), [ADR-011](ADR-011-multi-station-scope.md) (single station), [ADR-041](ADR-041-realtime-bff.md) (BFF), [ADR-056](ADR-056-api-weewx-co-location.md) (co-location)
+- Related: [ADR-010](ADR-010-canonical-data-model.md) (data model), [ADR-011](ADR-011-multi-station-scope.md) (single station), [ADR-041](ADR-041-realtime-bff.md) (unit conversion / enrichment, merged into API), [ADR-056](ADR-056-api-weewx-co-location.md) (co-location)
 - Backlog: FIX-006
 - weewx capabilities: [docs/reference/weewx-5.3/](../../docs/reference/weewx-5.3/)
