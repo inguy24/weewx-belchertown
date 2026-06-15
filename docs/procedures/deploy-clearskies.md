@@ -27,13 +27,13 @@ These are what the script targets. Re-verify if the container is rebuilt.
 
 | Thing | Value |
 |-------|-------|
-| systemd units | `weewx-clearskies-realtime.service`, `weewx-clearskies-api.service`, `weewx-clearskies-config.service` |
+| systemd units | `weewx-clearskies-config.service` |
 | Dashboard repo | `/home/ubuntu/repos/weewx-clearskies-dashboard` |
 | Build command | `npm run build` → `tsc -b && vite build` |
 | Build output | `./dist` (default Vite `outDir`; no override in `vite.config.ts`) |
 | Web root | `/var/www/clearskies` (Caddy `root *`; owned `ubuntu:ubuntu`, mode 775) |
 | Webcam mount | `/var/www/clearskies/webcam` — **read-only LXD bind-mount** (host `/mnt/weewx/webcam`) |
-| Reverse proxy | Caddy on `:80`; serves web root, proxies `/api/v1/*` + `/sse` → `:8766`, config UI paths → `:9876` |
+| Reverse proxy | Caddy on `:80`; serves web root, proxies `/api/v1/*` + `/sse` → API on weewx container (`https://192.168.7.20:8765`), config UI paths → `:9876` |
 
 ## The webcam exclusion (why it matters)
 
@@ -66,8 +66,9 @@ What it does, in order (each step aborts on failure — `set -euo pipefail`):
 
 1. **Pull** — delegates to `sync-to-weather-dev.sh` (all five repos, `git pull --ff-only` as `ubuntu`).
    Skip with `--skip-pull`.
-2. **Restart services** — `systemctl restart` (as root) for realtime, api, config; each is then
-   checked with `systemctl is-active --quiet` and the deploy aborts if a unit didn't come back up.
+2. **Restart services** — `systemctl restart` (as root) for config UI; checked with
+   `systemctl is-active --quiet` and the deploy aborts if the unit didn't come back up.
+   Note: The API runs on the weewx container, not weather-dev. The realtime service is eliminated (ADR-058).
 3. **Build dashboard** — `npm ci --legacy-peer-deps && npm run build` (as `ubuntu`) in the dashboard
    repo; verifies `dist/index.html` exists. (`--legacy-peer-deps` is required until the
    `typescript@6` vs `openapi-typescript` peer conflict is reconciled — plain `npm ci` aborts on
@@ -93,9 +94,9 @@ What it does, in order (each step aborts on failure — `set -euo pipefail`):
 
 ## Deploying API changes to the weewx container
 
-**The API does NOT run on weather-dev.** It runs on the `weewx` LXD container (see [ARCHITECTURE.md](../ARCHITECTURE.md) §Services, §Container inventory). The redeploy script above only deploys frontend code (dashboard, BFF, config UI) to weather-dev.
+**The API runs on the `weewx` LXD container only** (see [ARCHITECTURE.md](../ARCHITECTURE.md) §Services, §Container inventory). weather-dev does NOT run the API — it only runs Caddy, the dashboard static files, and the config UI. Caddy proxies `/api/v1/*` and `/sse` to the API on the weewx container at `https://192.168.7.20:8765`.
 
-When you change code in `weewx-clearskies-api`, you must deploy it to the weewx container separately:
+When you change code in `weewx-clearskies-api`, deploy to the weewx container:
 
 ```bash
 # 1. Pull the latest code on the weewx container
@@ -107,13 +108,11 @@ ssh ratbert "lxc exec weewx -- systemctl restart weewx-clearskies-api"
 # 3. Verify it started correctly (should NOT say "setup mode")
 ssh ratbert "lxc exec weewx -- journalctl -u weewx-clearskies-api --since '10 sec ago' --no-pager | head -5"
 
-# 4. Verify the API responds through the BFF on weather-dev
+# 4. Verify the API responds through Caddy on weather-dev
 ssh ratbert "lxc exec weather-dev -- curl -s -o /dev/null -w '%{http_code}\n' http://localhost/api/v1/current"
 ```
 
-**Common mistake:** The `redeploy-weather-dev.sh` script restarts `weewx-clearskies-api.service` on weather-dev, but that is NOT the production API instance. The production API runs on the `weewx` container. Restarting the weather-dev copy does nothing useful and may start in "setup mode" (no config file on that host).
-
-**Cache note:** The API uses an in-memory cache (30-min TTL for forecast, 5-min for AQI). Restarting the API service clears the cache. The first request after restart will fetch fresh data from the upstream provider (Aeris, OWM, etc.).
+**Cache note:** The API uses Redis (or in-memory fallback) for caching (30-min TTL for forecast, 5-min for AQI). Restarting the API service clears the in-memory cache. The first request after restart will fetch fresh data from the upstream provider (Aeris, OWM, etc.).
 
 ---
 
@@ -126,11 +125,11 @@ ssh ratbert "lxc exec weather-dev -- curl -sI http://localhost/ | head -1"
 # 2. Webcam still served (the bind-mount survived the rsync) — expect 200 if a capture exists
 ssh ratbert "lxc exec weather-dev -- curl -s -o /dev/null -w '%{http_code}\n' http://localhost/webcam/weather_cam.jpg"
 
-# 3. API through the BFF (expect 200 + unit-converted JSON)
+# 3. API through Caddy (expect 200 + unit-converted JSON)
 ssh ratbert "lxc exec weather-dev -- curl -s -o /dev/null -w '%{http_code}\n' http://localhost/api/v1/current"
 
-# 4. All three services active
-ssh ratbert "lxc exec weather-dev -- systemctl is-active weewx-clearskies-realtime weewx-clearskies-api weewx-clearskies-config"
+# 4. Config UI service active
+ssh ratbert "lxc exec weather-dev -- systemctl is-active weewx-clearskies-config"
 
 # 5. Confirm webcam is still a mounted, read-only bind (NOT a plain dir rsync recreated)
 ssh ratbert "lxc exec weather-dev -- findmnt /var/www/clearskies/webcam"
@@ -140,8 +139,8 @@ Checks:
 
 - [ ] `/` returns 200 and the React SPA loads
 - [ ] `/webcam/...` still served from the read-only mount (findmnt shows it as `ro` bind)
-- [ ] `/api/v1/current` returns 200 through the BFF
-- [ ] all three services report `active`
+- [ ] `/api/v1/current` returns 200 through Caddy (proxied to weewx container API)
+- [ ] `weewx-clearskies-config` service reports `active`
 
 ## Rollback
 
@@ -160,5 +159,6 @@ restores the previous behavior. The webcam mount is independent of any deploy an
 
 ---
 
-See [CONTAINER-ACCESS.md](CONTAINER-ACCESS.md) for transport details and
+See [CONTAINER-ACCESS.md](CONTAINER-ACCESS.md) for transport details,
+[install-weewx-extension.md](install-weewx-extension.md) for the ClearSkiesLoopRelay extension installation, and
 [../ARCHITECTURE.md](../ARCHITECTURE.md) for the authoritative service/topology/webcam reference.

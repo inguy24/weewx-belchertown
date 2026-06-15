@@ -1,6 +1,7 @@
 ---
 status: Accepted
 date: 2026-05-05
+amended: 2026-06-14
 deciders: shane
 supersedes:
 superseded-by:
@@ -112,18 +113,41 @@ Nine core entities + two convenience containers. Pydantic v2 `BaseModel` subclas
 | `ForecastBundle` | `hourly: list[HourlyForecastPoint]`, `daily: list[DailyForecastPoint]`, `discussion: ForecastDiscussion \| None`, `source`, `generatedAt`. Shape `/api/v1/forecast` returns. |
 | `AlertList` | `alerts: list[AlertRecord]`, `retrievedAt`, `source`. Shape `/api/v1/alerts` returns. |
 
-### Example response shape
+### Response shapes by endpoint type
+
+#### Observation endpoints (`/current`, individual records) — ConvertedValue dicts
+
+**Amendment 2026-06-14:** Observation endpoints return `ConvertedValue` dicts (`{value, label, formatted}`) in the `data` block, matching the SSE event shape defined in ADR-042. This ensures one data shape across both REST and SSE — dashboard components use the same `asConverted()` accessor regardless of data source. The `units` envelope block remains as a convenience summary derived from the ConvertedValue labels (backward-compatible).
+
+**Why:** ADR-010 originally showed REST `data` as flat scalars. ADR-042 defined SSE output as ConvertedValue dicts. One data source (weewx) producing two different shapes was a footgun — dashboard components reading REST-sourced values got empty labels, while SSE-sourced values worked correctly. The user directed: "the data packets from both the SSE and REST need to look similar."
 
 ```json
 {
   "data": {
     "timestamp": "2026-05-01T14:32:00Z",
-    "outTemp": 68.5,
-    "windSpeed": 5.2,
-    "barometer": 29.95
+    "outTemp": { "value": 68.5, "label": "°F", "formatted": "68.5" },
+    "windSpeed": { "value": 5.2, "label": "mph", "formatted": "5.2" },
+    "barometer": { "value": 29.95, "label": "inHg", "formatted": "29.950" }
   },
   "units": { "outTemp": "°F", "windSpeed": "mph", "barometer": "inHg" },
   "source": "weewx"
+}
+```
+
+Every unit-bearing field in the `data` block is a ConvertedValue dict. Non-unit fields (`timestamp`, `source`, string fields like `weatherText`, `comfortIndex`, `windDirCardinal`) remain plain values.
+
+#### Archive endpoints (`/archive`) — flat scalars
+
+Archive responses keep flat numeric scalars with full-precision `value` extraction. Charts need raw numbers for Recharts binning, LTTB downsampling, and proportional scaling — ConvertedValue dicts would force every chart component to unwrap objects.
+
+Exception: the `beaufort` field stays as a ConvertedValue dict in archive responses because the wind rose reads `beaufort.value` via `extractNumber()` for Beaufort-band classification.
+
+```json
+{
+  "data": [
+    { "dateTime": "2026-05-01T14:00:00Z", "outTemp": 68.5, "windSpeed": 5.2, "beaufort": { "value": 3, "label": "Gentle breeze", "formatted": "3" } }
+  ],
+  "units": { "outTemp": "°F", "windSpeed": "mph" }
 }
 ```
 

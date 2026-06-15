@@ -2,7 +2,7 @@
 
 **Goal:** Fix all security audit findings for the ClearSkiesLoopRelay weewx extension, deploy it on the production weewx container, verify end-to-end loop packet flow through to the API's SSE emitter, and update all documentation.
 
-**Status:** Not started.
+**Status:** Phase 1 complete. Phase 4 complete. Phases 2-3 blocked on SSH access to weewx container.
 
 **Source:** Security audit findings (11 items), FIXIT-BACKLOG-2 items FIX2-001, FIX2-003, FIX2-005.
 

@@ -60,6 +60,8 @@ Each repo builds its own container image independently (ADR-034). A dashboard CS
 
 > **Removed container (ADR-058, 2026-06-14):** `clearskies-realtime` is deprecated. The realtime service has been merged into the API (`clearskies-api`). The `weewx-clearskies-realtime` repo is archived.
 
+> **ClearSkiesLoopRelay weewx extension** (`weewx-clearskies-extension`) is NOT a container. It is a weewx service extension that runs inside the weewx process, installed via `weectl extension install`. It creates the Unix socket at `/var/run/weewx-clearskies/loop.sock` that the API's DirectAdapter connects to. See [ADR-058](decisions/ADR-058-fold-realtime-into-api.md) and [ADR-061](decisions/ADR-061-filesystem-permissions-model.md).
+
 > **Config UI is NOT containerized.** It has no Dockerfile and is not in any compose file. It is distributed as a pip package (`weewx-clearskies-config`) and run manually by the operator. ADR-027 says "bundled compose adds a `config` service" — this is an unimplemented requirement. See Known gaps.
 
 > **API native install (2026-05-24):** The API is currently installed natively on the `weewx` LXD container (not in Docker) via pip into a Python 3.12 venv at `/home/ubuntu/repos/weewx-clearskies-api/.venv`, managed by systemd unit `weewx-clearskies-api.service`. Config at `/etc/weewx-clearskies/api.conf`. Health port (8081) also serves TLS. This is the production deployment path on bare-metal / LXD; the Dockerfile exists for Docker compose deployments.
@@ -274,7 +276,7 @@ The API connects to weewx via direct mode only. MQTT input is eliminated per ADR
 
 | Mode | Config | When | Transport | Broker needed |
 |------|--------|------|-----------|--------------|
-| **Direct** | `[input] mode = direct` (the only mode) | weewx co-located on same host (ADR-056) | Unix socket at `[input.direct] socket_path` (default `/var/run/weewx-clearskies/loop.sock`) | No |
+| **Direct** | `[input] mode = direct` (the only mode) | weewx co-located on same host (ADR-056) | Unix socket at `[input.direct] socket_path` (default `/var/run/weewx-clearskies/loop.sock`), served by `weewx-clearskies-extension` | No |
 
 The API is the only component that touches the database. The direct adapter reads loop packets from weewx; it does not read the database.
 
@@ -460,6 +462,7 @@ Per-provider TTLs: forecast 30 min, alerts 5 min, AQI 15 min, radar metadata 5 m
 | weewx-clearskies-realtime | `repos/weewx-clearskies-realtime` | main | Python | Yes — **DEPRECATED — merged into API per ADR-058. Repo archived.** |
 | weewx-clearskies-dashboard | `repos/weewx-clearskies-dashboard` | main | TypeScript/React | Yes (init container) |
 | weewx-clearskies-stack | `repos/weewx-clearskies-stack` | main | Python (config UI) + YAML/Caddyfile (orchestration) | **No** |
+| weewx-clearskies-extension | `repos/weewx-clearskies-extension` | master | Python | No (installs into weewx via `weectl extension install`) |
 | weewx-clearskies-design-tokens | `repos/weewx-clearskies-design-tokens` | main | — | No (Phase 6+ placeholder) |
 | weather-belchertown (meta) | `.` (root) | master | — (ADRs, plans, rules, contracts) | — |
 
@@ -519,6 +522,7 @@ weewx-clearskies-stack/
 | Observability / Metrics | ADR-031 |
 | Logging | ADR-029 |
 | Security | contracts/security-baseline.md |
+| Filesystem permissions | ADR-061 |
 
 > **Note:** ADR-038a (`ADR-038a-wizard-api-channel.md`) was originally numbered ADR-038, sharing the number with the data-provider module organization ADR. Renumbered to 038a on 2026-05-23.
 

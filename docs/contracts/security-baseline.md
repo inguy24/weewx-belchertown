@@ -5,7 +5,7 @@
 
 This document is the per-component security checklist the Clear Skies project commits to. It consolidates the security-relevant decisions scattered across 7 ADRs and `coding.md` §1, plus cross-cutting controls not pinned to any single ADR (security headers, request limits, systemd/Docker hardening, dependency auditing, per-repo `SECURITY.md`).
 
-**Scope.** Every Clear Skies repo: `weewx-clearskies-api`, `weewx-clearskies-dashboard`, `weewx-clearskies-stack`. Excludes `weewx-clearskies-design-tokens` (deferred to Phase 6+ per [ADR-001](../decisions/ADR-001-component-breakdown.md)). The `weewx-clearskies-realtime` repo is deprecated — the realtime service has been merged into the API per ADR-058.
+**Scope.** Every Clear Skies repo: `weewx-clearskies-api`, `weewx-clearskies-dashboard`, `weewx-clearskies-stack`, `weewx-clearskies-extension`. Excludes `weewx-clearskies-design-tokens` (deferred to Phase 6+ per [ADR-001](../decisions/ADR-001-component-breakdown.md)). The `weewx-clearskies-realtime` repo is deprecated — the realtime service has been merged into the API per ADR-058.
 
 **Posture.** Software is AS-IS under GPL v3 per [ADR-003](../decisions/ADR-003-license.md) — no warranty, no support window, no LTS. This document is the standard the maintainer holds the project to during development; deployments inherit the same controls. Per [ADR-018](../decisions/ADR-018-api-versioning-policy.md) there is no security-backport commitment for prior versions.
 
@@ -134,6 +134,23 @@ FastAPI + SQLAlchemy backend. Largest attack surface — most controls live here
 | Backpressure on slow consumers | This doc | Per-subscriber queue maxsize=64; stalled subscribers ejected (unsubscribed) after overflow | Unit test for queue overflow → unsubscribe |
 | SSE keepalive | This doc | 15-second comment-line keepalive prevents proxy/firewall timeout | Integration test confirms keepalive timing |
 | Rate limiting on SSE connection establishment | This doc | `RateLimitMiddleware` applies to `GET /sse` like any other request (60/min/IP default) | Rate limit test against /sse endpoint |
+
+### 3.10 ClearSkiesLoopRelay (weewx extension)
+
+weewx service extension (`weewx-clearskies-extension`). Runs inside the weewx process as the `weewx` user. Creates a Unix domain socket for the API's DirectAdapter to receive loop packets.
+
+| Control | Source | How | Verify |
+|---|---|---|---|
+| Error isolation — top-level try/except | weewx guidelines, ADR-060 | `on_new_loop_packet` wrapped in `try: ... except Exception` — no exception path can escape to the weewx engine caller | Code inspection: outer try catches `Exception`, logs ERROR, returns silently |
+| Graceful degradation on startup failure | weewx guidelines | `_start_server()` wrapped in try/except in `__init__`; on failure: sets `_disabled = True`, does NOT bind the event handler; weewx starts normally without the relay | Code inspection: `self.bind()` inside try block, only executes on success |
+| Socket file permissions | [ADR-061](../decisions/ADR-061-filesystem-permissions-model.md) | `os.chmod(socket_path, 0o660)` after bind; best-effort (wrapped in try/except, WARNING on failure) | `stat /var/run/weewx-clearskies/loop.sock` shows 0660 |
+| Socket directory permissions | [ADR-061](../decisions/ADR-061-filesystem-permissions-model.md) | `os.makedirs(mode=0o770)` + `os.chmod(sock_dir, 0o770)` enforcement; best-effort | `stat /var/run/weewx-clearskies/` shows 0770 |
+| Socket group ownership | [ADR-061](../decisions/ADR-061-filesystem-permissions-model.md) | `os.chown(socket_path, -1, grp.getgrnam(socket_group).gr_gid)` after chmod; default group `weewx`; best-effort (KeyError/OSError caught) | `stat loop.sock` shows `weewx:weewx` |
+| Connection limit | ADR-060 | `_max_clients` (default 8) enforced in accept loop under lock; excess connections rejected immediately with WARNING | Open 9 concurrent connections; 9th rejected; WARNING in weewx log |
+| No app-level auth on socket | [ADR-061](../decisions/ADR-061-filesystem-permissions-model.md) | Filesystem permissions only (0660 `weewx:weewx`); `clearskies` user accesses via `weewx` group membership | `id clearskies` shows `weewx` in groups; non-group users get EACCES |
+| Accept loop resilience | This doc | Non-OSError exceptions in accept loop: logged ERROR, continue. Connection-handling block wrapped in try/except. Thread can only die from OSError (shutdown). | Code inspection: two exception handlers in `_accept_loop` |
+| Thread join on shutdown | This doc | `_accept_thread.join(timeout=5.0)` in `shutDown()` after server socket close; WARNING if join times out | `journalctl -u weewx` on stop shows "ClearSkiesLoopRelay stopped" with no timeout warning |
+| No secrets in loop packets | This doc | Loop packets contain only weewx observation fields (outTemp, windSpeed, etc.) — no API keys, passwords, or PII. Extension does not read config secrets. | Code inspection: `event.packet` is a weewx loop packet dict |
 
 ---
 

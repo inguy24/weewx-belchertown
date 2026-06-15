@@ -33,7 +33,7 @@ Every runtime process has a dedicated user with no login shell, no sudo, and onl
 
 | Process | User | Group | Supplementary groups | Needs | Does NOT need |
 |---|---|---|---|---|---|
-| **API** | `clearskies` | `clearskies` | `weewx-ro` (DB read group) | Read config, read weewx DB, read weewx.conf, read weewx.units, read/write Unix socket, write to config dir (setup endpoints) | sudo, weewx group membership, web root write, Caddy cert access |
+| **API** | `clearskies` | `clearskies` | `weewx-ro` (DB read), `weewx` (socket access) | Read config, read weewx DB, read weewx.conf, read weewx.units, read/write Unix socket, write to config dir (setup endpoints) | sudo, web root write, Caddy cert access |
 | **Config UI** | `clearskies` | `clearskies` | — | Read/write config dir, read/write secrets.env, connect to API | sudo, weewx DB access, web root write |
 | **Caddy** | `caddy` | `caddy` | — | Read Caddyfile, read web root, read branding.json/webcam.json, write TLS certs (ACME), connect to API/Config UI | Config dir write, secrets.env read, weewx DB, weewx.conf |
 | **Redis** | `redis` | `redis` | — | Read/write its own data dir | Everything else |
@@ -115,8 +115,9 @@ All containers: `security_opt: [no-new-privileges:true]`, no host network, no pr
 useradd --system --no-create-home --shell /usr/sbin/nologin clearskies
 groupadd --system weewx-ro
 
-# Add clearskies to the read-only DB group
+# Add clearskies to the read-only DB group and the weewx group (socket access)
 usermod -aG weewx-ro clearskies
+usermod -aG weewx clearskies
 
 # Create config directory
 mkdir -p /etc/weewx-clearskies
@@ -152,7 +153,8 @@ On bare-metal, `ubuntu` (or any deploy user with sudo) handles:
 ## Consequences
 
 - **Install script required:** User creation, group setup, directory permissions, DB grants. Documented in `INSTALL.md` with copy-paste commands for SQLite and MariaDB.
-- **`weewx-ro` group:** New group for read-only weewx DB access. Keeps `clearskies` out of the `weewx` group (which has write access).
+- **`weewx-ro` group:** New group for read-only weewx DB access. Separate from `weewx` so DB read access is independent of socket write access.
+- **`weewx` group membership for `clearskies`:** Required for the API to connect to the loop relay Unix socket (`weewx:weewx` 0660). This is read access only — `clearskies` connects as a client, not as the socket server.
 - **Web root ownership change:** Currently `ubuntu:ubuntu`, moves to `caddy:caddy`. Deploy script must `chown` after rsync.
 - **Config file migration:** All files in `/etc/weewx-clearskies/` change from `ubuntu:ubuntu` to `clearskies:clearskies`. One-time migration during Phase 5.
 - **`charts.conf` root ownership fix:** T0.6 found `charts.conf` owned by `root:root` — must be corrected to `clearskies:clearskies`.
@@ -163,7 +165,8 @@ On bare-metal, `ubuntu` (or any deploy user with sudo) handles:
 ## Acceptance criteria
 
 - [ ] `clearskies` system user exists, no login shell, no sudo (`id clearskies`, `getent passwd clearskies`)
-- [ ] `weewx-ro` group exists, `clearskies` is a member, `weewx` is NOT a member
+- [ ] `weewx-ro` group exists, `clearskies` is a member
+- [ ] `clearskies` is a member of `weewx` group (socket access)
 - [ ] API runs as `clearskies` (`ps aux` shows correct user)
 - [ ] `/etc/weewx-clearskies/` ownership and modes match the table above (verified with `ls -la`)
 - [ ] `secrets.env` is mode 0600, owner `clearskies` (verified: `stat`)
