@@ -7,7 +7,7 @@
 #
 # Performs, in order:
 #   1. git pull --ff-only for all (or one) repo(s)        [delegates to sync-to-weather-dev.sh]
-#   2. restart the systemd services                       (realtime, config)
+#   2. restart the systemd services                       (config)
 #   3. npm run build in the dashboard repo                 (Vite → dist/)
 #   4. rsync built dist/ → web root /var/www/clearskies/   (EXCLUDING the read-only webcam/ mount)
 #
@@ -20,7 +20,7 @@
 #   - rsync runs as the `ubuntu` user (owns /var/www/clearskies)
 #
 # Verified weather-dev facts (2026-06-10):
-#   - Units:    weewx-clearskies-realtime.service, weewx-clearskies-config.service
+#   - Units:    weewx-clearskies-config.service
 #   - Dashboard repo:  /home/ubuntu/repos/weewx-clearskies-dashboard
 #   - Build:    `npm run build` (tsc -b && vite build) → ./dist (default Vite outDir)
 #   - Web root: /var/www/clearskies (Caddy `root *`; owned ubuntu:ubuntu 775)
@@ -42,7 +42,6 @@ DASHBOARD_PATH="${CONTAINER_REPO_ROOT}/${DASHBOARD_REPO}"
 DIST_DIR="${DASHBOARD_PATH}/dist"
 WEB_ROOT="/var/www/clearskies"
 SERVICES=(
-    "weewx-clearskies-realtime"
     "weewx-clearskies-config"
 )
 # NOTE: weewx-clearskies-api is NOT restarted here — the API runs on the

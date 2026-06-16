@@ -1,4 +1,4 @@
-# UI Polish, Wizard Gaps & Privacy/Legal Compliance — Execution Plan
+today# UI Polish, Wizard Gaps & Privacy/Legal Compliance — Execution Plan
 
 **Status:** ACTIVE  
 **Created:** 2026-06-10  
