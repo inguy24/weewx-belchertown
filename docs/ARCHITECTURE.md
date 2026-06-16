@@ -532,12 +532,12 @@ weewx-clearskies-stack/
 | Deployment topology | ADR-034 |
 | API | ADR-010 (data model), ADR-012 (DB access), ADR-018 (versioning) |
 | Realtime (historical — merged into API) | ADR-058 (fold realtime into API), ADR-005 (superseded), ADR-041 (amended), ADR-042 (units — now API authority) |
-| Dashboard | ADR-002, ADR-009 (design), ADR-024 (page taxonomy) |
+| Dashboard | ADR-002, ADR-024 (page taxonomy). **UI design rules:** [`docs/DESIGN-MANUAL.md`](DESIGN-MANUAL.md) (single authority — replaces ADR-009/022/023/026/047/048/049/050/051/062, which are archived) |
 | Config UI / Wizard | ADR-027 (wizard), ADR-038a-wizard-api-channel (wizard-to-API channel) |
 | Auth | ADR-008, ADR-037 (inbound traffic) |
 | Providers | ADR-006 (compliance), ADR-007 (forecast), ADR-038-data-provider-module-organization |
 | Caching | ADR-017 |
-| Theming / Branding | ADR-022, ADR-023 (light/dark mode) |
+| Theming / Branding | [`docs/DESIGN-MANUAL.md`](DESIGN-MANUAL.md) §15 (ADR-022/023 archived) |
 | i18n | ADR-021 |
 | Health / Readiness | ADR-030 |
 | Observability / Metrics | ADR-031 |

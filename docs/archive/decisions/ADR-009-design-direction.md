@@ -1,5 +1,5 @@
 ---
-status: Accepted
+status: Archived — consolidated into DESIGN-MANUAL.md
 date: 2026-05-04
 deciders: shane
 supersedes:

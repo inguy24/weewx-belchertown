@@ -1,5 +1,5 @@
 ---
-status: Accepted
+status: Archived — consolidated into DESIGN-MANUAL.md
 date: 2026-05-02
 deciders: shane
 amended: 2026-06-10

@@ -20,6 +20,7 @@ At the start of a task, identify which domain(s) apply and read the matching fil
 | GitHub operations (branches, PRs, releases) | [rules/github.md](rules/github.md) |
 | Clear Skies project (planning, ADRs, contracts, research) | [rules/clearskies-process.md](rules/clearskies-process.md) — facts live in ADRs at [docs/decisions/](docs/decisions/) and contracts at [docs/contracts/](docs/contracts/) |
 | Clear Skies architecture (services, containers, endpoints, routing, deployment) | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — **read first, before any ADRs** + [rules/clearskies-process.md](rules/clearskies-process.md) |
+| UI design, visual patterns, tokens, component styling, card anatomy, backgrounds, icons | [docs/DESIGN-MANUAL.md](docs/DESIGN-MANUAL.md) — **single authority for all UI design rules**. ADRs explain *why*; the manual says *what to do*. |
 | Writing or modifying code in any language (Python, PHP, JS/TS, shell, Cheetah, SQL) | [rules/coding.md](rules/coding.md) |
 
 ## Always-applicable rules

@@ -6,7 +6,7 @@ model: sonnet
 
 Scope: review only. Never write or modify code, configs, or docs.
 
-Before each review: read the ADRs and rules relevant to the work product.
+Before each review: for UI work, read `docs/DESIGN-MANUAL.md` (single authority for all UI design rules) and `rules/coding.md` §5 (accessibility) and §9 (design system compliance). For non-UI work, read the relevant ADRs from `docs/decisions/INDEX.md`. UI-related ADRs are archived in `docs/archive/decisions/` — they explain *why* decisions were made but the manual says *what to do*.
 
 ## Scope acknowledgment (mandatory first action)
 

@@ -27,6 +27,13 @@ Incident history and rationale at [reference/process-rule-history.md](../referen
 
 **Recover lost state immediately.** If the user references a decision you can't find in files: STOP. Tell them. Ask for context. Write it down before the next item.
 
+**UI decisions follow a separate lifecycle.** Non-UI ADRs follow the standard lifecycle (Proposed → Accepted → rarely Superseded). UI-related ADRs follow an extended lifecycle:
+1. Decision needed → draft ADR as Proposed
+2. User approves → ADR becomes Accepted
+3. Rules extracted into `docs/DESIGN-MANUAL.md` (the single authority for UI design rules)
+4. ADR archived → moved to `docs/archive/decisions/`, status "Archived — consolidated into DESIGN-MANUAL.md"
+5. Future reference → archived ADR explains *why*; the design manual is where you *follow* it
+
 ## ADR content standards
 
 Use the Nygard format. Template at `docs/decisions/_TEMPLATE.md`. Required: Status, Context, Options considered, Decision, Consequences, Implementation guidance, References.

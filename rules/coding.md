@@ -430,3 +430,11 @@ The Clear Skies dashboard uses Recharts v3.x for all chart components. Recharts 
 **Rule: After EVERY code change, `npx tsc --noEmit` must return ZERO errors — not warnings, not "just TS6133." ZERO.** If there are unused variable errors (TS6133), fix them before committing. Do not commit code with any TS errors.
 
 **Why (2026-06-02):** Multiple commits over ~2 hours were deployed but never reached the site because removing a YAxis import left unused variables. The TS6133 errors appeared in every deploy output and were ignored. The site served stale JS while the developer repeatedly changed code and asked the user to check — wasting hours of the user's time.
+
+## 9. Design system compliance
+
+1. Before any UI change, read `docs/DESIGN-MANUAL.md`. It is the single authority for all UI design rules — tokens, typography, colors, card anatomy, component patterns, backgrounds, icons, accessibility, and anti-patterns. Use existing components and tokens — no ad-hoc one-offs.
+2. If the user's prompt conflicts with the design manual, stop and ask before writing code.
+3. If existing code doesn't comply with the design manual, surface the gap and ask before building on top of it.
+4. If the design manual doesn't cover the case, flag it — don't invent.
+5. Archived UI-related ADRs (in `docs/archive/decisions/`) explain *why* decisions were made. The design manual says *what to do*. When the two conflict, the manual wins — the ADR is historical context.

@@ -1,5 +1,5 @@
 ---
-status: Accepted
+status: Archived — consolidated into DESIGN-MANUAL.md
 date: 2026-05-30
 deciders: shane
 supersedes:
@@ -324,3 +324,129 @@ to the `--text-chart-label` equivalent (14px ≈ 0.875rem).
 - [ ] Every `fontSize` in card component inline styles uses `var(--text-*)` — zero hardcoded values.
 - [ ] `--text-stat-tile` (1.25rem) and `--text-stat-label` (1rem) tokens exist in `index.css`.
 - [ ] No font size in any card component is smaller than `--text-micro` (0.7rem / ~11px).
+
+---
+
+## Amendment — 2026-06-16: Row height increase (Option B) and card content box contract
+
+**Status:** Accepted
+
+**Context:** Two problems surfaced during Legal page and Now page review:
+
+1. **Row heights too tight.** The `--card-quarter-row` at 2.75rem desktop produced an 11rem data card row. To fit content, card titles were shrunk to 0.82rem — smaller than body text (0.9rem), destroying visual hierarchy. Option B (+0.5rem quarter) was selected to restore proportional title sizing.
+
+2. **No defined content area.** Card content dimensions are implicit — "whatever's left after the title and padding." Every card component guesses at available space differently, producing ad-hoc sizing (hardcoded heights, `!important` padding overrides, `maxHeight` hacks). Future card designers have no contract to build against.
+
+### Changes to the Decision
+
+**9. Row height tokens increased (Option B).**
+
+All row tokens increase by the same ratio. Token arithmetic is preserved (quarter × 2 = half, quarter × 4 = row, quarter × 8 = tall).
+
+| Token | Previous desktop | **New desktop** | Previous mobile | **New mobile** |
+|---|---|---|---|---|
+| `--card-quarter-row` | 2.75rem | **3.25rem** | 3.25rem | **3.75rem** |
+| `--card-half-row` | 5.5rem | **6.5rem** | 6.5rem | **7.5rem** |
+| `--card-row` | 11rem | **13rem** | 13rem | **15rem** |
+| `--card-content-max` | 7rem | **9rem** | 9rem | **11rem** |
+
+Updated row-span model:
+
+| Card role | rowSpan | Track count (md+) | Desktop height | Mobile min-h |
+|---|---|---|---|---|
+| Control strip | `"quarter"` | 1 | 3.25rem | 3.75rem |
+| Page header | `"half"` | 2 | 6.5rem | 7.5rem |
+| Data card (default) | `1` | 4 | 13rem | 15rem |
+| Tall card | `2` | 8 | 26rem | 30rem |
+
+Token arithmetic (desktop): 3.25 × 2 = 6.5 ✓. 3.25 × 4 = 13 ✓. 3.25 × 8 = 26 ✓.
+
+Token arithmetic (mobile): 3.75 × 2 = 7.5 ✓. 3.75 × 4 = 15 ✓. 3.75 × 8 = 30 ✓.
+
+**10. Card title token increased.**
+
+| Token | Previous | **New** |
+|---|---|---|
+| `--text-card-title` | 0.82rem | **1.1rem** |
+
+Title (1.1rem) is now clearly larger than body text (0.9rem), restoring visual hierarchy.
+
+**11. Card content box contract.**
+
+Every card has two defined slots with token-backed dimensions. The Card component owns all chrome (padding, title area, gap, radius). Card designers build against the content box — not raw card dimensions.
+
+**Header slot:**
+- Fixed height: `--card-header-h` (new token).
+- Contains: card title (at `--text-card-title`), underline rule, and padding.
+- The card component renders this. The designer passes a title string.
+
+**Content slot:**
+- A defined rectangular area below the header with known dimensions.
+- Width: card interior minus horizontal padding → `--card-content-w: calc(100% - 2 * var(--card-pad-x))`.
+- Height depends on grid mode (see below).
+- Exposed as a container element that content fills.
+
+**Two grid modes, same content box:**
+
+| Property | Rigid mode (Now page) | Fluid mode (other pages) |
+|---|---|---|
+| Grid `auto-rows` | `var(--card-quarter-row)` | `auto` |
+| Content box **width** | Fixed (from card footprint - padding) | Same |
+| Content box **height** | Fixed: `--card-row - --card-header-h - (2 × --card-pad-y)` — content clips at boundary | **Min-height** from same formula; grows to fit content |
+| Overflow | Hidden — content must fit | Visible — content expands the card |
+| Use case | Charts, gauges, compass, radar — fixed visual fills the box | Legal text, forecast tables, record lists — variable-length content |
+
+A card on a fluid page can opt into fixed-height behavior by setting `overflow: hidden` and constraining to the content box height. The mode is inherited from the grid context (Now grid vs PageLayout grid), not declared per-card.
+
+**New tokens:**
+
+| Token | Desktop | Mobile | Meaning |
+|---|---|---|---|
+| `--card-pad` | 1rem | 1rem | Card padding — uniform on all four sides |
+| `--card-header-h` | 2.5rem | 2.5rem | Header slot height (title + underline + spacing) |
+| `--card-content-h` | `calc(var(--card-row) - var(--card-header-h) - 2 * var(--card-pad))` | same formula | Content slot height (rigid mode); min-height (fluid mode) |
+
+Padding is proportional: left, right, top, and bottom are all `--card-pad` (1rem). Previous `py-2.5` (0.625rem) was disproportionately tight vs `px-4` (1rem), causing cards to look squeezed vertically. Uniform padding eliminates that asymmetry.
+
+Derived content box heights (desktop):
+
+| Card role | Card height | Header | Padding (×2) | Content box |
+|---|---|---|---|---|
+| Half-row (page header) | 6.5rem | 2.5rem | 2rem | 2rem |
+| Data card (1-row) | 13rem | 2.5rem | 2rem | 8.5rem |
+| Tall card (2-row) | 26rem | 2.5rem | 2rem | 21.5rem |
+
+Validated against current content: tallest 1-row content is 7rem (gauges/charts), which fits within 8.5rem with 1.5rem headroom. Tallest 2-row content is ~20rem (wind compass / current conditions), which fits within 21.5rem.
+
+**Designer mental model:** "I get a title string and a content box. On the Now page, the box is 8.5rem × (card width - 2rem). I design inside it. On other pages, same width, same minimum height, but it grows if I need more room."
+
+### Updated acceptance criteria (additive — content box)
+
+- [ ] `--card-pad`, `--card-header-h`, `--card-content-h` tokens exist in `index.css`.
+- [ ] `Card` component uses `--card-pad` for padding on all four sides — no hardcoded `py-2.5` / `px-4`.
+- [ ] `CardHeader` height is constrained to `--card-header-h`.
+- [ ] `CardContent` exposes the content box: width from `--card-pad`, height/min-height from `--card-content-h`.
+- [ ] On the Now page grid, content box clips overflow (rigid mode).
+- [ ] On non-Now pages (PageLayout), content box grows to fit content (fluid mode) with `--card-content-h` as min-height.
+- [ ] No card component sets its own padding, header height, or content area dimensions — all derive from tokens.
+- [ ] Token arithmetic holds with new values: 3.25 × 2 = 6.5, 3.25 × 4 = 13, 3.25 × 8 = 26 (desktop).
+
+---
+
+## Amendment 2026-06-16 — Extra-tall row span (2.5)
+
+**Accepted:** 2026-06-16
+
+Adds `rowSpan="2.5"` (10 quarter-tracks) to the row-span vocabulary. Desktop height: 32.5rem (3.25 × 10). Mobile min-h: 37.5rem (3.75 × 10). Content box: 28rem desktop (32.5 - 2.5 - 2).
+
+Use case: charts or content cards that need more vertical space than 2× but less than a full page scroll. Token arithmetic: 3.25 × 10 = 32.5 ✓ (desktop), 3.75 × 10 = 37.5 ✓ (mobile).
+
+Updated row-span model:
+
+| Role | rowSpan | Track count | Desktop height | Mobile min-h |
+|---|---|---|---|---|
+| Control strip | `"quarter"` | 1 | 3.25rem | 3.75rem |
+| Page header | `"half"` | 2 | 6.5rem | 7.5rem |
+| Data card | `1` | 4 | 13rem | 15rem |
+| Tall card | `2` | 8 | 26rem | 30rem |
+| Extra-tall card | `2.5` | 10 | 32.5rem | 37.5rem |

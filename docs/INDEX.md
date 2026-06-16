@@ -23,7 +23,8 @@ This repo started as a Belchertown skin evaluation and pivoted to the Clear Skie
 
 ## Design
 
-- **[design/design-tokens-typography.md](design/design-tokens-typography.md)** — Typography token spec (LOCKED 2026-05-31): font role assignments (Manrope body/labels, Outfit display-role stat numerals, Lexend chart SVG text), weight map, and role-named rem type scale. Sibling to ADR-048. Visual specimen: [design/mockups/C2pre-type-system.html](design/mockups/C2pre-type-system.html).
+- **[DESIGN-MANUAL.md](DESIGN-MANUAL.md)** — **Single authority for all UI design rules.** Tokens, typography, color, card anatomy, components, icons, backgrounds, navigation, page structure, data formatting, responsive behavior, motion, theming, accessibility, wizard standards, anti-patterns. Read this before any UI work. Replaces the individual UI ADRs (archived to `archive/decisions/`).
+- [design/design-tokens-typography.md](design/design-tokens-typography.md) — Typography token spec (LOCKED 2026-05-31): font role assignments (Manrope body/labels, Outfit display-role stat numerals, Lexend chart SVG text), weight map, and role-named rem type scale. Historical reference — the design manual is now authoritative for typography rules.
 
 ## Contracts
 

@@ -6,7 +6,7 @@ model: sonnet
 
 Scope: the clearskies-dashboard repo. Frontend (React/TypeScript) only.
 
-Before each task: read relevant design ADRs from `docs/decisions/INDEX.md`. Common ones for frontend work: ADR-002 (tech stack), ADR-009 (design direction), ADR-022 (theming), ADR-023 (light/dark mode), ADR-024 (page taxonomy), ADR-025 (browser support), ADR-026 (accessibility), ADR-033 (performance budget). Read `rules/coding.md` §5 (accessibility) every session.
+Before each task: read `docs/DESIGN-MANUAL.md` — the single authority for all UI design rules (tokens, typography, color, card anatomy, components, accessibility, anti-patterns). This replaces the individual UI ADRs (009, 022, 023, 026, 047, 048, 049, 050, 051, 062), which are archived in `docs/archive/decisions/`. Also read `rules/coding.md` §5 (accessibility) and §9 (design system compliance) every session. For non-UI concerns: ADR-002 (tech stack), ADR-024 (page taxonomy), ADR-025 (browser support), ADR-033 (performance budget) remain active in `docs/decisions/`.
 
 Hard constraints:
 - WCAG 2.1 AA is release-blocking, not polish. Per-change a11y audit per `rules/coding.md` §5.7. Run `npx @axe-core/cli` (or equivalent); zero violations or a documented reason for each remaining warning.
