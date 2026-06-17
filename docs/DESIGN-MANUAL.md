@@ -196,8 +196,7 @@ Weight ranges in the table (e.g. 400–600) indicate contextual flexibility for 
 | `--card-row` | 13rem | 15rem | Standard data card (4 quarter tracks) |
 | `--card-content-max` | 9rem | 11rem | Graphic container max-height |
 | `--card-pad` | 1rem | 1rem | Uniform card padding (all 4 sides) |
-| `--card-header-h` | 2.5rem | 2.5rem | Header slot height |
-| `--card-content-h` | 8.5rem | 10.5rem | Content slot height (derived: row - header - 2×pad) |
+| `--card-content-h` | 8.5rem | 10.5rem | Content slot height (derived) |
 
 Token arithmetic must hold: quarter × 2 = half, quarter × 4 = row, quarter × 8 = tall. Desktop: 3.25 × 2 = 6.5 ✓, 3.25 × 4 = 13 ✓, 3.25 × 8 = 26 ✓. Mobile: 3.75 × 2 = 7.5 ✓, 3.75 × 4 = 15 ✓, 3.75 × 8 = 30 ✓.
 
@@ -248,17 +247,14 @@ A card on a fluid page may opt into fixed-height behavior by setting `overflow: 
 ┌─────────────────────────────────────────────┐
 │  padding (--card-pad: 1rem)                 │
 │  ┌───────────────────────────────────────┐  │
-│  │ HEADER SLOT (--card-header-h: 2.5rem) │  │
+│  │ HEADER (content-driven height)        │  │
 │  │ ┌─────────────┐  ┌─────────────────┐ │  │
 │  │ │ CardTitle   │  │ Controls (opt.) │ │  │
 │  │ └─────────────┘  └─────────────────┘ │  │
-│  │ ─────────── underline (full width) ── │  │
+│  │ ── pb-2 ── underline (full width) ── │  │
 │  └───────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────┐  │
-│  │ CONTENT SLOT                          │  │
-│  │ height: --card-content-h              │  │
-│  │   rigid mode: 8.5rem (fixed, clips)   │  │
-│  │   fluid mode: 8.5rem min, grows       │  │
+│  │ CONTENT SLOT (pt-3 spacing)           │  │
 │  │ width: card interior - 2 × --card-pad │  │
 │  │                                       │  │
 │  │   [chart / gauge / text / list]       │  │
@@ -267,16 +263,6 @@ A card on a fluid page may opt into fixed-height behavior by setting `overflow: 
 │  padding (--card-pad: 1rem)                 │
 └─────────────────────────────────────────────┘
 ```
-
-### Content Box Dimensions
-
-Derived from layout tokens. Desktop values shown. These apply to cards that use the standard header + content slot anatomy.
-
-| Card role | Card height | Header | Padding (×2) | Content box |
-|---|---|---|---|---|
-| Data card (1-row) | 13rem | 2.5rem | 2rem | 8.5rem |
-| Tall card (2-row) | 26rem | 2.5rem | 2rem | 21.5rem |
-| Extra-tall (2.5-row) | 32.5rem | 2.5rem | 2rem | 28rem |
 
 Half-row cards (page headers, control strips) do not follow the header + content slot split. Their full interior (card height minus 2×`--card-pad`) is a single layout area — 4.5rem for half-row desktop, 5.5rem mobile — arranged however the card needs (icon, title, logo, controls, etc.).
 
@@ -291,9 +277,9 @@ Half-row cards (page headers, control strips) do not follow the header + content
 
 ### Card Header Contract
 
-- Height: fixed `--card-header-h` (2.5rem)
-- Layout: flex row, `align-items: center`, `justify-content: space-between`
-- Padding: `0 var(--card-pad)` (horizontal only — vertical from card padding)
+- Height: content-driven (no fixed height). Header sizes to its tallest child (title text or controls).
+- Layout: flex row, `align-items: center`
+- Padding: `0 var(--card-pad) 0.5rem var(--card-pad)` (horizontal from token, `pb-2` before the underline)
 - Title slot (left): semantic heading (`<h2>` default, configurable level), font `--text-card-title` (1.1rem), Manrope 600, `flex: 1`
 - Controls slot (right, optional): `flex-shrink-0`, vertically centered
 - Underline: `border-bottom` on `CardHeader`, spans full card interior width (padding edge to padding edge), always present
