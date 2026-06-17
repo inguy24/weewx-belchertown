@@ -174,7 +174,7 @@ Weight ranges in the table (e.g. 400–600) indicate contextual flexibility for 
 - Card titles: Manrope 600 (semibold). Do not use 700 (bold).
 - CJK fallback: ja/zh-CN/zh-TW use system CJK fonts. Do not ship a Noto-CJK bundle.
 - SVG `<text>` inside a `viewBox` coordinate system (sun arc, compass cardinals): use viewBox-unit font sizes, not CSS rem. Tokens do not apply. Recharts `tick={{ fontSize }}` props use pixel values mapped to `--text-chart-label` equivalent (14px ≈ 0.875rem).
-- **Tile-chart exception:** Charts inside tile-footprint (1-column) cards use `--text-chart-label-sm` (11px) for tick labels, `XAxis height={12}`, and tighter margins (`{ top: 2, right: 8, bottom: 0, left: 8 }`). This is a space constraint — tile content areas cannot accommodate 14px labels with standard margins. Standard-size cards (wide, panel, full) use the normal 14px / `--text-chart-label`.
+- **Tile-chart exception:** Charts inside tile-footprint (1-column) cards use `--text-chart-label-sm` (11px) for tick labels, `XAxis height={15}`, and tighter margins (`{ top: 2, right: 8, bottom: 0, left: 8 }`). This is a space constraint — tile content areas cannot accommodate 14px labels with standard margins. Standard-size cards (wide, panel, full) use the normal 14px / `--text-chart-label`.
 
 ### Text Color Usage
 
@@ -602,7 +602,7 @@ Colors: `--gauge-fill` (filled arc), `--gauge-unfill` (unfilled arc), `--gauge-i
 
 - **Description:** Time-series and specialized data visualizations rendered with Recharts inside card content slots.
 - **Layout:** Charts fill the card content slot using `ResponsiveContainer` with `width="99%"` and `height="100%"`. The wrapper div needs explicit sizing (`minWidth: 0, minHeight: 0, width: '100%', height: '100%'`) to prevent flex containers from reporting 0 to ResizeObserver.
-- **Typography:** Axis labels, ticks, and data labels use Lexend (`--font-chart`) at `--text-chart-label` size. Recharts `tick={{ fontSize }}` props take pixel values — use 14px (the pixel equivalent of 0.875rem). Do not use rem values in Recharts tick props. **Tile-chart exception:** charts inside tile-footprint cards use 11px (`--text-chart-label-sm`), `XAxis height={12}`, and tighter margins (`{ top: 2, right: 8, bottom: 0, left: 8 }`) — the standard 14px labels are too large for the constrained content area of a 1-column tile.
+- **Typography:** Axis labels, ticks, and data labels use Lexend (`--font-chart`) at `--text-chart-label` size. Recharts `tick={{ fontSize }}` props take pixel values — use 14px (the pixel equivalent of 0.875rem). Do not use rem values in Recharts tick props. **Tile-chart exception:** charts inside tile-footprint cards use 11px (`--text-chart-label-sm`), `XAxis height={15}`, and tighter margins (`{ top: 2, right: 8, bottom: 0, left: 8 }`) — the standard 14px labels are too large for the constrained content area of a 1-column tile.
 - **Colors:** Use `--chart-1` through `--chart-5` for series colors. Domain-specific colors (`--temp-hi`, `--temp-lo`, `--gauge-fill`) where semantically appropriate.
 - **Tooltips:** Card-glass surface treatment, `--text-body` font, `--font-sans`. Show value + unit + timestamp. Match the card's border-radius.
 - **Expandable view:** Charts should support an expanded/full-screen view for detailed inspection. The expanded view uses the same chart configuration at a larger size — not a different chart.
