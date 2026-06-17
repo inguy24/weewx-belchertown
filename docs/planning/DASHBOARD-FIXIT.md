@@ -478,7 +478,7 @@ Cards with controls (NowForecastCard, WebcamCard, PlanetTimelineCard, ForecastDa
 
 4. **Below --text-micro minimum (0.7rem):** `aqi-card.tsx:537` (8px badge), `PlanetTimelineCard.tsx:984` (0.55rem), `ChartGauge.tsx` clamp lower bound (0.65rem), `nav-rail.tsx:62` (`md:text-[0.6rem]`).
 
-5. **Chart tick fontSize:** Standard cards (`current-conditions-card.tsx`, `ConfigDrivenChart.tsx`, `MonthlyAveragesCard.tsx`, `WeatherRangeChart.tsx`) use 14px per `--text-chart-label`. **Tile-footprint cards** (`solar-radiation-card.tsx`, `uv-index-card.tsx`, `lightning-card.tsx`) use 11px per `--text-chart-label-sm` with `XAxis height={15}` and tighter margins `{ top: 2, right: 12, bottom: 0, left: 12 }` — 14px labels are too large for tile content areas. (Design manual updated 2026-06-17.)
+5. **Chart tick fontSize:** Standard cards (`current-conditions-card.tsx`, `ConfigDrivenChart.tsx`, `MonthlyAveragesCard.tsx`, `WeatherRangeChart.tsx`) use 14px per `--text-chart-label`. **Tile-footprint cards** (`solar-radiation-card.tsx`, `uv-index-card.tsx`, `lightning-card.tsx`) use 11px per `--text-chart-label-sm` with `XAxis height={24}` and tighter margins `{ top: 2, right: 12, bottom: 0, left: 12 }` — 14px labels are too large for tile content areas. (Design manual updated 2026-06-17.)
 
 6. **CardTitle fallback value:** `card.tsx:135` uses `0.82rem` fallback but manual specifies `1.1rem`.
 
