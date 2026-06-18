@@ -9,7 +9,7 @@
 
 ## Context
 
-On 2026-06-06, four rapid commits rewrote sky_condition.py thresholds. The final commit (13f8f26) tightened "Clear" from kc ≥ 0.85 to kc ≥ 0.95 because the old value reportedly called 4-okta partly cloudy skies "Clear." But 0.95 overcorrected — the Davis 6450 sensor has ±5% accuracy and weewx's maxSolarRad model has ±4%, so a perfectly clear sky can produce kc ~0.93 from systematic bias alone. The threshold is inside the sensor's noise floor.
+On 2026-06-06, four rapid commits rewrote sky_condition.py thresholds. The final commit (13f8f26) tightened "Clear" from kc ≥ 0.85 to kc ≥ 0.95 because the old value reportedly called 4-okta partly cloudy skies "Clear." But 0.95 overcorrected — typical pyranometer accuracy and clear-sky model error means a perfectly clear sky can produce kc ~0.93 from systematic bias alone. The threshold is inside the sensor's noise floor.
 
 On 2026-06-08, a visibly clear blue sky (963.3 W/m², webcam confirms) is classified "Mostly Clear." The ADR was never updated after any of the four commits.
 
@@ -138,7 +138,7 @@ On 2026-06-08, a visibly clear blue sky (963.3 W/m², webcam confirms) is classi
   - Amend §2: add day/night vocabulary mapping table (Sunny/Mostly Sunny vs Clear/Mostly Clear)
   - Note: "Overcast" replaced with "Cloudy" (NWS display vocabulary)
   - Note: June 5 sigma-first simplification (low-sigma = only Clear/Overcast) revised — intermediate tiers legitimate for cirrus/haze
-  - Note: research basis — Davis 6450 ±5% accuracy, maxSolarRad ±4%, combined systematic uncertainty makes kc ≥ 0.95 unreliable
+  - Note: research basis — typical pyranometer accuracy + maxSolarRad model error makes kc ≥ 0.95 unreliable (sensor-agnostic)
 - Accept: ADR table matches code. No undocumented behaviors.
 
 **T-C2 — Update ARCHITECTURE.md**

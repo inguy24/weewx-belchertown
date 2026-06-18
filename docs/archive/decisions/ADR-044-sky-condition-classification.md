@@ -33,7 +33,7 @@ During daytime, the station's pyranometer is the authoritative source. Provider 
 
 > **Amendment (2026-06-05):** Classification axes swapped — σ(kc) is now the primary axis, mean(kc) secondary. The original table used mean(kc) as primary, which conflated cloud opacity with cloud coverage.
 
-> **Amendment (2026-06-08):** Thresholds revised for sensor accuracy. Davis 6450 pyranometer ±5% accuracy + weewx maxSolarRad model ±4% error means a perfectly clear sky can produce kc ~0.93 from systematic bias alone — the previous Clear threshold of 0.95 was inside the noise floor. σ threshold corrected from 0.10 to 0.08 (matching deployed code). Intermediate low-sigma tiers restored (the June 5 simplification conflated opacity with coverage, but thin cirrus/haze legitimately produces low-sigma intermediate kc). "Overcast"/"Heavily Overcast" replaced with "Cloudy" per NWS display vocabulary. Day/night display vocabulary added (§2).
+> **Amendment (2026-06-08):** Thresholds revised for sensor accuracy. Typical pyranometer accuracy and clear-sky model error means a perfectly clear sky can produce kc ~0.93 from systematic bias alone — the previous Clear threshold of 0.95 was inside the noise floor. Thresholds must be sensor-agnostic; operators use diverse hardware. σ threshold corrected from 0.10 to 0.08 (matching deployed code). Intermediate low-sigma tiers restored (the June 5 simplification conflated opacity with coverage, but thin cirrus/haze legitimately produces low-sigma intermediate kc). "Overcast"/"Heavily Overcast" replaced with "Cloudy" per NWS display vocabulary. Day/night display vocabulary added (§2).
 
 **Low sigma (< 0.08) — uniform sky, no cloud transits detected:**
 

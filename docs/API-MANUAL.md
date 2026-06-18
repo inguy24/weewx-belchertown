@@ -546,7 +546,7 @@ The conditions text engine is a multi-module stateful system that produces the `
 | ≥ 0.08 | 0.60–0.85 | Partly Cloudy |
 | ≥ 0.08 | < 0.60 | Mostly Cloudy |
 
-The σ threshold of 0.08 reflects actual sensor accuracy: Davis 6450 pyranometer ±5% and weewx `maxSolarRad` model ±4% combined error means a perfectly clear sky can produce kc ~0.93 from systematic bias alone. A threshold of 0.95 would be inside the noise floor.
+The σ threshold of 0.08 accounts for typical pyranometer accuracy and clear-sky model error. A perfectly clear sky can produce kc ~0.93 from systematic bias alone — a threshold of 0.95 would be inside the noise floor. Operators use diverse sensor hardware; thresholds must be sensor-agnostic.
 
 **Secondary source (night / twilight / startup / no pyranometer):** Provider cloud cover or provider weather text, via these priority levels:
 
