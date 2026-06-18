@@ -152,6 +152,7 @@ All three typefaces are self-hosted via @fontsource woff2. No CDN loading.
 | `--text-stat-hero` | 4.25rem | Current temperature numeral | Outfit | 700 |
 | `--text-stat-unit` | 1.9rem | Unit beside hero stat (°F/°C) | Outfit | 400 |
 | `--text-hero-name` | 1.35rem | Station name in hero card | Manrope | 700 |
+| `--text-page-title` | 2rem | Page title in page-header cards (non-Now) | Manrope | 700 |
 | `--text-stat-tile` | 1.25rem | Primary stat value on 1×1 tiles | Outfit | 600 |
 | `--text-card-title` | 1.1rem | Card title (semibold, NOT bold) | Manrope | 600 |
 | `--text-stat-label` | 1rem | Secondary stat value / large label | Outfit or Manrope | 400–600 |
@@ -197,7 +198,8 @@ Weight ranges in the table (e.g. 400–600) indicate contextual flexibility for 
 | `--card-half-row` | 6.5rem | 7.5rem | Page headers (2 quarter tracks) |
 | `--card-row` | 13rem | 15rem | Standard data card (4 quarter tracks) |
 | `--card-content-max` | 9rem | 11rem | Graphic container max-height |
-| `--card-pad` | 1rem | 1rem | Uniform card padding (all 4 sides) |
+| `--card-pad` | 1rem | 1rem | Standard card padding (all 4 sides) — data cards (rowSpan ≥1) |
+| `--card-pad-compact` | 0.5rem | 0.5rem | Compact padding for short cards: quarter-row (strip), half-row (page header, hero) |
 | `--card-content-h` | 8.5rem | 10.5rem | Content slot height (derived) |
 
 Token arithmetic must hold: quarter × 2 = half, quarter × 4 = row, quarter × 8 = tall. Desktop: 3.25 × 2 = 6.5 ✓, 3.25 × 4 = 13 ✓, 3.25 × 8 = 26 ✓. Mobile: 3.75 × 2 = 7.5 ✓, 3.75 × 4 = 15 ✓, 3.75 × 8 = 30 ✓.
@@ -266,7 +268,7 @@ A card on a fluid page may opt into fixed-height behavior by setting `overflow: 
 └─────────────────────────────────────────────┘
 ```
 
-Half-row cards (page headers, control strips) do not follow the header + content slot split. Their full interior (card height minus 2×`--card-pad`) is a single layout area — 4.5rem for half-row desktop, 5.5rem mobile — arranged however the card needs (icon, title, logo, controls, etc.).
+Half-row cards (page headers, control strips) do not follow the header + content slot split. They use `--card-pad-compact` (0.5rem), not `--card-pad`. Their full interior (card height minus 2×`--card-pad-compact`) is a single layout area — 5.5rem for half-row desktop, 6.5rem mobile — arranged however the card needs (icon, title, logo, controls, etc.).
 
 ### Card Surface Treatment
 
@@ -300,7 +302,8 @@ All share: border-radius consistent with card scale, visible focus ring per acce
 ### Card Rules
 
 - Every element on every page is a card. No free-floating content.
-- Use `--card-pad` for all four sides of every card. Do not use hardcoded `py-2.5` / `px-4`.
+- Standard data cards (rowSpan ≥1): use `--card-pad` (1rem) for all four sides.
+- Short cards (quarter-row strips, half-row page headers and hero): use `--card-pad-compact` (0.5rem) for all four sides. These cards have limited vertical space; standard padding wastes too much of it.
 - Do not add ad-hoc className overrides for sizing (`!py-1`, `min-h-[...]`, `maxHeight`).
 - Every card declares `footprint` and (on Now page) `rowSpan`.
 - Cards self-hide when backing data has no non-null aggregate.
@@ -407,7 +410,7 @@ ADR-050 accepted 2026-06-16. Icon assignments above and in the utility/alert tab
 | Condition | Day Asset | Night Asset |
 |---|---|---|
 | Clear / Mostly Clear / Partly Cloudy | `clear` | `clear_night` |
-| Mostly Cloudy / Overcast | `cloudy_day` | `cloudy_night` |
+| Mostly Cloudy / Cloudy / Overcast | `cloudy_day` | `cloudy_night` |
 | Thunderstorm | `storm_day` | `storm_night` |
 | Foggy | maps to cloudy | maps to cloudy (no dedicated fog photo) |
 | Unknown / startup | maps to clear | maps to clear |
@@ -500,14 +503,26 @@ Every page except Now uses `PageLayout`. The composition order is:
 ### Page-Header Card
 
 - Footprint: `full`, rowSpan: `"half"`
-- Icon: left-aligned, sized proportionally to half-row height
-- Title: visible heading at `<h1>` level, font `--text-hero-name` or larger
+- Padding: `--card-pad-compact` (0.5rem), not `--card-pad`
+- Icon: left-aligned, 2.25rem (36px) — proportional to the 5.5rem interior height
+- Title: visible heading at `<h1>` level, font `--text-page-title` (2rem), Manrope 700
 - Controls slot: right-aligned (for pages with few controls)
-- Icon and title scale proportionally to fill the half-row height.
+- Icon and title fill the half-row height visually — they must not look small relative to the card. Previous sizes were 50% too small; the values above are the corrected targets.
+
+### Now Hero Card
+
+The hero is the Now-page page-header card (station logo + station name). It is a half-row card but has distinct rules from the non-Now page-header cards.
+
+- Footprint: `full`, rowSpan: `"half"`
+- Padding: `--card-pad-compact` (0.5rem) — the hero is a short card; standard `--card-pad` wastes too much vertical space
+- Logo: rendered with `object-fit: contain` and `max-height` constrained to the card interior height (card height minus 2×`--card-pad-compact` = 5.5rem desktop, 6.5rem mobile). The logo must maintain its aspect ratio — never stretch or crop. If the logo is landscape-oriented, it fills the width available; if portrait, it fills the height.
+- Station name: `--text-hero-name` (1.35rem), Manrope 700, right of or below the logo depending on layout
+- Station ID / location: `--text-secondary` (0.85rem), Manrope 400, secondary text placement
 
 ### Controls Strip
 
 - Full-width quarter-row card placed directly below the page header
+- Padding: `--card-pad-compact` (0.5rem), not `--card-pad`
 - Use approved control components only (`HeaderTabs`, `HeaderSelect`, `HeaderToggle`, `HeaderButton`)
 - Do not place raw `<button>` or `<select>` elements inside the strip
 - ARIA: `<section aria-label="[Page] controls">`
