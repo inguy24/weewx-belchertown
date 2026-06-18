@@ -152,7 +152,7 @@ All three typefaces are self-hosted via @fontsource woff2. No CDN loading.
 | `--text-stat-hero` | 4.25rem | Current temperature numeral | Outfit | 700 |
 | `--text-stat-unit` | 1.9rem | Unit beside hero stat (°F/°C) | Outfit | 400 |
 | `--text-hero-name` | 1.35rem | Station name in hero card | Manrope | 700 |
-| `--text-page-title` | 2rem | Page title in page-header cards (non-Now) | Manrope | 700 |
+| `--text-page-title` | 2rem | Page title in page-header cards (non-Now) | Manrope | 400 |
 | `--text-stat-tile` | 1.25rem | Primary stat value on 1×1 tiles | Outfit | 600 |
 | `--text-card-title` | 1.1rem | Card title (semibold, NOT bold) | Manrope | 600 |
 | `--text-stat-label` | 1rem | Secondary stat value / large label | Outfit or Manrope | 400–600 |
@@ -505,7 +505,7 @@ Every page except Now uses `PageLayout`. The composition order is:
 - Footprint: `full`, rowSpan: `"half"`
 - Padding: `--card-pad-compact` (0.5rem), not `--card-pad`
 - Icon: left-aligned, 2.25rem (36px) — proportional to the 5.5rem interior height
-- Title: visible heading at `<h1>` level, font `--text-page-title` (2rem), Manrope 700
+- Title: visible heading at `<h1>` level, font `--text-page-title` (2rem), Manrope 400
 - Controls slot: right-aligned (for pages with few controls)
 - Icon and title fill the half-row height visually — they must not look small relative to the card. Previous sizes were 50% too small; the values above are the corrected targets.
 
