@@ -584,6 +584,15 @@ paths:
           required: false
           description: Four-digit year. Default = current year.
           schema: { type: integer, minimum: 1900 }
+        - name: min_radiant_alt
+          in: query
+          required: false
+          description: |
+            Minimum radiant altitude in degrees at local midnight on the peak
+            night. Showers whose radiant is below this threshold are excluded.
+            When omitted, all showers in the window are returned regardless of
+            altitude.
+          schema: { type: number }
       responses:
         '200':
           description: Meteor shower list
