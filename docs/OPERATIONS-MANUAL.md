@@ -459,7 +459,7 @@ The config UI serves an admin landing page at `/admin`. This is the default post
 | Database | `api.conf [database]` | DB type, connection |
 | Providers | `api.conf [forecast/alerts/aqi/earthquakes/radar/seeing]` | Provider selection + API keys |
 | Appearance | `branding.json` | Accent color, logos, site title, favicon, theme mode, custom CSS |
-| Social | `branding.json` | Mastodon, GitHub, Twitter/X, Facebook URLs |
+| Social | `branding.json` | Facebook, Twitter/X, Instagram, YouTube URLs |
 | Analytics & Privacy | `branding.json` | GA ID, privacy region toggles |
 | Webcam | `stack.conf [webcam]` | Enabled, image/video URLs, refresh interval |
 | Pages | `pages.json` | Per-page visibility checkboxes |
