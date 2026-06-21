@@ -1,6 +1,6 @@
 # Admin Page & Card Plugin Architecture — Execution Plan
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Created:** 2026-06-21
 **Components:** Dashboard SPA (`weewx-clearskies-dashboard`), Config UI (`weewx-clearskies-stack`), API (`weewx-clearskies-api`)
 
@@ -15,7 +15,7 @@
 | **3** — Admin Landing Page + Expanded Sections (Stack) | **COMPLETE** | `665e91b`–`7715611`, fix `83f128c` (auditor: 1 low doc-drift, 1 low dead code, 1 low a11y heading — all remediated) | 2026-06-21 |
 | **4** — Now Page Card Layout Editor (Stack) | **COMPLETE** | stack `c260171`, dash `79de0e5` (thumbnails from live site) | 2026-06-21 |
 | **5** — API Architecture Cleanup | **COMPLETE** | api `806534b`, meta `1b1b594`, fix `6d26e6e` (auditor: 2 medium doc-sync remediated, 1 low deprecation log deferred, 1 low ruff deferred to post-push) | 2026-06-21 |
-| **6** — Deploy + Final Verification | NOT STARTED | — | — |
+| **6** — Deploy + Final Verification | **COMPLETE** | Deployed all repos. API `/pages` returns 9. pytest 2791 passed (31 pre-existing failures, 0 introduced). Caddy routes added. `6323f8a` script fix. | 2026-06-21 |
 
 ---
 
