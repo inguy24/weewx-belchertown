@@ -21,13 +21,19 @@ The original implementation used a single-reading clearness index (Kt) for sky c
 
 ## Decisions
 
-### 1. Sky classification: CAELUS Variability Index system
+### 1. Sky classification: CAELUS as detection engine, K-C as translation layer
 
-**Decision:** Use the six-class Variability Index (VI) system from CAELUS (Ruiz-Arias & Gueymard 2023) adapted for real-time streaming.
+**Decision:** Use CAELUS (Ruiz-Arias & Gueymard 2023) as the **detection engine** — its four indices (Kcs, Km, Kv, Kvf) identify what type of cloud pattern the pyranometer sees. Use Kasten-Czeplak (1980) as the **translation layer** — its empirical formula maps Km values to NWS sky coverage categories for weather display labels.
 
-**Why CAELUS over σ(kc):** The original σ(kc) approach (standard deviation of clearness index over a window) conflated cloud *opacity* with cloud *coverage*. A thin uniform cirrus layer and a patchy cumulus field can produce the same σ(kc) despite being visually distinct sky conditions. CAELUS's four indices (Kcs, Km, Kv, Kvf) capture the *shape* of the irradiance signal — the cumulative absolute first-derivative (Kv, Kvf) measures the roughness of the curve, distinguishing a smooth overcast signal from a jagged broken-cloud signal. σ cannot make this distinction.
+**Why this separation matters:** CAELUS was designed for solar energy applications. Its six class names (CLOUDLESS, CLOUD_ENHANCEMENT, THIN_CLOUDS, SCATTER_CLOUDS, THICK_CLOUDS, OVERCAST) describe irradiance patterns relevant to solar panel production, not weather conditions. The CAELUS README explicitly warns: *"The name of the different sky conditions is only orientative of the expected situations within each class."* CAELUS CLOUDLESS means "stable high output, good for panels" — but you can have scattered clouds visible in the sky while the pyranometer sees CLOUDLESS because the sun is in a gap. CAELUS class names cannot be used directly as weather display labels.
 
-**Scientific foundation:** Ruiz-Arias & Gueymard validated CAELUS on 54 Baseline Surface Radiation Network (BSRN) stations across all major climate zones. The six classes (CLOUDLESS, CLOUD_ENHANCEMENT, THIN_CLOUDS, SCATTER_CLOUDS, THICK_CLOUDS, OVERCAST) emerge from physically distinct irradiance patterns, not arbitrary threshold boundaries. Threshold constants from CAELUS Table 3 (`options.py` in the reference implementation at github.com/jararias/caelus).
+K-C bridges this gap. The formula `Km = 1 - 0.75 × (N/8)^3.4` was derived from correlating ground-based radiation measurements with human-observed cloud cover (oktas). It maps the Km value — which CAELUS computes from pyranometer data — to the NWS sky coverage category that a person looking at the sky would report. The display label comes from K-C's mapping, not from CAELUS's class name.
+
+**The chain:** Pyranometer → CAELUS indices (Kcs, Km, Kv, Kvf) → CAELUS class (identifies the pattern type) → Km value via K-C → NWS okta category → display label. CAELUS tells us the sky's *character* (scattered cumulus vs uniform layer). K-C tells us what that Km *means* in weather terms.
+
+**Why CAELUS over σ(kc):** The original σ(kc) approach (standard deviation of clearness index over a window) conflated cloud *opacity* with cloud *coverage*. CAELUS's four indices capture the *shape* of the irradiance signal — the cumulative absolute first-derivative (Kv, Kvf) measures curve roughness, distinguishing a smooth overcast signal from a jagged broken-cloud signal. σ cannot make this distinction.
+
+**Scientific foundation:** Ruiz-Arias & Gueymard validated CAELUS on 54 BSRN stations across all major climate zones. Threshold constants from CAELUS Table 3 (`options.py` in the reference implementation at github.com/jararias/caelus). K-C validated on decades of ground-based observations correlating radiation with human sky observations.
 
 **Why rejected alternatives:**
 - **Provider cloud cover only** (Option B): Not always available; some providers default to "Clear" when data is absent. Cannot serve as sole source.
@@ -78,11 +84,28 @@ The original implementation used a single-reading clearness index (Kt) for sky c
 - "Scattered Clouds" descriptor pairs with clear-sky labels only: "for scattered clouds you would use 'sunny' or 'clear' or 'mostly sunny' or 'mostly clear' with scattered clouds" (line 229)
 - Stops at Partly Cloudy: "once you hit partly cloudy or mostly cloudy, you do not say scattered clouds or broken clouds anymore" (line 240)
 
-**Why Kasten-Czeplak 1980 is the scientific basis for the sub-split boundaries:** CAELUS does not define sub-splits within SCATTER_CLOUDS — it is one catch-all class. To sub-split it meaningfully, we need a defensible mapping from Km values to NWS sky categories. Kasten & Czeplak (1980) provides exactly this: their empirical formula `Km = 1 - 0.75 × (N/8)^3.4`, derived from ground-based radiation measurements correlated with human-observed cloud cover (oktas), establishes the physical relationship between mean clearness and sky coverage. Using K-C, we can compute what each Km value corresponds to in NWS terms: Km 0.6 ≈ 6.5 oktas (BKN = Mostly Cloudy), Km 0.5 ≈ 7.0 oktas (BKN), Km 0.4 ≈ 7.3 oktas (BKN/OVC boundary). Without K-C, the sub-split boundaries would be arbitrary numbers with no scientific defense.
+**Why K-C sets the boundaries, not CAELUS:** CAELUS does not define sub-splits within SCATTER_CLOUDS — it is one catch-all class. CAELUS's own class boundaries (CLOUDLESS > 0.6, THIN_CLOUDS > 0.5, THICK_CLOUDS < 0.4) describe solar production categories, not weather display categories. Using those boundaries as display-label thresholds produced wrong results: Km 0.85 (which K-C maps to ~5 oktas, BKN, "Mostly Cloudy") was labeled "Sunny, Scattered Clouds" because 0.85 > 0.6. The CAELUS boundary at 0.6 means "good enough for solar production to call it cloudless" — it does NOT mean "the sky looks clear to a person."
 
-**Why the sub-split thresholds are conservative:** K-C's theoretical boundaries (Clear > 0.99, Mostly Clear > 0.97) fall within the noise floor of consumer pyranometers (Davis ±3-5%, Ambient ~±15% per manufacturer specs; ISO 9060:2018 Class C ≤ 5%). This means tight thresholds at the clear end of the spectrum cannot be reliably resolved by the hardware most operators run. CAELUS avoids this entirely — "Clear" is detected via the CLOUDLESS anchor class (Km > 0.6 + Kcs + Kv constraints), which classifies the *pattern* rather than resolving a narrow Km band. The SCATTER_CLOUDS sub-splits operate in the Km 0.4-0.6 range where the K-C curve has more slope and sensor noise is less dominant.
+K-C provides the correct mapping. The formula `Km = 1 - 0.75 × (N/8)^3.4` was derived from correlating measured radiation with human-observed cloud cover. It tells us what each Km value means in terms of sky coverage:
 
-**Operator adjustability:** Because sensor accuracy varies across installations, the sub-split thresholds are operator-adjustable via the admin UI. The K-C reference table is displayed alongside the threshold controls so operators can see what each Km boundary means in terms of sky coverage. An operator with a research-grade thermopile pyranometer (ISO Class A, ≤ 1.8% uncertainty) can tighten thresholds toward K-C theoretical values. An operator with a consumer photodiode sensor can widen them. The defaults are conservative — biased toward avoiding false "Clear" classifications under overcast, which was the original bug.
+| K-C boundary | Km | Oktas | NWS category |
+|---|---|---|---|
+| CLR/FEW | 0.97 | ~2 | Clear → Mostly Clear |
+| FEW/SCT | 0.85 | ~4 | Mostly Clear → Partly Cloudy |
+| BKN/OVC | 0.52 | ~7 | Mostly Cloudy → Cloudy |
+
+The sub-split thresholds use these K-C boundaries:
+
+| Km range | K-C oktas | Display label |
+|---|---|---|
+| > 0.97 | 0-2 (CLR/FEW) | Clear, Scattered Clouds |
+| 0.85–0.97 | 2-4 (FEW/SCT) | Mostly Clear, Scattered Clouds |
+| 0.52–0.85 | 4-7 (SCT/BKN) | Partly Cloudy |
+| < 0.52 | 7+ (BKN/OVC) | Mostly Cloudy |
+
+**Sensor noise at the top:** K-C's Clear boundary (Km > 0.99) is inside consumer sensor noise (Davis ±3-5%). But within SCATTER_CLOUDS, Kv ≥ 0.03 — there IS variability, meaning clouds ARE present. The CLOUDLESS anchor (which requires Kv < 0.03) handles truly clear skies. The SCATTER_CLOUDS sub-splits only fire when the CAELUS engine has already confirmed cloud-induced variability exists. "Clear, Scattered Clouds" at Km > 0.97 means: very high clearness but with confirmed cloud transits — a mostly-blue sky with a few clouds drifting through.
+
+**Operator adjustability:** Thresholds are adjustable via the admin UI. The K-C table is displayed so operators can see what each boundary means in sky coverage terms.
 
 ### 7. OVERCAST sub-splits by Km × Kv
 

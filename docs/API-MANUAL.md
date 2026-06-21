@@ -555,16 +555,16 @@ Kv is the cumulative absolute first-derivative of **clear-sky-detrended** GHI. E
 | THICK_CLOUDS | Km < 0.4 AND Kv ∈ [0.04, 0.16) | Mostly Cloudy |
 | SCATTER_CLOUDS | Everything else in cloudy zone | Km-dependent (see below) |
 
-**SCATTER_CLOUDS Km sub-split** (patchy cumulus, sun in and out):
+**SCATTER_CLOUDS Km sub-split** (patchy cumulus, sun in and out). Boundaries from Kasten-Czeplak (1980) `Km = 1 - 0.75 × (N/8)^3.4` — maps Km to NWS okta-based sky coverage categories. CAELUS is the detection engine (identifies the cloud pattern); K-C is the translation layer (maps Km to weather display labels). See ADR-044 §1 and §6 for why this separation is necessary.
 
-| Km range | Display label |
-|----------|---------------|
-| > 0.6 | Clear, Scattered Clouds |
-| 0.5–0.6 | Mostly Clear, Scattered Clouds |
-| 0.4–0.5 | Partly Cloudy |
-| < 0.4 | Mostly Cloudy |
+| Km range | K-C oktas | Display label |
+|----------|-----------|---------------|
+| > 0.97 | 0–2 (CLR/FEW) | Clear, Scattered Clouds |
+| 0.85–0.97 | 2–4 (FEW/SCT) | Mostly Clear, Scattered Clouds |
+| 0.52–0.85 | 4–7 (SCT/BKN) | Partly Cloudy |
+| < 0.52 | 7+ (BKN/OVC) | Mostly Cloudy |
 
-"Scattered Clouds" descriptor only appears when the sky is predominantly clear — at Partly Cloudy and below, the base label carries it alone.
+"Scattered Clouds" descriptor only appears when sky is predominantly clear (K-C FEW or better). At Partly Cloudy and denser, the base label carries it alone.
 
 **OVERCAST zone Km×Kv sub-split** (Km < 0.3, Kv < 0.10):
 
