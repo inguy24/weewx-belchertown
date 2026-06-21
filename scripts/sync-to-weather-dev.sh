@@ -23,9 +23,10 @@
 
 set -eu
 
+# Repos deployed to weather-dev. The API repo is NOT included — it runs on
+# the weewx container, not weather-dev. To pull the API on weather-dev for
+# pytest, pass it explicitly: ./sync-to-weather-dev.sh weewx-clearskies-api
 ALL_REPOS=(
-    weewx-clearskies-api
-    weewx-clearskies-realtime
     weewx-clearskies-dashboard
     weewx-clearskies-stack
     weewx-clearskies-design-tokens
