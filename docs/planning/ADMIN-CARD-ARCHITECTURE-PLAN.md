@@ -9,9 +9,9 @@
 | Phase | Status | Commit | Date |
 |-------|--------|--------|------|
 | **0A** — ADRs + Manual Updates | **COMPLETE** | `f638cbb` | 2026-06-21 |
-| **0B** — Card Plugin Architecture (Dashboard) | NOT STARTED | — | — |
+| **0B** — Card Plugin Architecture (Dashboard) | **COMPLETE** | `07160ae`–`85e3860` | 2026-06-21 |
 | **1** — Dynamic Now Page (Dashboard) | NOT STARTED | — | — |
-| **2** — Page Visibility: Static Config + Dashboard | NOT STARTED | — | — |
+| **2** — Page Visibility: Static Config + Dashboard | **COMPLETE** | stack `929ebf6`, dash `716cb25` | 2026-06-21 |
 | **3** — Admin Landing Page + Expanded Sections (Stack) | NOT STARTED | — | — |
 | **4** — Now Page Card Layout Editor (Stack) | NOT STARTED | — | — |
 | **5** — API Architecture Cleanup | NOT STARTED | — | — |

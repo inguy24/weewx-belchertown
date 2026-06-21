@@ -51,7 +51,7 @@ SERVICES=(
 # rsync must NEVER delete or write into it. webcam.json is a manually-managed
 # config file at the web root level — not part of the Vite build output — so it
 # must also be excluded from --delete pruning.
-WEBCAM_EXCLUDES=("webcam/" "webcam.json")
+WEBCAM_EXCLUDES=("webcam/" "webcam.json" "cards/")
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
