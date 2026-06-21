@@ -535,7 +535,7 @@ The conditions text engine is a multi-module stateful system that produces the `
 
 Kv is the cumulative absolute first-derivative of **clear-sky-detrended** GHI. Each minute-to-minute GHI change has the corresponding maxSolarRad change subtracted before taking the absolute value and summing. This removes the deterministic solar geometry signal (the sun rising and setting changes GHI even under clear skies) and isolates cloud-induced variability. Without detrending, a clear afternoon's steady GHI decline produces Kv above the CLOUDLESS threshold (0.03), causing false "Mostly Sunny" classifications.
 
-**Scientific basis:** Detrending by a clear-sky model to isolate cloud variability from solar geometry is standard practice in solar energy research. Stein et al. 2012 (Sandia Variability Index, SAND2012-3464C) defined variability as the ratio of measured GHI path length to clear-sky path length. Coimbra et al. 2013 established that dividing by clear-sky irradiance produces a near-stationary signal whose fluctuations reflect only atmospheric (cloud) effects. CAELUS uses centered rolling windows (batch mode) which partially suppress the geometry trend; our real-time trailing window uses explicit clear-sky detrending to achieve the same effect.
+**Scientific basis:** See ADR-044 §2 for why clear-sky detrending is necessary and the research (Stein et al. 2012, Coimbra et al. 2013) that establishes it as standard practice. Full citations in `docs/reference/sky-classification-science.md` §2.
 
 - Classify using CAELUS set-based logic (matching the reference implementation at `github.com/jararias/caelus`). Three anchor classes are evaluated independently; the cloudy zone is the residual:
 
@@ -583,7 +583,17 @@ Thresholds from CAELUS `options.py` (Table 3), validated on 54 BSRN stations acr
 
 **Startup backfill:** On API restart, `backfill()` seeds the ring buffer from archive records (last 30 minutes) for immediate classification. Full accuracy after ~30 minutes of live LOOP data.
 
-**Secondary source (night / twilight / startup / no pyranometer):** Provider cloud cover percentage, via `_cloud_pct_to_sky()`. Cannot produce "Scattered Clouds" composites (no Kv from a cloud percentage). Thresholds: ≤10% Clear, ≤25% Mostly Clear, ≤50% Partly Cloudy, ≤85% Mostly Cloudy, ≤95% Cloudy, >95% Overcast.
+**GHI mirroring across sunrise/sunset:** At sunrise, the trailing 30-minute window has only a few minutes of data. Under overcast, this inflates Km (diffuse radiation at low angles is a high fraction of the small clear-sky reference), producing incorrect sunny/scattered labels. The mirroring algorithm (adapted from CAELUS `sky_indices.py:mirror_ghi_with_pandas()`) generates synthetic pre-sunrise data points using cos(zenith) interpolation from post-sunrise measurements, stabilizing the rolling statistics. Station coordinates (lat/lon/altitude from `services/station.py`) and Skyfield ephemeris (from `services/almanac.py`) are used to compute cos(zenith) for both real and mirrored entries. Full scientific description in `docs/reference/sky-classification-science.md` §3.
+
+**SZA < 85° classification guard:** When solar elevation < 5° (SZA > 85°), `classify()` returns None. The downstream consumer (`enrichment/weather_text.py`) falls back to provider cloud cover. This matches CAELUS's own SZA filter. Solar elevation is computed via Skyfield from station coordinates (same ephemeris used by the almanac service). The previous `_MIN_SOLAR_RAD = 20 W/m²` proxy is retained for ring buffer data acceptance — data still accumulates below the SZA threshold to be available when elevation crosses 5°.
+
+**Kv/Kvf clear-sky detrending:** Described in the index formula table above. Scientific reasoning for why detrending is necessary: ADR-044 §2. Full citations: `docs/reference/sky-classification-science.md` §2.
+
+**Haze/smoke detection — known gap:** ADR-044 §1c describes a detection heuristic but it has not been implemented. Needs further research on AQI thresholds for diverse regions.
+
+**Secondary source (night / twilight / startup / no pyranometer):** Provider cloud cover percentage, via `_cloud_pct_to_sky()`. Cannot produce "Scattered Clouds" composites (no Kv from a cloud percentage). Thresholds: ≤10% Clear, ≤25% Mostly Clear, ≤50% Partly Cloudy, ≤85% Mostly Cloudy, ≤95% Cloudy, >95% Overcast. Note: these code thresholds differ from the NWS ASOS okta-based thresholds in ADR-044 §1b (0–6/7–31/32–56/57–87/88–100). The code thresholds are wider bins implemented as a pragmatic approximation. Operator adjustability is planned via the admin UI.
+
+**Scientific basis and operator calibration:** ADR-044 records the scientific reasoning behind every threshold and classification decision. Full citations in `docs/reference/sky-classification-science.md`. SCATTER_CLOUDS Km sub-split and OVERCAST Km×Kv sub-split thresholds are operator-adjustable via the admin UI (`docs/planning/ADMIN-CARD-ARCHITECTURE-PLAN.md` Phase 3, T3.5).
 
 ### Day/night display vocabulary
 
@@ -601,7 +611,7 @@ Apply day/night vocabulary at display time via substring replacement ("Clear"→
 | Overcast | Overcast | Overcast |
 | Heavy Overcast | Heavy Overcast | Heavy Overcast |
 
-Solar zenith > 96° = night; 80–96° = civil twilight (fall back to provider); < 80° = day. Compute zenith from station coordinates and timestamp via pvlib `solarposition` or equivalent.
+Solar zenith > 96° = night; 85–96° = twilight/SZA guard zone (fall back to provider); < 85° = day (solar classification active). Solar elevation computed via Skyfield from station lat/lon/altitude (`services/almanac.py`). The SZA < 85° guard (elevation ≥ 5°) gates classification; below this threshold `classify()` returns None and the provider fallback supplies the sky label.
 
 ### Precipitation
 
