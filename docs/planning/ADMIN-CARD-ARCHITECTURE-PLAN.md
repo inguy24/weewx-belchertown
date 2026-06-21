@@ -13,7 +13,7 @@
 | **1** — Dynamic Now Page (Dashboard) | **COMPLETE** | `295c67a`, fix `a433b3b` (auditor: 1 medium deferred [F1 getEndpointsForCards skip flags], 1 low remediated [F2 null init]) | 2026-06-21 |
 | **2** — Page Visibility: Static Config + Dashboard | **COMPLETE** | stack `929ebf6`, dash `716cb25`, fix `f021350` (auditor: 1 low, remediated) | 2026-06-21 |
 | **3** — Admin Landing Page + Expanded Sections (Stack) | **COMPLETE** | `665e91b`–`7715611`, fix `83f128c` (auditor: 1 low doc-drift, 1 low dead code, 1 low a11y heading — all remediated) | 2026-06-21 |
-| **4** — Now Page Card Layout Editor (Stack) | NOT STARTED | — | — |
+| **4** — Now Page Card Layout Editor (Stack) | **COMPLETE** | stack `c260171`, dash `79de0e5` (thumbnails from live site) | 2026-06-21 |
 | **5** — API Architecture Cleanup | **COMPLETE** | api `806534b`, meta `1b1b594`, fix `6d26e6e` (auditor: 2 medium doc-sync remediated, 1 low deprecation log deferred, 1 low ruff deferred to post-push) | 2026-06-21 |
 | **6** — Deploy + Final Verification | NOT STARTED | — | — |
 
