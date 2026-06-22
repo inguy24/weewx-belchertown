@@ -859,7 +859,7 @@ The haze detection channel compares current Kcs against a station-specific clean
 **Hardware change detection:**
 - Station type tracking: `calibration.json` records the `station_type` from `weewx.conf` at last persist. On startup, if the current station type differs from the persisted value, a WARNING is logged.
 - Drift detection: Within each month, if the mean of the last 10 samples diverges from the month's baseline by more than 0.05 (5%), a drift warning is generated and reported in the admin UI.
-- Manual reset: The admin UI "Reset Calibration" button clears all samples and baselines and triggers re-bootstrap if conditions are met.
+- Manual reset: The admin UI "Reset Calibration" button clears all samples and baselines. Re-bootstrap runs automatically on the next API restart if conditions are met (OpenAQ key present, radiation column available).
 
 **Graceful sensor failover:**
 

@@ -243,7 +243,7 @@ Used by the config UI wizard per ADR-038. Not proxied through Caddy — config U
 | `/setup/current-config` | GET | Full config for re-run | Proxy secret |
 | `/setup/restart` | POST | Trigger graceful service restart | Proxy secret |
 | `/setup/calibration-state` | GET | Per-month calibration data for admin UI | Proxy secret |
-| `/setup/calibration-reset` | POST | Clear calibration data, trigger re-bootstrap | Proxy secret |
+| `/setup/calibration-reset` | POST | Clear calibration data (re-bootstrap on next restart) | Proxy secret |
 
 ### Health & metrics (separate loopback port 8081)
 

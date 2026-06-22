@@ -85,7 +85,7 @@ When sensor data is absent, the affected module silently falls back to provider 
 Admin UI runs on weather-dev; calibration data lives on weewx. Two new endpoints enable cross-host access:
 
 - `GET /setup/calibration-state` — returns per-month calibration data. Auth: proxy secret.
-- `POST /setup/calibration-reset` — clears all data, triggers re-bootstrap. Auth: proxy secret.
+- `POST /setup/calibration-reset` — clears all data (re-bootstrap on next restart). Auth: proxy secret.
 
 ## Consequences
 
@@ -119,7 +119,7 @@ Admin UI runs on weather-dev; calibration data lives on weewx. Two new endpoints
 - [ ] Drift detection: last-10-sample mean vs baseline divergence > 0.05 triggers warning
 - [ ] Station type change: logged WARNING on startup if persisted type differs from current
 - [ ] `GET /setup/calibration-state` returns per-month data (auth: proxy secret)
-- [ ] `POST /setup/calibration-reset` clears all data and triggers re-bootstrap (auth: proxy secret)
+- [ ] `POST /setup/calibration-reset` clears all data; re-bootstrap runs on next restart (auth: proxy secret)
 - [ ] Missing pyranometer → calibration skipped, haze defers to provider present weather
 - [ ] Missing hygrometer → f(RH) correction skipped, fog/mist defers to provider
 - [ ] Admin 12-month grid renders with per-month counts, baselines, and status indicators
