@@ -1,8 +1,8 @@
 # Haze/Fog/NWS Text — Implementation Plan
 
-**Status:** IN PROGRESS — Phase 8 complete, awaiting user approval before Phase 9  
+**Status:** IN PROGRESS — Phase 9 complete, awaiting user approval before Phase 10  
 **Created:** 2026-06-21  
-**Updated:** 2026-06-22 (Phase 8 complete)  
+**Updated:** 2026-06-22 (Phase 9 complete)  
 **Origin:** Replaces Part 2 of [HAZE-FOG-NWS-TEXT-PLAN.md](HAZE-FOG-NWS-TEXT-PLAN.md) (research plan)  
 **Components:** API (`weewx-clearskies-api`), Stack (`weewx-clearskies-stack`), Dashboard (`weewx-clearskies-dashboard`)
 
@@ -35,7 +35,7 @@ The UI-LEGAL-WIZARD-PLAN is the reference standard for plan structure. This rewr
 | 6 | Nighttime Mode + Auto-Calibration | ✅ COMPLETE | api: b979935 (T6.1), cff995f + 2fd438b (T6.2/T6.3) |
 | 7 | NWS Text System | ✅ COMPLETE | api: b9c9964 (T7.2), 718dd67 (T7.1), 8cecb28 (T7.3), 01a2f1d (wiring) |
 | 8 | Bootstrap & Configuration | ✅ COMPLETE | api: 22ddcc9 (T8.2a), 66e1183 (T8.1), stack: 4a32ea0 (T8.2b) |
-| 9 | Integration Testing & QA | ⬜ NOT STARTED | — |
+| 9 | Integration Testing & QA | ✅ COMPLETE | api: c033111 (T9.2), 8deaf4f (T9.1), 7727872 (T9.3), 10767a0 (OpenAQ two-station), 9c4be50 (F1/F2), 064fe38 (F3 f(RH)), 42a34bf (F4 units), 1f74bb4 (test fixes); meta: a62b139 (F5/F7 docs) |
 | 10 | Deploy & Final Verification | ⬜ NOT STARTED | — |
 
 ---
@@ -359,10 +359,35 @@ New subsections to add:
 
 ### PHASE 9 — Integration Testing & QA
 
-**T9.1 — Write integration tests for haze detection**
-**T9.2 — Write integration tests for fog improvements**
-**T9.3 — Write integration tests for text generation + new providers**
-**T9.4 — Full audit against ADRs + manuals**
+**T9.1 — Haze detection tests** ✅
+- Owner: `clearskies-test-author` (Sonnet)
+- Files: `tests/test_haze_condition.py` (51 tests), `tests/test_auto_calibration.py` (40 tests), `tests/test_pm_feed.py` (25 tests)
+- Commits: 8deaf4f (tests), 2e0eb3e + 1f74bb4 (fixes for f(RH) threshold + RH gate)
+
+**T9.2 — Fog improvement tests** ✅
+- Owner: `clearskies-test-author` (Sonnet)
+- Files: `tests/test_fog_condition.py` (59 tests)
+- Commits: c033111 (tests), 2e0eb3e (coherence pruning fix)
+
+**T9.3 — Text generation + providers tests** ✅
+- Owner: `clearskies-test-author` (Sonnet)
+- Files: `tests/test_text_generator.py` (37 tests), `tests/test_weather_code.py` (28 tests), `tests/test_provider_weather_feed.py` (13 tests), `tests/providers/aqi/test_openaq.py` (30 tests), 2 fixture files
+- Commits: 7727872 (tests), 2e0eb3e (rate limiter fix), 4c92cdc + 1f74bb4 (state var renames + °F labels)
+
+**T9.4 — Full audit against ADRs + manuals** ✅
+- Owner: `clearskies-auditor` (Sonnet) + Coordinator remediation
+- 8 findings, all resolved:
+  - F1 (HIGH): auto_calibration PM gate required both PM2.5+PM10 — fixed to PM2.5 only, PM10 optional (9c4be50)
+  - F2 (HIGH): "Scattered" in clean-sky substrings — removed (9c4be50)
+  - F3 (HIGH): f(RH) correction dead variable — applied with deficit threshold scaling per Hanel 1976 (064fe38)
+  - F4 (MEDIUM): Text generator US-only — added Metric/MetricWX unit-aware rendering (42a34bf, a74bb06 wiring)
+  - F5 (MEDIUM): OPERATIONS-MANUAL wrong gamma key name/range — fixed (meta: a62b139)
+  - F6 (LOW): Temporal coherence wording — pushed back, acceptance criterion satisfied
+  - F7 (MEDIUM): ARCHITECTURE.md missing OpenAQ — fixed (meta: a62b139)
+  - F8 (MEDIUM): Confidence level in admin UI — pushed back, state enum serves this purpose
+- Additional enhancement: OpenAQ two-station PM2.5/PM10 resolution (10767a0) — separately queries for PM10 when not co-located with PM2.5
+
+**Pytest results:** 354 new tests passing. Full suite: 3188+ passed, 358 skipped, 3 pre-existing failures (OWM Redis cache × 2, weewx metadata × 1).
 
 ### PHASE 10 — Deploy & Final Verification
 
