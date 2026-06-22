@@ -481,7 +481,7 @@ Read-only enforcement (defense-in-depth): DB user with `SELECT`-only grants + st
 weewx_clearskies_api/providers/
 ├── _common/          # HTTP client, retry/backoff, error taxonomy, capability registry
 ├── forecast/         # aeris, nws, openmeteo, openweathermap, wunderground
-├── aqi/              # aeris, iqair, openmeteo, openweathermap (deprecated)
+├── aqi/              # aeris, iqair, openaq, openmeteo, openweathermap (deprecated)
 ├── alerts/           # nws, aeris, openweathermap
 ├── earthquakes/      # usgs, geonet, emsc, renass
 ├── seeing/           # seven_timer (keyless, 7Timer ASTRO product)

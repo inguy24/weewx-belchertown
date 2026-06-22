@@ -382,7 +382,7 @@ Hand-rolled Python settings classes, parsed from ConfigObj. Do not use Pydantic 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `haze_detection` | bool | `true` | Enable or disable the haze detection engine. When `false`, sky classification runs without haze confirmation and haze-related calibration is inactive. |
-| `haze_gamma` | float | `0.45` | Hygroscopic correction gamma parameter in the f(RH) correction factor. Controls how strongly relative humidity scales apparent extinction. Valid range: 0.12–1.52 (composition-dependent). Default 0.45 is appropriate for mixed continental aerosol. |
+| `gamma` | float | `0.45` | Hygroscopic correction gamma parameter in the f(RH) correction factor. Controls how strongly relative humidity scales apparent extinction. Valid range: 0.1–1.0. Default 0.45 is appropriate for mixed continental aerosol. |
 | `haze_aqi_provider` | string | (inherits from `[aqi]`) | AQI provider used for haze PM data. Must be an observed-data provider (Aeris or IQAir). Falls back to the `[aqi]` section provider if not set. Model-based providers (Open-Meteo) are not accepted here — the haze engine will log an error and disable haze confirmation if a non-observed provider is configured. |
 | `calibration_percentile` | float | `0.92` | Percentile for clean-sky baseline computation. The baseline Kcs is taken at this percentile of accumulated clean-sky samples in the rolling window. Valid range: 0.90–0.95. |
 | `calibration_window_days` | int | `90` | Rolling window size in days for seasonal baseline computation. Samples older than this window are excluded from the current percentile. A 180-day fallback window activates automatically when the 90-day window has fewer than 15 samples. |
