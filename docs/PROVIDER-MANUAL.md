@@ -311,8 +311,8 @@ The two paths do not coordinate. An operator can use both simultaneously.
 | Module | Location | Key required | Coverage | Data type | Haze-eligible |
 |---|---|---|---|---|---|
 | `aeris` | `providers/aqi/aeris.py` | Yes | Global; 8 regional AQI scales | Observed (monitoring networks) | Yes |
-
 | `iqair` | `providers/aqi/iqair.py` | Yes | Global; US EPA and China MEP scales | Observed (monitors + crowd-sourced) | Yes |
+| `openaq` | `providers/aqi/openaq.py` | Yes (free) | 141 countries, ~2016–present | Observed (government reference monitors) | Yes |
 | `openmeteo` | `providers/aqi/openmeteo.py` | No | Global; US EPA and European AQI | Model-based (CAMS forecast) | No |
 | `openweathermap` | `providers/aqi/openweathermap.py` | Yes | Global; OWM 1-5 ordinal scale | Model-based (SILAM forecast) — **DEPRECATED** | No |
 
@@ -326,6 +326,7 @@ The `is_observed_source` capability flag on each provider module controls haze e
 |---|---|---|
 | `aeris` | `True` | Blended real-time monitoring networks (observed) |
 | `iqair` | `True` | Monitoring stations + crowd-sourced sensors (observed) |
+| `openaq` | `True` | Government reference monitors (observed) |
 | `openmeteo` | `False` | CAMS global atmospheric composition model (forecast) |
 | `openweathermap` | `False` | SILAM atmospheric dispersion model (forecast) — deprecated |
 
@@ -404,9 +405,54 @@ The setup wizard auto-suggests the regional setting based on the operator's stat
 
 **Deprecated.** OWM AQI uses the SILAM atmospheric dispersion model — it returns predicted PM concentrations, not observed measurements. PM2.5 and PM10 values from this provider are not eligible for haze confirmation. The module logs a deprecation warning at startup when configured and logs a warning on each `fetch()` call. The module continues to function for general AQI display.
 
-Operators should migrate to Aeris or AirNow for haze-eligible AQI data. OWM AQI will be removed in the next major version.
+Operators should migrate to Aeris or IQAir for haze-eligible AQI data. OWM AQI will be removed in the next major version.
 
 Existing operator behavior is unchanged: the AQI card renders normally. Only haze detection is affected — the haze engine ignores PM data from this provider.
+
+### OpenAQ AQI provider
+
+**Module:** `providers/aqi/openaq.py`  
+**`is_observed_source`:** `True`
+
+**Coverage:** 141 countries, approximately 2016–present. Data comes from government reference PM2.5 monitors only — the same regulatory-grade instruments used for official air quality reporting. PM2.5 and PM10 only; no composite AQI index and no gas-phase pollutants (O3, NO2, SO2, CO) are returned.
+
+**Auth:** API key via `X-API-Key` request header. Register for a free key at https://explore.openaq.org/register. Set the key in `secrets.env` as `WEEWX_CLEARSKIES_OPENAQ_API_KEY=<your-key>`.
+
+**Env var:** `WEEWX_CLEARSKIES_OPENAQ_API_KEY`
+
+**Rate limits (free tier):** 60 requests/minute, 2,000 requests/hour.
+
+**Cache TTL:** 3,600 s (1 hour). OpenAQ reference monitors typically update with a 1–2 hour lag relative to real-time. A 1-hour TTL matches that lag and avoids unnecessary API calls against a response that has not changed.
+
+**`aqiScale`:** None. OpenAQ returns raw PM concentrations in µg/m³ only. No AQI index is computed. `aqi` and `aqiCategory` are `null` in the canonical response; the AQI card renders the available concentration fields.
+
+**`is_observed_source = True`** — OpenAQ sourcing is limited to government reference monitors (`sensor_type = reference grade`). PM2.5 and PM10 values are observed concentrations eligible for haze confirmation.
+
+**Canonical field mapping:**
+
+| OpenAQ wire field | Canonical field | Notes |
+|---|---|---|
+| `results[0].measurements[N].value` where `parameter == "pm25"` | `pollutantPM25` | µg/m³ |
+| `results[0].measurements[N].value` where `parameter == "pm10"` | `pollutantPM10` | µg/m³ |
+| (not returned) | `aqi` | Always `null` — OpenAQ does not provide an index |
+| (not returned) | `aqiCategory` | Always `null` |
+| (not returned) | `aqiScale` | Always `null` |
+
+**Bootstrap source:** OpenAQ is also used as the calibration bootstrap data source. The `clearskies-api bootstrap` CLI uses the OpenAQ API to pull historical PM2.5 records for seeding the auto-calibration baseline. See OPERATIONS-MANUAL §4 bootstrap procedure.
+
+**Not recommended as primary AQI provider** for operators who need a composite AQI index or gas-phase pollutant data. Aeris and IQAir return lower-latency data with full pollutant coverage. Use OpenAQ when neither Aeris nor IQAir is available, or when PM-concentration-only data is acceptable for the AQI card.
+
+**ToS:** https://openaq.org/about/licensing/  
+**Key signup:** https://explore.openaq.org/register
+
+### AQI provider recommendation hierarchy
+
+| Priority | Provider | Key cost | Latency | AQI index | Haze-eligible | Notes |
+|---|---|---|---|---|---|---|
+| 1 | `aeris` | Free for PWS contributors | Minutes | Yes (8 scales) | Yes | Recommended default. Free via PWSWeather Contributor Plan; returns composite AQI + full pollutant suite from observed monitoring networks. |
+| 2 | `iqair` | Paid | Minutes | Yes (US EPA, China MEP) | Yes | Gold standard for latency and data quality. Proprietary network + government monitors. Use when accuracy is the priority and budget allows. |
+| 3 | `openaq` | Free | 1–2 hours | No | Yes | Free for all operators. Observed government reference data; haze-eligible. Data lag of 1–2 hours makes it unsuitable for real-time AQI display but acceptable for haze confirmation. |
+| 4 | `openmeteo` | Free | Hours | Yes (US EPA, European) | No | Model-based (CAMS). No observed data; not haze-eligible. Use only when no observed provider is available and haze detection is not required. |
 
 ### AQI card rendering
 

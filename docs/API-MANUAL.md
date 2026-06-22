@@ -847,15 +847,11 @@ The haze detection channel compares current Kcs against a station-specific clean
 
 **Persistent storage:** Baseline samples and current percentile are written to `/etc/weewx-clearskies/calibration.json` (or SQLite) and read back on API restart.
 
-**Bootstrap data sources** for new installs without enough live history:
+**Bootstrap data source:** OpenAQ API v3. Provides hourly PM2.5 from government reference monitors in 141 countries (~2016–present). Free API key required (register at https://explore.openaq.org/register). The bootstrap CLI automatically finds the nearest PM2.5 monitor within 25 km of the station and pulls historical data.
 
-| Source | Coverage | Cost | Format |
-|--------|----------|------|--------|
-| EPA AQS annual CSV | US (hourly PM2.5, parameter code 88101, 1980–present) | Free | CSV |
-| OpenAQ S3 archive | 141 countries, 2016–present | Free, no credentials | CSV/JSON |
-| Aeris historical archive | January 2024–present | Aeris subscribers only | API |
+Bootstrap CLI: `clearskies-api bootstrap [--years N] [--max-distance-km N]`
 
-Bootstrap import: `clearskies-api bootstrap --pm-source file.csv --format epa-aqs` (CLI) or admin UI file upload.
+The `--years` flag controls how many years of history to pull (default: 2). The `--max-distance-km` flag sets the search radius for the nearest monitor (default: 25, max: 25 per OpenAQ API).
 
 **maxSolarRad recomputation for NULL archive records:** Pre-weewx 4.0 archive records may have NULL maxSolarRad. Recompute using the Ryan-Stolzenbach formula (lat/lon/altitude + timestamp + atc=0.80). Output is computationally identical to what weewx 4.0+ stores. Implemented in `sse/auto_calibration.py`; the reference formula is `weewx/wxformulas.py:solar_rad_RS()`.
 

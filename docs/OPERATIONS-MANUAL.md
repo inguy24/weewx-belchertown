@@ -552,41 +552,53 @@ Use the CLI wizard for SSH-only installs where opening a browser on the LAN is n
 
 The haze detection baseline requires a minimum of 22 clean-sky samples in a 90-day window before it activates. Without historical PM data, building this baseline from real-time observations takes 4–6 months depending on local weather and air quality. Bootstrapping from historical PM data activates the baseline immediately.
 
-**Step 1 — Determine PM data source.**
+**Prerequisites:**
+- OpenAQ API key. Register for free at https://explore.openaq.org/register. Set the key in `secrets.env` as `WEEWX_CLEARSKIES_OPENAQ_API_KEY=<your-key>`.
+- A PM2.5 reference monitor within 25 km of the station. Check coverage at https://explore.openaq.org/.
 
-- **US stations:** Download EPA AQS annual CSV files from `https://aqs.epa.gov/aqsweb/airdata/download_files.html`. Select "Hourly Data" → PM2.5 FRM/FEM (parameter code 88101). Download the year(s) matching your weewx archive range. Files are free, require no registration, and contain quality-assured hourly PM2.5 concentrations from all US reference monitors.
-
-  For data from the past 6 months (not yet in the AQS release), supplement with AirNow hourly observation files from `https://files.airnowtech.org/airnow/YYYY/YYYYMMDD/`.
-
-- **Non-US stations:** Download from the OpenAQ AWS S3 archive at `s3://openaq-data-archive`. The archive is publicly accessible with no credentials required and is organized by `records/csv.gz/locationid={id}/year={year}/month={month}/`. Data coverage begins approximately 2016 for most government reference monitor networks across 141 countries. Locate the nearest sensor ID using the OpenAQ explore interface at `https://explore.openaq.org/`.
-
-- **Aeris subscribers:** The Xweather historical archive endpoint (`https://data.api.xweather.com/airquality/archive/{action}`) provides hourly PM2.5 and PM10 from January 2024 onward. Each archive request counts as 5× a normal API access against the subscription allotment. Use this path only if EPA AQS lacks a nearby monitor and an Xweather subscription is already active.
-
-**Step 2 — Import via admin UI.**
-
-Navigate to Admin → Sky Classification → Haze Calibration → Import Historical PM Data. Upload the CSV file. Select the file format: EPA AQS, Generic CSV (columns: timestamp, PM2.5, PM10), or OpenAQ. The system validates timestamps, PM concentration values (accepted range: 0–999 µg/m³), and deduplicates by timestamp.
-
-**Step 3 — Import via CLI.**
+**Step 1 — Run the bootstrap command.**
 
 ```bash
-clearskies-api bootstrap --pm-source file.csv --format epa-aqs
-# or
-clearskies-api bootstrap --pm-source file.csv --format generic
-# or
-clearskies-api bootstrap --pm-source file.csv --format openaq
+clearskies-api bootstrap
 ```
 
-Both the admin UI and CLI import paths produce identical calibration output. Use whichever is accessible.
+The command automatically:
+1. Reads station coordinates (latitude, longitude, altitude) from `weewx.conf`.
+2. Queries the OpenAQ API to find the nearest PM2.5 reference monitor within 25 km.
+3. Pulls 2 years of hourly PM2.5 data from that monitor.
+4. Matches each PM record against the weewx archive (±30-minute window).
+5. Computes Kcs (clearness index) for each matched record where radiation data is available.
+6. Filters for clean-sky samples: PM2.5 < 12 µg/m³, sun above 10°, no rain, Kcs > 0.3.
+7. Seeds the auto-calibration baseline and saves to `/etc/weewx-clearskies/calibration.json`.
 
-**Step 4 — Monitor import progress.**
+Optional flags:
+- `--years N` — years of history to pull (default: 2)
+- `--max-distance-km N` — search radius for nearest monitor in km (default: 25)
 
-The admin UI shows: import progress, total records imported, number qualifying as clean-sky samples (PM2.5 < 12 µg/m³, PM10 < 50 µg/m³, solar elevation > 10°, sky clear, no recent rain), and the current baseline state. A nearest-station distance warning appears when the nearest PM monitor is more than 25 km from the station coordinates.
+**Step 2 — Review the output.**
 
-**Step 5 — maxSolarRad recomputation (pre-weewx 4.0 archives).**
+The command prints a summary:
+
+```
+OpenAQ bootstrap
+  Nearest PM2.5 monitor: "Station Name" (3.2 km away)
+  Pulling 2 year(s) of history...
+  Retrieved 17,520 PM2.5 records
+  Matching against weewx archive...
+  Results:
+    Archive matched:          14,200
+    Clean-sky samples:         1,847
+    Skipped (no archive):      3,320
+    ...
+  Calibration state: calibrated (1,847 samples, baseline Kcs = 0.872)
+  Saved to /etc/weewx-clearskies/calibration.json
+```
+
+**Step 3 — maxSolarRad recomputation (pre-weewx 4.0 archives).**
 
 weewx 4.0.0 began natively archiving `maxSolarRad`. Stations running older weewx versions have NULL in this column for historical records, which prevents Kcs computation. The bootstrap process automatically recomputes `maxSolarRad` for these records using the Ryan-Stolzenbach formula, given the station's latitude, longitude, and altitude from `weewx.conf`. Recomputed values are computationally identical to what weewx would have stored.
 
-**Step 6 — Calibration activates.**
+**Step 4 — Calibration activates.**
 
 Once ≥ 22 clean-sky samples are accumulated in a 90-day window, the calibration state transitions from "bootstrapping" to "calibrated" and haze detection becomes active. The admin UI Haze Calibration section reflects the current state. If the sample count drops below 15 (extended haze episode, seasonal transition), the baseline widens to a 180-day fallback window. If still insufficient, haze detection deactivates gracefully — no false positives are emitted from an uncalibrated baseline.
 
