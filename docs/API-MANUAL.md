@@ -822,11 +822,13 @@ Default γ = 0.45 (moderate, composition-unknown). γ is a composition property 
 
 ### Auto-calibration baseline
 
-The haze detection channel compares current Kcs against a station-specific clean-sky baseline. This baseline is computed from a rolling sample of locally measured clean-sky Kcs values rather than a fixed global constant, because station altitude, local horizon obstructions, and seasonal water vapor all shift the expected Kcs.
+The haze detection channel compares current Kcs against a station-specific clean-sky baseline. This baseline is computed from locally measured clean-sky Kcs values rather than a fixed global constant, because station altitude, local horizon obstructions, and seasonal water vapor all shift the expected Kcs.
 
-**Rolling window:** 90-day seasonal window. cos(Z) normalization via Kcs handles the diurnal cycle — no time-of-day binning is needed or used.
+**Monthly normals model:** The system maintains 12 independent per-month Kcs baselines (January through December). A sample is assigned to the calendar month in which it was recorded (station local time). Today's Kcs is compared against the baseline for the current calendar month, not a seasonal average. This approach follows established radiation network science (ARM, BSRN, SURFRAD) which uses monthly stratification as standard practice.
 
-**Percentile target:** 90th–95th percentile of qualifying clean-sky Kcs samples ("clean ceiling"). Higher than the 85th percentile used in climate research (Renner et al. 2019) because haze detection needs a reference that excludes routinely hazy-but-accepted days.
+**3-year rolling window:** Within each month bucket, samples older than 3 years are pruned. Sensor drift and hardware changes make older data unreliable. cos(Z) normalization via Kcs handles the diurnal cycle — no time-of-day binning is needed or used.
+
+**Percentile target:** Fixed at the 92nd percentile of qualifying clean-sky Kcs samples per month. Higher than the 85th percentile used in climate research (Renner et al. 2019) because haze detection needs a reference that excludes routinely hazy-but-accepted days. Not operator-tunable — the value is science-determined.
 
 **Clean-sample selection criteria** — a sample qualifies only when ALL of the following are true:
 
@@ -835,37 +837,51 @@ The haze detection channel compares current Kcs against a station-specific clean
 3. Sky classifier returns CLOUDLESS or THIN_CLOUDS
 4. No rain in the prior 30 minutes
 
-**Sample count thresholds:**
+**Minimum samples per month:** A month's learned baseline activates only when it has >= 30 qualifying clean-sky samples. Below this threshold, that month falls back to the flat baseline.
 
-| Count | State | Behavior |
-|-------|-------|----------|
-| < 22 | bootstrapping | Haze detection inactive — no false positives from uncalibrated baseline |
-| 22–50 | calibrated | Haze detection active |
-| > 50 | well-calibrated | Full confidence |
+**Flat fallback baseline:** A pooled baseline computed across all months is used for any month that has not yet reached 30 samples. This preserves v1 behavior during the learning period.
 
-**Fallback:** When the 90-day window has fewer than 15 samples (e.g., extended haze episode or seasonal transition), widen to 180-day window. If still fewer than 15 samples, haze detection is inactive.
+**Progressive activation:** Each month independently transitions from the flat fallback to its learned monthly normal once it reaches 30 samples. The admin UI shows "N of 12 months calibrated."
 
-**Persistent storage:** Baseline samples and current percentile are written to `/etc/weewx-clearskies/calibration.json` (or SQLite) and read back on API restart.
+**State transitions:**
 
-**Bootstrap data source:** OpenAQ API v3. Provides hourly PM2.5 from government reference monitors in 141 countries (~2016–present). Free API key required (register at https://explore.openaq.org/register). The bootstrap CLI automatically finds the nearest PM2.5 monitor within 25 km of the station and pulls historical data.
+| State | Condition | Behavior |
+|-------|-----------|----------|
+| `no-data` | No samples collected yet | Haze detection inactive |
+| `bootstrapping` | Samples accumulating; current month < 30 | Flat fallback baseline active; haze detection may be active if flat baseline is available |
+| `partial` | Some months >= 30 samples, others not | Mixed: calibrated months use learned normals, uncalibrated months use flat fallback |
+| `fully-calibrated` | All 12 months >= 30 samples | All months use learned normals; haze detection fully active |
 
-Bootstrap CLI: `clearskies-api bootstrap [--years N] [--max-distance-km N]`
+**Auto-bootstrap at startup:** At API startup, if an OpenAQ API key is present in `secrets.env`, the calibration state has fewer than 12 months calibrated, and a pyranometer is present (radiation column in the archive schema), the system automatically bootstraps from OpenAQ historical data. Bootstrap runs synchronously after `load_persisted()` but before packet-tap registration (2–5 minutes). No CLI command, no admin button, no SSH required.
 
-The `--years` flag controls how many years of history to pull (default: 2). The `--max-distance-km` flag sets the search radius for the nearest monitor (default: 25, max: 25 per OpenAQ API).
+**Bootstrap data source:** OpenAQ API v3. Provides hourly PM2.5 from government reference monitors in 141 countries (~2016–present). Free API key required (register at https://explore.openaq.org/register). Bootstrap automatically finds the nearest PM2.5 monitor within 25 km and pulls the maximum available history (up to 3 years). Samples are distributed into per-month bins during import.
+
+**Hardware change detection:**
+- Station type tracking: `calibration.json` records the `station_type` from `weewx.conf` at last persist. On startup, if the current station type differs from the persisted value, a WARNING is logged.
+- Drift detection: Within each month, if the mean of the last 10 samples diverges from the month's baseline by more than 0.05 (5%), a drift warning is generated and reported in the admin UI.
+- Manual reset: The admin UI "Reset Calibration" button clears all samples and baselines and triggers re-bootstrap if conditions are met.
+
+**Graceful sensor failover:**
+
+| Sensor absent | Failover |
+|---------------|---------|
+| `radiation` (no pyranometer) | Sky: provider cloud cover % (unchanged). Haze: provider present weather (HZ) 24/7. Calibration: skipped entirely. |
+| `dewpoint` (no hygrometer) | Fog/mist: provider present weather (BR/FG). f(RH) correction: skipped (uncorrected Kcs deficit used). |
+
+Dashboard never shows null data — absent sensors silently defer to provider present-weather codes.
+
+**Persistent storage:** Baseline samples and computed percentiles are written to `/etc/weewx-clearskies/calibration.json` (v2 format, month-keyed structure) and read back on API restart. v1 format (flat sample list) is automatically migrated to v2 on load by distributing flat samples into month buckets using station timezone.
 
 **maxSolarRad recomputation for NULL archive records:** Pre-weewx 4.0 archive records may have NULL maxSolarRad. Recompute using the Ryan-Stolzenbach formula (lat/lon/altitude + timestamp + atc=0.80). Output is computationally identical to what weewx 4.0+ stores. Implemented in `sse/auto_calibration.py`; the reference formula is `weewx/wxformulas.py:solar_rad_RS()`.
 
-### Haze and calibration configuration (api.conf [conditions])
+### Haze detection configuration (api.conf [conditions])
 
-The following keys in the `[conditions]` section of `api.conf` control haze detection and auto-calibration behavior (ADR-067/068). All keys are optional; defaults match the algorithm constants.
+The following keys in the `[conditions]` section of `api.conf` control haze detection behavior (ADR-067/068). Calibration parameters are fixed by the algorithm and are not operator-configurable. All keys are optional; defaults match the algorithm constants.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `haze_detection` | bool | `true` | Enable or disable haze detection entirely. When `false`, `detect_haze()` always returns `None` and auto-calibration parameters are not applied. |
+| `haze_detection` | bool | `true` | Enable or disable haze detection entirely. When `false`, `detect_haze()` always returns `None`. |
 | `haze_aqi_provider` | str or absent | (inherits from `[aqi]`) | Override the AQI provider used for haze PM data. If absent or empty, uses the provider configured in `[aqi]`. |
-| `calibration_percentile` | float | `0.92` | Percentile target for the clean-sky Kcs baseline. A ±2.5 percentage-point band is derived from this value (e.g. 0.92 → 89th–94th percentile range). Range: 0.90–0.95. |
-| `calibration_window_days` | int | `90` | Primary rolling window length in days for clean-sky sample collection. The 180-day fallback window is not operator-configurable. Range: 30–365. |
-| `calibration_min_samples` | int | `22` | Minimum qualifying clean-sky samples required before haze detection activates. Below this count the system is bootstrapping and no haze label is emitted. Range: 10–100. |
 | `gamma` | float | `0.45` | Hygroscopic correction exponent γ (Hanel 1976 / Tang 1996). Controls how strongly relative humidity amplifies apparent aerosol extinction. Advanced operator override — the default 0.45 is the composition-unknown value suitable for most stations. Range: 0.1–1.0. |
 
 Validation errors in any of these keys cause a fatal startup failure with a descriptive message.
