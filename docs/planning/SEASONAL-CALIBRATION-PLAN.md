@@ -1,6 +1,6 @@
 # Seasonal Monthly-Normals Calibration Model — Implementation Plan
 
-**Status:** APPROVED — ready to execute  
+**Status:** IN PROGRESS — Phases 0-4 complete, Phase 5 next  
 **Created:** 2026-06-22  
 **Origin:** Rework of Phase 8 auto-calibration (flat 90-day window) to science-backed monthly normals  
 **Components:** API (`weewx-clearskies-api`), Stack (`weewx-clearskies-stack`), Meta (`weather-belchertown`)
@@ -51,6 +51,29 @@ These are settled — do not re-derive or re-propose alternatives:
 
 - **Wizard 422 on apply:** `ApplyRequest` model missing `openaq_api_key` field (API commit `170805f`, stack commit `2d44b34`).
 - **Station description not sticking:** Three bugs — template `about_content` missing `state.` prefix, `populate_from_branding_json` not reading `aboutContent` back, and branding read gated behind `station_name is None` (stack commits `941a961`, `52a3de7`, `861e121`).
+
+### Session 1 progress (2026-06-22)
+
+**Phases completed:** 0, 1, 2, 3, 4 (ADR amendment, manual updates, core model rewrite, bootstrap rework, wiring).
+
+**Meta repo** (weather-belchertown, branch `master`): 4 commits ahead of origin.
+- ADR-068 amended and accepted (monthly-normals model)
+- API-MANUAL.md §8, OPERATIONS-MANUAL.md §4, ARCHITECTURE.md updated — removed 90-day model references, added monthly-normals, added calibration endpoints
+
+**API repo** (weewx-clearskies-api on weewx container, branch `main`): 1 commit ahead of origin.
+- `auto_calibration.py` — complete rewrite: 12 per-month baselines, 3-year window, fixed 92nd percentile, v1→v2 migration, drift detection, station type tracking, set_timezone/set_station_type/set_has_radiation
+- `importer.py` — monthly bins, per-month baseline computation after import
+- `__main__.py` — auto-bootstrap at startup, configure() removed, --years/--max-distance-km removed, set_timezone/set_station_type/set_has_radiation/check_station_type_change wired
+- `settings.py` — calibration_percentile/window_days/min_samples removed from ConditionsSettings
+- `endpoints/setup.py` — GET /setup/calibration-state + POST /setup/calibration-reset added
+- `enrichment/weather_text.py` — missing pyranometer/hygrometer deferral to provider in both terse and code paths
+- `haze_condition.py` — docstring updates (phase references resolved)
+
+**Stack repo** (weewx-clearskies-stack on weather-dev): NOT YET TOUCHED. Phase 5 is next.
+
+**Known issue:** The weewx container has an automated process (likely Nextcloud sync cron) that runs `git pull` and occasionally `git reset --hard origin/main`. This caused a Phase 4 commit to be lost mid-session (recovered via `git cherry-pick` from reflog). Before pushing API commits, verify reflog state. Consider pushing immediately after committing to prevent sync-related data loss.
+
+**What's next:** Phase 5 (admin UI rework in stack repo), Phase 6 (tests), Phase 7 (audit), Phase 8 (deploy).
 
 ---
 
