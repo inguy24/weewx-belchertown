@@ -384,9 +384,6 @@ Hand-rolled Python settings classes, parsed from ConfigObj. Do not use Pydantic 
 | `haze_detection` | bool | `true` | Enable or disable the haze detection engine. When `false`, sky classification runs without haze confirmation and haze-related calibration is inactive. |
 | `gamma` | float | `0.45` | Hygroscopic correction gamma parameter in the f(RH) correction factor. Controls how strongly relative humidity scales apparent extinction. Valid range: 0.1–1.0. Default 0.45 is appropriate for mixed continental aerosol. |
 | `haze_aqi_provider` | string | (inherits from `[aqi]`) | AQI provider used for haze PM data. Must be an observed-data provider (Aeris or IQAir). Falls back to the `[aqi]` section provider if not set. Model-based providers (Open-Meteo) are not accepted here — the haze engine will log an error and disable haze confirmation if a non-observed provider is configured. |
-| `calibration_percentile` | float | `0.92` | Percentile for clean-sky baseline computation. The baseline Kcs is taken at this percentile of accumulated clean-sky samples in the rolling window. Valid range: 0.90–0.95. |
-| `calibration_window_days` | int | `90` | Rolling window size in days for seasonal baseline computation. Samples older than this window are excluded from the current percentile. A 180-day fallback window activates automatically when the 90-day window has fewer than 15 samples. |
-| `calibration_min_samples` | int | `22` | Minimum number of clean-sky samples required in the current window before the baseline activates. Until this threshold is reached, haze detection is inactive. Calibration state reports "bootstrapping" below this value, "calibrated" from 22 to 50, and "well-calibrated" above 50. |
 
 ### Config directory
 
@@ -478,9 +475,9 @@ The config UI serves an admin landing page at `/admin`. This is the default post
 | Column Mapping | `api.conf [column_mapping]` | Observation column mapping |
 | TLS | `stack.conf [tls]` | Mode, domain, email, provider |
 | Sky Classification | `api.conf [sky_classification]` | CAELUS threshold calibration |
-| Haze Calibration | `api.conf [conditions]` + calibration storage | Baseline status, clean-day count, confidence level, PM data import, gamma override |
+| Haze Calibration | `api.conf [conditions]` + calibration storage | Per-month calibration status (12-month grid), drift warnings, reset button, gamma override |
 
-The Haze Calibration section shows the current calibration state (bootstrapping / calibrated / well-calibrated), the number of clean-sky samples accumulated in the current 90-day window, the current baseline Kcs percentile value, and an import interface for historical PM data. It also provides a toggle to enable or disable haze detection without removing the calibration data.
+The Haze Calibration section shows a 12-month status grid with each month's sample count, learned baseline Kcs value, and calibration status (green = fully calibrated, amber = bootstrapping, gray = no data). An overall summary shows "N of 12 months calibrated." When sensor drift or a station type change is detected, a warning banner is shown. The section also provides a "Reset Calibration" button (clears all samples and baselines, triggers re-bootstrap), a toggle to enable or disable haze detection without removing calibration data, and a gamma override input for the hygroscopic correction exponent.
 
 Each section shows a summary of current values with an "Edit" link that loads the edit form via HTMX fragment swap.
 
@@ -550,57 +547,38 @@ Use the CLI wizard for SSH-only installs where opening a browser on the LAN is n
 
 ### Haze calibration bootstrap
 
-The haze detection baseline requires a minimum of 22 clean-sky samples in a 90-day window before it activates. Without historical PM data, building this baseline from real-time observations takes 4–6 months depending on local weather and air quality. Bootstrapping from historical PM data activates the baseline immediately.
+The haze detection baseline uses a monthly-normals model: 12 independent per-month Kcs baselines, each requiring >= 30 qualifying clean-sky samples before it activates. Without historical PM data, accumulating 30 samples per month from real-time observations alone takes 2–4 years depending on local weather and air quality. Bootstrapping from historical PM data populates the per-month bins immediately.
+
+**Bootstrap is automatic.** No CLI command, admin button, or SSH step is required. At API startup, the system checks three conditions:
+
+1. OpenAQ API key is present in `secrets.env` (`WEEWX_CLEARSKIES_OPENAQ_API_KEY=<your-key>`).
+2. Calibration state has fewer than 12 months calibrated.
+3. A pyranometer is present (radiation column in the weewx archive schema).
+
+When all three are true, bootstrap runs automatically after persisted state is loaded but before packet processing begins. This takes 2–5 minutes. The API logs progress to the standard log channel.
 
 **Prerequisites:**
 - OpenAQ API key. Register for free at https://explore.openaq.org/register. Set the key in `secrets.env` as `WEEWX_CLEARSKIES_OPENAQ_API_KEY=<your-key>`.
 - A PM2.5 reference monitor within 25 km of the station. Check coverage at https://explore.openaq.org/.
+- A pyranometer connected to the weewx station (radiation column present in the archive).
 
-**Step 1 — Run the bootstrap command.**
-
-```bash
-clearskies-api bootstrap
-```
-
-The command automatically:
+**What bootstrap does:**
 1. Reads station coordinates (latitude, longitude, altitude) from `weewx.conf`.
 2. Queries the OpenAQ API to find the nearest PM2.5 reference monitor within 25 km.
-3. Pulls 2 years of hourly PM2.5 data from that monitor.
+3. Pulls up to 3 years of hourly PM2.5 data from that monitor.
 4. Matches each PM record against the weewx archive (±30-minute window).
 5. Computes Kcs (clearness index) for each matched record where radiation data is available.
-6. Filters for clean-sky samples: PM2.5 < 12 µg/m³, sun above 10°, no rain, Kcs > 0.3.
-7. Seeds the auto-calibration baseline and saves to `/etc/weewx-clearskies/calibration.json`.
+6. Filters for clean-sky samples: PM2.5 < 12 µg/m³, sun above 10°, no rain.
+7. Distributes samples into per-month bins (station local time determines the month).
+8. Saves to `/etc/weewx-clearskies/calibration.json` in v2 (month-keyed) format.
 
-Optional flags:
-- `--years N` — years of history to pull (default: 2)
-- `--max-distance-km N` — search radius for nearest monitor in km (default: 25)
-
-**Step 2 — Review the output.**
-
-The command prints a summary:
-
-```
-OpenAQ bootstrap
-  Nearest PM2.5 monitor: "Station Name" (3.2 km away)
-  Pulling 2 year(s) of history...
-  Retrieved 17,520 PM2.5 records
-  Matching against weewx archive...
-  Results:
-    Archive matched:          14,200
-    Clean-sky samples:         1,847
-    Skipped (no archive):      3,320
-    ...
-  Calibration state: calibrated (1,847 samples, baseline Kcs = 0.872)
-  Saved to /etc/weewx-clearskies/calibration.json
-```
-
-**Step 3 — maxSolarRad recomputation (pre-weewx 4.0 archives).**
+**maxSolarRad recomputation (pre-weewx 4.0 archives).**
 
 weewx 4.0.0 began natively archiving `maxSolarRad`. Stations running older weewx versions have NULL in this column for historical records, which prevents Kcs computation. The bootstrap process automatically recomputes `maxSolarRad` for these records using the Ryan-Stolzenbach formula, given the station's latitude, longitude, and altitude from `weewx.conf`. Recomputed values are computationally identical to what weewx would have stored.
 
-**Step 4 — Calibration activates.**
+**Progressive activation after bootstrap.**
 
-Once ≥ 22 clean-sky samples are accumulated in a 90-day window, the calibration state transitions from "bootstrapping" to "calibrated" and haze detection becomes active. The admin UI Haze Calibration section reflects the current state. If the sample count drops below 15 (extended haze episode, seasonal transition), the baseline widens to a 180-day fallback window. If still insufficient, haze detection deactivates gracefully — no false positives are emitted from an uncalibrated baseline.
+Each month activates its learned baseline independently as soon as it reaches 30 qualifying samples. Bootstrap may fully calibrate all 12 months immediately (if sufficient historical data is available) or bring some months to calibrated state while others remain on the flat fallback. The admin UI 12-month grid shows per-month status. Haze detection becomes active as soon as the current month's baseline (or the flat fallback) is available.
 
 ---
 
