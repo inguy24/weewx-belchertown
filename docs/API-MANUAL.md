@@ -854,7 +854,26 @@ The haze detection channel compares current Kcs against a station-specific clean
 
 **Auto-bootstrap at startup:** At API startup, if an OpenAQ API key is present in `secrets.env`, the calibration state has fewer than 12 months calibrated, and a pyranometer is present (radiation column in the archive schema), the system automatically bootstraps from OpenAQ historical data. Bootstrap runs synchronously after `load_persisted()` but before packet-tap registration (2–5 minutes). No CLI command, no admin button, no SSH required.
 
-**Bootstrap data source:** OpenAQ API v3. Provides hourly PM2.5 from government reference monitors in 141 countries (~2016–present). Free API key required (register at https://explore.openaq.org/register). Bootstrap automatically finds the nearest PM2.5 monitor within 25 km and pulls the maximum available history (up to 3 years). Samples are distributed into per-month bins during import.
+**Bootstrap data source:** OpenAQ API v3. Provides hourly PM2.5 from government reference monitors in 141 countries (~2016–present). Free API key required (register at https://explore.openaq.org/register). Bootstrap uses the sensor selection algorithm below to choose among nearby reference monitors. Samples are distributed into per-month bins during import.
+
+**Sensor selection algorithm (Phase 9).** Bootstrap automatically selects the best reference-grade PM2.5 sensor from nearby OpenAQ monitors:
+
+1. Query OpenAQ `/locations` with `isMonitor=true` (reference/regulatory only) within 25 km of the station.
+2. Filter: sensors must have >= 12 months of data history (`datetimeLast - datetimeFirst >= 365 days`).
+3. Sort by distance ascending.
+4. Try each candidate: fetch PM data, run bootstrap, check for qualifying clean-sky samples.
+5. First sensor producing > 0 clean-sky samples is selected and persisted.
+6. If all candidates produce 0 samples, log the outcome and proceed without bootstrap data. Calibration will accumulate from real-time observations.
+
+Rejection reasons are logged with per-sensor counters (total records, PM>=12, no archive match, no radiation, qualifying samples) for operator troubleshooting.
+
+**Operator sensor override.** The `openaq_sensor_id` key in `[conditions]` allows operators to bypass automatic sensor selection:
+- When set to any valid OpenAQ sensor ID (integer), that sensor is used directly — no candidate search.
+- Non-reference sensors (PurpleAir, private monitors) are accepted. The system does not endorse low-cost sensors but does not block an informed operator.
+- Set via the admin UI (dropdown of reference stations or manual ID entry) or directly in `api.conf`.
+- Clear the override to return to automatic selection.
+
+**Selected sensor persistence.** The selected sensor's ID, name, distance, and coordinates are stored in `calibration.json` alongside calibration data. The admin UI displays this information without re-querying OpenAQ.
 
 **Hardware change detection:**
 - Station type tracking: `calibration.json` records the `station_type` from `weewx.conf` at last persist. On startup, if the current station type differs from the persisted value, a WARNING is logged.
@@ -883,6 +902,7 @@ The following keys in the `[conditions]` section of `api.conf` control haze dete
 | `haze_detection` | bool | `true` | Enable or disable haze detection entirely. When `false`, `detect_haze()` always returns `None`. |
 | `haze_aqi_provider` | str or absent | (inherits from `[aqi]`) | Override the AQI provider used for haze PM data. If absent or empty, uses the provider configured in `[aqi]`. |
 | `gamma` | float | `0.45` | Hygroscopic correction exponent γ (Hanel 1976 / Tang 1996). Controls how strongly relative humidity amplifies apparent aerosol extinction. Advanced operator override — the default 0.45 is the composition-unknown value suitable for most stations. Range: 0.1–1.0. |
+| `openaq_sensor_id` | int (optional) | (automatic) | OpenAQ sensor ID override for bootstrap. When set, the bootstrap process uses this sensor directly instead of searching for the nearest reference monitor. Accepts any valid OpenAQ sensor ID including non-reference sensors. Clear to return to automatic selection. |
 
 Validation errors in any of these keys cause a fatal startup failure with a descriptive message.
 

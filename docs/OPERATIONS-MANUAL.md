@@ -384,6 +384,7 @@ Hand-rolled Python settings classes, parsed from ConfigObj. Do not use Pydantic 
 | `haze_detection` | bool | `true` | Enable or disable the haze detection engine. When `false`, sky classification runs without haze confirmation and haze-related calibration is inactive. |
 | `gamma` | float | `0.45` | Hygroscopic correction gamma parameter in the f(RH) correction factor. Controls how strongly relative humidity scales apparent extinction. Valid range: 0.1–1.0. Default 0.45 is appropriate for mixed continental aerosol. |
 | `haze_aqi_provider` | string | (inherits from `[aqi]`) | AQI provider used for haze PM data. Must be an observed-data provider (Aeris or IQAir). Falls back to the `[aqi]` section provider if not set. Model-based providers (Open-Meteo) are not accepted here — the haze engine will log an error and disable haze confirmation if a non-observed provider is configured. |
+| `openaq_sensor_id` | int (optional) | (automatic) | OpenAQ sensor ID override for bootstrap. When set, bypasses automatic reference sensor search. Accepts any valid sensor ID, including non-reference (PurpleAir, private). Set via admin UI or directly in api.conf. |
 
 ### Config directory
 
@@ -475,7 +476,7 @@ The config UI serves an admin landing page at `/admin`. This is the default post
 | Column Mapping | `api.conf [column_mapping]` | Observation column mapping |
 | TLS | `stack.conf [tls]` | Mode, domain, email, provider |
 | Sky Classification | `api.conf [sky_classification]` | CAELUS threshold calibration |
-| Haze Calibration | `api.conf [conditions]` + calibration storage | Per-month calibration status (12-month grid), drift warnings, reset button, gamma override |
+| Haze Calibration | `api.conf [conditions]` + calibration storage | Per-month calibration status (12-month grid), drift warnings, active sensor display, sensor override (dropdown + manual ID), reset button, gamma override |
 
 The Haze Calibration section shows a 12-month status grid with each month's sample count, learned baseline Kcs value, and calibration status (green = fully calibrated, amber = bootstrapping, gray = no data). An overall summary shows "N of 12 months calibrated." When sensor drift or a station type change is detected, a warning banner is shown. The section also provides a "Reset Calibration" button (clears all samples and baselines, triggers re-bootstrap), a toggle to enable or disable haze detection without removing calibration data, and a gamma override input for the hygroscopic correction exponent.
 
@@ -564,7 +565,7 @@ When all three are true, bootstrap runs automatically after persisted state is l
 
 **What bootstrap does:**
 1. Reads station coordinates (latitude, longitude, altitude) from `weewx.conf`.
-2. Queries the OpenAQ API to find the nearest PM2.5 reference monitor within 25 km.
+2. Queries the OpenAQ API for reference-grade PM2.5 monitors within 25 km (`isMonitor=true`). Filters for sensors with >= 12 months of data history. Tries candidates in distance order until one produces qualifying clean-sky samples.
 3. Pulls up to 3 years of hourly PM2.5 data from that monitor.
 4. Matches each PM record against the weewx archive (±30-minute window).
 5. Computes Kcs (clearness index) for each matched record where radiation data is available.
@@ -579,6 +580,16 @@ weewx 4.0.0 began natively archiving `maxSolarRad`. Stations running older weewx
 **Progressive activation after bootstrap.**
 
 Each month activates its learned baseline independently as soon as it reaches 30 qualifying samples. Bootstrap may fully calibrate all 12 months immediately (if sufficient historical data is available) or bring some months to calibrated state while others remain on the flat fallback. The admin UI 12-month grid shows per-month status. Haze detection becomes active as soon as the current month's baseline (or the flat fallback) is available.
+
+**Sensor selection and override.**
+
+Bootstrap uses a try-until-it-works approach: candidates are tried in distance order, and the first to produce qualifying samples is selected. If all candidates fail, calibration proceeds from real-time observations alone — this is a valid outcome, not an error.
+
+The admin UI shows the selected sensor (name, distance, coordinates) and provides two override mechanisms:
+- **Dropdown:** Lists nearby reference-grade sensors. Select one and save.
+- **Manual ID entry:** Type any OpenAQ sensor ID, including non-reference sensors. For operators who know their local sensor network.
+
+To clear an override and return to automatic selection, use the "Clear override" button on the admin haze calibration page, or remove `openaq_sensor_id` from `[conditions]` in `api.conf`.
 
 ---
 

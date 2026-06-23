@@ -87,6 +87,22 @@ Admin UI runs on weather-dev; calibration data lives on weewx. Two new endpoints
 - `GET /setup/calibration-state` — returns per-month calibration data. Auth: proxy secret.
 - `POST /setup/calibration-reset` — clears all data (re-bootstrap on next restart). Auth: proxy secret.
 
+### Sensor selection (Phase 9 amendment, 2026-06-22)
+
+The bootstrap process selects from nearby OpenAQ reference-grade monitors using a try-until-it-works approach:
+
+- Query: `isMonitor=true`, PM2.5 parameter, within 25 km.
+- Filter: data span >= 12 months.
+- Order: distance ascending.
+- Selection: first sensor producing > 0 qualifying clean-sky samples.
+- Fallback: no suitable sensor → calibrate from real-time observations.
+
+Operator override via `openaq_sensor_id` in `[conditions]`: dropdown of reference stations in admin UI, plus manual ID entry for any OpenAQ sensor (including non-reference). Override is persisted in `api.conf` and respected on every restart.
+
+Selected sensor info (ID, name, distance, coordinates) is persisted in `calibration.json` alongside calibration data.
+
+New API endpoint: `GET /setup/openaq-sensors` returns nearby reference PM2.5 sensors for the admin UI dropdown. Auth: proxy secret.
+
 ## Consequences
 
 - **Reworked module:** `sse/auto_calibration.py` — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, automatic bootstrap, persistent v2 storage, drift detection, station type tracking.

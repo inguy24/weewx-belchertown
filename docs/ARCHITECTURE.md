@@ -244,6 +244,7 @@ Used by the config UI wizard per ADR-038. Not proxied through Caddy — config U
 | `/setup/restart` | POST | Trigger graceful service restart | Proxy secret |
 | `/setup/calibration-state` | GET | Per-month calibration data for admin UI | Proxy secret |
 | `/setup/calibration-reset` | POST | Clear calibration data (re-bootstrap on next restart) | Proxy secret |
+| `/setup/openaq-sensors` | GET | List nearby reference PM2.5 sensors for admin UI | Proxy secret |
 
 ### Health & metrics (separate loopback port 8081)
 
@@ -278,7 +279,7 @@ The API hosts a multi-module, stateful conditions-text engine that produces the 
 | `weewx_clearskies_api/sse/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
 | `weewx_clearskies_api/sse/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict |
 | `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit + PM), solar elevation gate, f(RH) correction |
-| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, automatic bootstrap, persistent storage |
+| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, automatic bootstrap with smart sensor selection, sensor info persistence |
 | `weewx_clearskies_api/sse/text_generation.py` | NWS-style text engine — terse/standard/verbose verbosity, GFE threshold tables |
 | `weewx_clearskies_api/sse/observation_model.py` | Structured local observation model — METAR-like field mapping |
 
