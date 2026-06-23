@@ -4,7 +4,7 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-06-14 (realtime service merged into API per ADR-058 — removed separate service, updated ports, routing, topology, config).
+Last verified: 2026-06-23 (ADR-072: added weewx-clearskies-truesun extension, McClear bootstrap, pvlib dependency).
 
 ---
 
@@ -24,6 +24,7 @@ One name per component. Code class names (`DirectAdapter`, `UnitTransformer`, `C
 | **Unit converter** | Component inside the API that transforms raw observation values to operator display units. Code class: `UnitTransformer`. | (part of API) | ~~conversion layer~~, ~~BFF conversion~~ |
 | **weewx host** | Server running the weewx engine, the API, and Redis. | — | ~~API host~~ |
 | **Front-end host** | Server running Caddy, dashboard static files, and optionally the config UI. Always hyphenated. | — | ~~frontend host~~ (no hyphen) |
+| **TrueSun XType** | weewx extension that overrides `maxSolarRad` with pvlib Simplified Solis + CAMS AOD + station humidity-derived precipitable water. Registered as an XType before `StdWXXTypes`. Code class: `ClearSkiesTruesunXType`. | `weewx-clearskies-truesun` | ~~the truesun extension~~ (use the canonical name) |
 | **Operator** | Person who installs, configures, and maintains Clear Skies. | — | ~~site owner~~ |
 | **Visitor** | Person viewing the weather dashboard in a browser. | — | ~~user~~ alone (ambiguous), ~~end user~~ when meaning visitor |
 
@@ -82,6 +83,8 @@ Each repo builds its own container image independently (ADR-034). A dashboard CS
 > **Removed container (ADR-058, 2026-06-14):** `clearskies-realtime` is deprecated. The realtime service has been merged into the API (`clearskies-api`). The `weewx-clearskies-realtime` repo is archived.
 
 > **ClearSkiesLoopRelay weewx extension** (`weewx-clearskies-extension`) is NOT a container. It is a weewx service extension that runs inside the weewx process, installed via `weectl extension install`. It creates the Unix socket at `/var/run/weewx-clearskies/loop.sock` that the API's DirectAdapter connects to. See [ADR-058](decisions/ADR-058-fold-realtime-into-api.md) and [ADR-061](decisions/ADR-061-filesystem-permissions-model.md).
+>
+> **ClearSkiesTruesunXType weewx extension** (`weewx-clearskies-truesun`) is NOT a container. It is a weewx XType extension that runs inside the weewx process, installed via `weectl extension install`. It overrides `maxSolarRad` with pvlib's Simplified Solis model using CAMS AOD satellite data and station humidity-derived precipitable water. A background thread fetches CAMS AOD once daily; the main loop does only pure math with cached values. When this extension is not installed, weewx falls back to its built-in Ryan-Stolzenbach model (no regression). See [ADR-072](decisions/ADR-072-solar-radiation-model-replacement.md). Dependencies: `pvlib`, `cdsapi`, `h5netcdf` (installed into the weewx Python environment).
 
 > **Config UI is NOT containerized.** It has no Dockerfile and is not in any compose file. It is distributed as a pip package (`weewx-clearskies-config`) and run manually by the operator. ADR-027 says "bundled compose adds a `config` service" — this is an unimplemented requirement. See Known gaps.
 
@@ -279,7 +282,8 @@ The API hosts a multi-module, stateful conditions-text engine that produces the 
 | `weewx_clearskies_api/sse/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
 | `weewx_clearskies_api/sse/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict |
 | `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit + PM), solar elevation gate, f(RH) correction |
-| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, automatic bootstrap with smart sensor selection, sensor info persistence |
+| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, automatic bootstrap with smart sensor selection, sensor info persistence. Bootstrap uses McClear clear-sky GHI (ADR-072). |
+| `weewx_clearskies_api/bootstrap/mcclear_client.py` | McClear data fetcher — retrieves historical clear-sky GHI via `pvlib.iotools.get_cams()` for bootstrap Kcs computation (ADR-072) |
 | `weewx_clearskies_api/sse/text_generation.py` | NWS-style text engine — terse/standard/verbose verbosity, GFE threshold tables |
 | `weewx_clearskies_api/sse/observation_model.py` | Structured local observation model — METAR-like field mapping |
 
@@ -511,6 +515,7 @@ Per-provider TTLs: forecast 30 min, alerts 5 min, AQI 15 min, radar metadata 5 m
 | weewx-clearskies-dashboard | `repos/weewx-clearskies-dashboard` | main | TypeScript/React | Yes (init container) |
 | weewx-clearskies-stack | `repos/weewx-clearskies-stack` | main | Python (config UI) + YAML/Caddyfile (orchestration) | **No** |
 | weewx-clearskies-extension | `repos/weewx-clearskies-extension` | master | Python | No (installs into weewx via `weectl extension install`) |
+| weewx-clearskies-truesun | `repos/weewx-clearskies-truesun` | main | Python | No (installs into weewx via `weectl extension install`). Deps: pvlib, cdsapi, h5netcdf. |
 | weewx-clearskies-design-tokens | `repos/weewx-clearskies-design-tokens` | main | — | No (Phase 6+ placeholder) |
 | weather-belchertown (meta) | `.` (root) | master | — (ADRs, plans, rules, contracts) | — |
 

@@ -10,7 +10,7 @@ Companion documents:
 - **PROVIDER-MANUAL.md** — provider module rules
 - **contracts/canonical-data-model.md** — per-field data catalog (the field inventory)
 
-Last updated: 2026-06-18
+Last updated: 2026-06-23
 
 ---
 
@@ -85,7 +85,7 @@ The API startup executes in the following ordered steps. Steps marked **fatal** 
 | 8 | Read `weewx.conf` for station metadata auto-detection | Non-fatal (warning) |
 | 9 | Load unit system config (`api.conf [units]`); validate column units | Non-fatal (warnings per mismatch) |
 | 10 | Load station metadata (lat, lon, altitude, timezone, station name) | Non-fatal |
-| 11 | Initialize ephemeris (pvlib Ineichen-Perez clear-sky model, Skyfield for almanac) | Non-fatal |
+| 11 | Initialize ephemeris (Skyfield for almanac). pvlib is used at bootstrap time for McClear clear-sky GHI (ADR-072), not at runtime. | Non-fatal |
 | 12 | Load reports config (`api.conf [reports]`) | Non-fatal |
 | 13 | Load content config (custom pages) | Non-fatal |
 | 14 | Initialize cache backend (memory or Redis per `api.conf [cache]`) | Non-fatal (falls back to memory) |

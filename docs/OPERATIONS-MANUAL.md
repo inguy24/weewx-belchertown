@@ -9,7 +9,7 @@ Companion documents:
 - **[API-MANUAL.md](API-MANUAL.md)** — API implementation rules
 - **[PROVIDER-MANUAL.md](PROVIDER-MANUAL.md)** — provider module rules
 
-Last updated: 2026-06-21
+Last updated: 2026-06-23
 
 ---
 
@@ -117,6 +117,45 @@ After running this script, install the Python package, run the wizard to generat
 ### Config UI distribution
 
 The config UI is distributed separately as `weewx-clearskies-config` on PyPI. It is not containerized. Install it with `pip install weewx-clearskies-config` on the host where it will be accessed from the LAN, then launch with `weewx-clearskies-config`. It is not a daemon — start it to make configuration changes, stop it when done.
+
+### weewx extensions
+
+Two weewx extensions are installed separately into the weewx process. Neither is containerized — they run inside weewx itself.
+
+**ClearSkiesLoopRelay** (`weewx-clearskies-extension`): Required. Creates the Unix socket that the API reads loop packets from.
+
+```bash
+weectl extension install weewx-clearskies-extension.tar.gz
+```
+
+**ClearSkiesTruesun** (`weewx-clearskies-truesun`): Optional. Replaces weewx's built-in Ryan-Stolzenbach `maxSolarRad` with pvlib's Simplified Solis model using real atmospheric data (CAMS AOD satellite data + station humidity-derived precipitable water). Improves sky classification accuracy at sunrise/sunset edges. If not installed, weewx falls back to R-S with no regression. See ADR-072.
+
+```bash
+# Install dependencies into the weewx Python environment
+pip install pvlib cdsapi h5netcdf
+
+# Install the extension
+weectl extension install weewx-clearskies-truesun.tar.gz
+
+# Configure the CAMS API key in weewx.conf [ClearSkiesTruesun]
+# Register at https://ads.atmosphere.copernicus.eu/ for a free key
+# The extension reads station lat/lon/altitude from weewx.conf [Station]
+sudo systemctl restart weewx
+```
+
+The `[ClearSkiesTruesun]` config stanza in `weewx.conf`:
+
+```ini
+[ClearSkiesTruesun]
+    # CAMS API key (register at https://ads.atmosphere.copernicus.eu/)
+    cams_api_key = <your-key>
+    # Fallback AOD at 700nm when CAMS is unavailable (0.06 = typical clean coastal)
+    fallback_aod700 = 0.06
+    # How often to refresh CAMS AOD forecast (hours)
+    aod_fetch_interval_hours = 12
+```
+
+Verification: after weewx restarts, check that `maxSolarRad` values at sunrise are > 10 W/m² at 6:00 AM (vs R-S's ~1.4 W/m²). Check the weewx log for `clearskies_truesun: CAMS AOD fetch` messages.
 
 ---
 
@@ -430,7 +469,11 @@ WEEWX_CLEARSKIES_AQI_IQAIR_KEY=...
 WEEWX_CLEARSKIES_PROXY_SECRET=...
 WEEWX_CLEARSKIES_ADMIN_USERNAME=...
 WEEWX_CLEARSKIES_ADMIN_PASSWORD_HASH=...
+WEEWX_CLEARSKIES_SODA_EMAIL=...
+WEEWX_CLEARSKIES_OPENAQ_API_KEY=...
 ```
+
+`WEEWX_CLEARSKIES_SODA_EMAIL` is the email registered at https://www.soda-pro.com/ — required for McClear clear-sky GHI bootstrap (ADR-072). `WEEWX_CLEARSKIES_OPENAQ_API_KEY` is the OpenAQ API key for auto-bootstrap PM data.
 
 ### Secret-leak guard
 

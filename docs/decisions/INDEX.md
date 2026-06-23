@@ -137,6 +137,12 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-070](ADR-070-nws-text-generation-system.md) | NWS-style text generation system | 2026-06-21 |
 | [ADR-071](ADR-071-nighttime-provider-deferral.md) | Nighttime mode — provider deferral pattern | 2026-06-21 |
 
+## Archived — consolidated into API-MANUAL.md + OPERATIONS-MANUAL.md + ARCHITECTURE.md
+
+| ADR | Title | Archived | Original Date |
+|---|---|---|---|
+| [ADR-072](../archive/decisions/ADR-072-solar-radiation-model-replacement.md) | Solar radiation model replacement (R-S → McClear / Solis) | 2026-06-23 | 2026-06-23 |
+
 ## Amendments (2026-06-21)
 
 | ADR | Amendment | Location |
