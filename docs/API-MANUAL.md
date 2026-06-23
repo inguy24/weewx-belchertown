@@ -1035,7 +1035,7 @@ A METAR-like structured intermediate representation is populated from the enrich
 | MOSTLY_CLOUDY | BKN | 5–7 |
 | OVERCAST | OVC | 8 |
 
-Specific okta assignment within each CAELUS class uses the Km sub-ranges defined in the SCATTER_CLOUDS sub-split table (§8 Sky condition).
+Specific okta assignment within each CAELUS class uses the Km thresholds defined in §8 Sky condition (Kv-first threshold constants table).
 
 ---
 
