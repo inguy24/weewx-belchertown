@@ -1621,6 +1621,14 @@ components:
         pollutantNO2: { type: number, nullable: true }
         pollutantSO2: { type: number, nullable: true }
         pollutantCO: { type: number, nullable: true }
+        pollutantSubIndices:
+          type: object
+          nullable: true
+          description: |
+            Per-pollutant AQI sub-index values on the same scale as `aqi`.
+            Keys are canonical pollutant ids (PM2.5, PM10, O3, NO2, SO2, CO).
+            Null when provider doesn't supply (IQAir free tier, weewx Path A).
+          additionalProperties: { type: number, nullable: true }
         observedAt: { type: string, format: date-time }
         source:
           type: string

@@ -1,6 +1,6 @@
 # Plan: Per-Pollutant AQI Dot Coloring
 
-**Status:** Approved 2026-06-22  
+**Status:** Executed 2026-06-23  
 **Approved by:** Shane  
 **Repos affected:** `weewx-clearskies-api`, `weewx-clearskies-dashboard`, `weather-belchertown` (docs)
 

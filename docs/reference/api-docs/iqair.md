@@ -160,72 +160,87 @@ Confirmation status: `p2` confirmed via published examples, Pro Device API docs,
 
 ## Pollutant concentration fields (paid tiers)
 
-**Captured:** 2026-06-13. Status: **INFERRED** — synthesized from AirVisual Pro Device API, Homebridge plugin, Home Assistant integration, and IQAir plans page. NOT confirmed from a real Startup-tier API capture.
+**Captured:** 2026-06-22. Status: **VERIFIED** — confirmed from a real Startup-tier API response (`/v2/nearest_station` endpoint) provided by the user.
 
 On Startup and Enterprise tiers, each pollutant appears as a nested object inside `data.current.pollution`:
 
 ```json
 "p2": {
-  "conc": 10,
-  "aqius": 41,
-  "aqicn": 14
+  "conc": 1.3,
+  "aqius": 7,
+  "aqicn": 2
 }
 ```
 
 Fields per pollutant object:
-- `conc` — Concentration value (numeric)
+- `conc` — Concentration value in µg/m³ (numeric)
 - `aqius` — Per-pollutant US EPA AQI sub-index (integer)
 - `aqicn` — Per-pollutant China MEP AQI sub-index (integer)
 
+**Not all 6 pollutants always present** — only those with data at the station appear. The verified response contained only `p2`, `p1`, `o3` (3 of 6).
+
 ### Concentration units
 
-From Home Assistant sensor.py pollutant unit mappings:
+All concentrations are µg/m³. Verified from `data.units` block in the real Startup-tier response:
+
+```json
+"units": {
+  "p2": "ugm3", "p1": "ugm3", "o3": "ugm3",
+  "n2": "ugm3", "s2": "ugm3", "co": "ugm3",
+  "pm25": "ugm3", "pm10": "ugm3"
+}
+```
 
 | Code | Pollutant | Unit |
 |------|-----------|------|
-| `p1` | PM10 | ug/m3 |
-| `p2` | PM2.5 | ug/m3 |
-| `co` | CO | ppm |
-| `n2` | NO2 | ppb |
-| `o3` | O3 | ppb |
-| `s2` | SO2 | ppb |
+| `p1` | PM10 | µg/m³ |
+| `p2` | PM2.5 | µg/m³ |
+| `o3` | O3 | µg/m³ |
+| `n2` | NO2 | µg/m³ |
+| `s2` | SO2 | µg/m³ |
+| `co` | CO | µg/m³ |
 
-**Unit ambiguity note:** The Homebridge plugin includes a `ppb_units` config option, noting that "certain locations report pollutants in ppb rather than ug/m3" and supports conversion "for nitrogen dioxide, ozone, and sulfur dioxide only." This implies the API may return gas pollutants in **either** ppb or ug/m3 depending on the station's reporting convention.
+**Correction (2026-06-22):** Previous INFERRED version (from Home Assistant sensor.py) listed gas units as ppb/ppm. The real `data.units` block confirms **all pollutants are µg/m³**, including gases. No unit conversion is needed in the provider module.
 
-### Inferred Startup-tier response shape
+### Verified Startup-tier response shape
 
 ```json
 {
   "status": "success",
   "data": {
-    "city": "Nashville",
-    "state": "Tennessee",
-    "country": "USA",
-    "location": {
-      "type": "Point",
-      "coordinates": [-86.7386, 36.1767]
+    "name": "St. John's",
+    "city": "Mount Pearl",
+    "state": "Newfoundland and Labrador",
+    "country": "Canada",
+    "location": { "type": "Point", "coordinates": [-52.7115, 47.56038] },
+    "units": {
+      "p2": "ugm3", "p1": "ugm3", "o3": "ugm3",
+      "n2": "ugm3", "s2": "ugm3", "co": "ugm3",
+      "pm25": "ugm3", "pm10": "ugm3"
     },
     "current": {
-      "weather": { "ts": "...", "tp": 18, "hu": 88, "pr": 1012, "wd": 90, "ws": 3.1, "ic": "04d" },
       "pollution": {
-        "ts": "2019-04-08T18:00:00.000Z",
-        "aqius": 41,
-        "mainus": "p2",
-        "aqicn": 14,
-        "maincn": "p2",
-        "p2": { "conc": 10, "aqius": 41, "aqicn": 14 },
-        "p1": { "conc": 18, "aqius": 17, "aqicn": 18 },
-        "o3": { "conc": 28, "aqius": 23, "aqicn": 14 },
-        "n2": { "conc": 5,  "aqius": 3,  "aqicn": 5  },
-        "s2": { "conc": 1,  "aqius": 1,  "aqicn": 1  },
-        "co": { "conc": 0.2,"aqius": 2,  "aqicn": 2  }
+        "ts": "2025-09-08T07:00:00.000Z",
+        "aqius": 7, "mainus": "p2",
+        "aqicn": 6, "maincn": "o3",
+        "p2": { "conc": 1.3, "aqius": 7, "aqicn": 2 },
+        "p1": { "conc": 3.8, "aqius": 3, "aqicn": 4 },
+        "o3": { "conc": 18.4, "aqius": 7, "aqicn": 6 }
+      },
+      "weather": {
+        "ts": "2025-09-08T08:00:00.000Z",
+        "ic": "04n", "hu": 97, "pr": 1016, "tp": 18,
+        "wd": 225, "ws": 6.78, "heatIndex": 18
       }
     }
   }
 }
 ```
 
-**IMPORTANT:** This shape is inferred from the AirVisual Pro Device API `outdoor_station` object (which uses the exact `p2: { conc, aqius, aqicn }` structure, confirmed from IQAir official docs), the Homebridge plugin (which states "Startup/Enterprise API keys provide individual pollutant concentrations"), and the Home Assistant integration field mappings. A real API capture from a Startup-tier key is the definitive gate.
+Additional verified fields not present in the earlier INFERRED version:
+- `data.name` — station name (distinct from `data.city`)
+- `data.units` — declares units per pollutant code (all µg/m³)
+- Free Community tier: pollution block has ONLY `ts`, `aqius`, `mainus`, `aqicn`, `maincn` — no per-pollutant objects
 
 ### Available pollutants per tier
 

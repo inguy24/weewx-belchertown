@@ -86,6 +86,10 @@ Providers compute AQI natively. We pass through what they return. No breakpoint 
 - Adding new AQI providers (e.g., Google Air Quality API with 70+ scales)
 - AQHI as a standalone index (Aeris returns it in the `health` object — surfacing it is a dashboard concern, not an API schema change)
 
+## Amendments
+
+**2026-06-23:** Added `pollutantSubIndices` field to `AQIReading` — per-pollutant sub-AQI values passed through from providers (Aeris, Open-Meteo, IQAir Startup+). Enables per-pollutant dot coloring on the dashboard AQI card. No AQI breakpoint computation added — this is a pass-through of values the providers already compute server-side. IQAir paid-tier wire shape verified from real Startup-tier API capture (2026-06-22); api-docs updated from INFERRED to VERIFIED. All IQAir concentrations confirmed as µg/m³ (corrects earlier inference of ppb for gases).
+
 ## References
 
 - Amends: [ADR-013](ADR-013-aqi-handling.md) (AQI handling)

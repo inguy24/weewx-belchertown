@@ -454,6 +454,21 @@ Existing operator behavior is unchanged: the AQI card renders normally. Only haz
 | 3 | `openaq` | Free | 1–2 hours | No | Yes | Free for all operators. Observed government reference data; haze-eligible. Data lag of 1–2 hours makes it unsuitable for real-time AQI display but acceptable for haze confirmation. |
 | 4 | `openmeteo` | Free | Hours | Yes (US EPA, European) | No | Model-based (CAMS). No observed data; not haze-eligible. Use only when no observed provider is available and haze detection is not required. |
 
+### Per-pollutant sub-index pass-through
+
+All three active AQI providers (Aeris, Open-Meteo, IQAir Startup+) compute per-pollutant sub-AQI values server-side and return them on the wire. The `pollutantSubIndices` field on `AQIReading` passes these through as a dict keyed by canonical pollutant id (`"PM2.5"`, `"PM10"`, `"O3"`, `"NO2"`, `"SO2"`, `"CO"`). Values are numeric sub-AQI on the same scale as the main `aqi` field, capped at 500.
+
+| Provider | Source | Keys |
+|----------|--------|------|
+| Aeris | `pollutants[].aqi` per entry | 6 (all standard pollutants) |
+| Open-Meteo (US) | `us_aqi_pm2_5`, `us_aqi_pm10`, etc. | 6 |
+| Open-Meteo (European) | `european_aqi_pm2_5`, `european_aqi_pm10`, etc. | 5 (no CO in EAQI formula) |
+| IQAir (Startup+) | `{p2,p1,o3,n2,s2,co}.aqius` or `.aqicn` | Variable (only pollutants with data at the station) |
+| IQAir (free Community) | — | `null` (no per-pollutant objects on free tier) |
+| weewx Path A | — | `null` (archive columns have no sub-index concept) |
+
+This is a pass-through — no AQI breakpoint computation on the Clear Skies side. Anti-pattern #11 ("Computing AQI from raw concentration breakpoints") still applies.
+
 ### AQI card rendering
 
 The AQI card always renders on the Now page. When `aqi` is null (no provider configured, or provider returned no data), render the "no data" placeholder. Do not conditionally remove the AQI card from the layout.
