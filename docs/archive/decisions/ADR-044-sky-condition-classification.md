@@ -1,9 +1,11 @@
 ---
-status: Accepted
+status: Superseded by ADR-073
 date: 2026-05-26
 amended: 2026-06-21
 deciders: shane
 ---
+
+> **Superseded (2026-06-23).** This ADR is fully superseded by [ADR-073](../../decisions/ADR-073-sky-condition-kv-first-classification.md). ADR-073 carries forward the still-valid decisions (detrending, dual windows, mirroring, SZA guard, precipitation, temperature-comfort, day/night vocabulary, temporal coherence, provider fallback) and replaces the classification architecture (Kv-first tree replaces CAELUS Km-first tree). Consult ADR-073 for all conditions-text methodology.
 
 # ADR-044: Current conditions text — methodology and sensor fusion
 

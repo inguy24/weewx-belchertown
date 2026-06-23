@@ -416,7 +416,7 @@ ADR-050 accepted 2026-06-16. Icon assignments above and in the utility/alert tab
 | Condition | Day Asset | Night Asset |
 |---|---|---|
 | Clear / Mostly Clear / Partly Cloudy | `clear` | `clear_night` |
-| Mostly Cloudy / Cloudy / Overcast | `cloudy_day` | `cloudy_night` |
+| Mostly Cloudy / Cloudy / Overcast / Heavy Overcast | `cloudy_day` | `cloudy_night` |
 | Thunderstorm | `storm_day` | `storm_night` |
 | Foggy | maps to cloudy | maps to cloudy (no dedicated fog photo) |
 | Hazy (clear sky + haze) | `hazy_day` (desaturated clear with warm overlay) | `hazy_night` (dimmed clear night with warm overlay) |

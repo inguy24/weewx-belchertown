@@ -26,7 +26,6 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-041](../archive/decisions/ADR-041-realtime-bff.md) | Unit conversion and enrichment authority | 2026-06-18 | 2026-05-26 |
 | [ADR-042](../archive/decisions/ADR-042-unit-system.md) | Unit system | 2026-06-18 | 2026-05-26 |
 | [ADR-043](../archive/decisions/ADR-043-skinconf-compliance.md) | skin.conf compliance | 2026-06-18 | 2026-05-26 |
-| [ADR-044](../archive/decisions/ADR-044-sky-condition-classification.md) | Current conditions text / sky condition classification | 2026-06-18 | 2026-05-26 |
 | [ADR-054](../archive/decisions/ADR-054-configurable-charts.md) | Operator-configurable charts system | 2026-06-18 | 2026-06-07 |
 | [ADR-056](../archive/decisions/ADR-056-api-weewx-co-location.md) | API co-location with weewx | 2026-06-18 | 2026-06-13 |
 | [ADR-057](../archive/decisions/ADR-057-api-weewx-application-layer.md) | API = weewx application layer | 2026-06-18 | 2026-06-13 |
@@ -112,6 +111,13 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 |---|---|---|---|
 | [ADR-005](../archive/decisions/ADR-005-realtime-architecture.md) | Realtime architecture | ADR-058 | 2026-04-30 |
 | [ADR-019](../archive/decisions/ADR-019-units-handling.md) | Units handling (original) | ADR-041, ADR-042 | 2026-05-02 |
+| [ADR-044](../archive/decisions/ADR-044-sky-condition-classification.md) | Current conditions text / sky condition classification | ADR-073 | 2026-05-26 |
+
+## Proposed
+
+| ADR | Title | Date |
+|---|---|---|
+| [ADR-073](ADR-073-sky-condition-kv-first-classification.md) | Sky condition Kv-first classification (supersedes ADR-044) | 2026-06-23 |
 
 ## Accepted — pending consolidation into PROVIDER-MANUAL.md
 

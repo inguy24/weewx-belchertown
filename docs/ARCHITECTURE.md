@@ -4,7 +4,7 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-06-23 (ADR-072: added weewx-clearskies-truesun extension, McClear bootstrap, pvlib dependency).
+Last verified: 2026-06-23 (ADR-072: added weewx-clearskies-truesun extension, McClear bootstrap, pvlib dependency; ADR-073: Kv-first sky classification replaces CAELUS Km-first tree).
 
 ---
 
@@ -271,14 +271,14 @@ Additionally, `GET /health` exists on the main port (8765) returning `{"status":
 
 All errors returned as RFC 9457 `application/problem+json`.
 
-### Conditions text engine (ADR-044)
+### Conditions text engine (ADR-073)
 
 The API hosts a multi-module, stateful conditions-text engine that produces the `weatherText` field on every `GET /api/v1/current` response. (Formerly in the realtime service; merged into the API per ADR-058.)
 
 | Module | Role |
 |--------|------|
 | `weewx_clearskies_api/sse/conditions_text.py` | Stateless composer — assembles the `weatherText` string from per-component labels |
-| `weewx_clearskies_api/sse/sky_condition.py` | Stateful classifier — VI-based (CAELUS), 30-min ring buffer of 1-min GHI averages, produces the sky label |
+| `weewx_clearskies_api/sse/sky_condition.py` | Stateful classifier — Kv-first (Duchon-O'Malley architecture with CAELUS indices), 30-min ring buffer of 1-min GHI averages, produces the sky label |
 | `weewx_clearskies_api/sse/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
 | `weewx_clearskies_api/sse/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict. Provider cross-check for fog/mist confirmation. |
 | `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit + PM), solar elevation gate, f(RH) correction |
@@ -299,7 +299,7 @@ The API hosts a multi-module, stateful conditions-text engine that produces the 
 
 **Registration:** The API's `__main__.py` registers `enrich_weather_text` against the `"current"` endpoint key. Every `GET /api/v1/current` response is enriched before being returned to the browser.
 
-**Sky classification (ADR-044, amended 2026-06-21):** Variability Index (VI) system adapted from CAELUS (set-based logic matching the reference implementation). Four indices (Kcs, Km, Kv, Kvf) computed from 1-minute GHI averages over a 30-minute ring buffer. Kv and Kvf are **clear-sky-detrended**: each minute-to-minute GHI change has the corresponding maxSolarRad change subtracted, isolating cloud-induced variability from deterministic solar geometry (Stein et al. 2012, Sandia Variability Index). Three anchor classes (CLOUD_ENHANCEMENT, CLOUDLESS, OVERCAST) evaluated independently; the "cloudy zone" residual splits into THIN_CLOUDS, THICK_CLOUDS, and SCATTER_CLOUDS. Km sub-splits within SCATTER_CLOUDS produce "Clear, Scattered Clouds" / "Mostly Clear, Scattered Clouds" / "Partly Cloudy" / "Mostly Cloudy". Km×Kv sub-splits within the OVERCAST zone produce "Cloudy" / "Overcast" / "Heavy Overcast". CLOUD_ENHANCEMENT maps to "Clear" (sun visible, GHI above clear-sky). Temporal coherence filter (15-min persistence). Startup backfill from archive records. **GHI mirroring** across sunrise/sunset boundaries via cos(zenith) interpolation (adapted from CAELUS `sky_indices.py`), stabilizing Km at low solar elevations. **SZA < 85° guard**: `classify()` returns None when solar elevation < 5°, falling back to provider cloud cover. Solar elevation computed via Skyfield from station coordinates. Operator-adjustable sub-split thresholds via admin UI. Full scientific citations in `docs/reference/sky-classification-science.md`.
+**Sky classification (ADR-073):** Kv-first decision tree in the Duchon & O'Malley (1999) tradition — variability-primary, clearness-secondary — using CAELUS-derived indices (Ruiz-Arias & Gueymard 2023). Four indices (Kcs, Km, Kv, Kvf) computed from 1-minute GHI averages over a 30-minute ring buffer. Kv and Kvf are **clear-sky-detrended**: each minute-to-minute GHI change has the corresponding maxSolarRad change subtracted, isolating cloud-induced variability from deterministic solar geometry (Stein et al. 2012, Sandia Variability Index). Primary axis: Kv distinguishes uniform sky (Kv < 0.05: clear or overcast) from variable sky (Kv ≥ 0.05: broken coverage) — the inverted-U relationship between cloud fraction and irradiance variability (Xie & Sengupta 2021, Mol et al. 2023). Within uniform: Km distinguishes Clear (high) from Overcast (moderate) from Heavy Overcast (low transmittance). Within variable: Km distinguishes Mostly Clear / Partly Cloudy / Mostly Cloudy / Cloudy. Cloud enhancement (Kcs > 1.06 + high Kv + high Kvf) → "Partly Cloudy" (broken-cloud scenario, not clear-sky). Seven labels total: Clear, Mostly Clear, Partly Cloudy, Mostly Cloudy, Cloudy, Overcast, Heavy Overcast. Temporal coherence filter (15-min persistence). Startup backfill from archive records. **GHI mirroring** across sunrise/sunset boundaries via cos(zenith) interpolation (adapted from CAELUS `sky_indices.py`), stabilizing Km at low solar elevations. **SZA < 85° guard**: `classify()` returns None when solar elevation < 5°, falling back to provider cloud cover. Solar elevation computed via Skyfield from station coordinates. Full scientific citations in `docs/reference/sky-classification-science.md`.
 
 **Startup behavior:** On API restart, `backfill()` seeds the sky classifier's ring buffer from archive records (last 30 minutes), enabling immediate classification. The temporal coherence filter applies a 3-minute startup grace. Full CAELUS-quality classification after ~30 minutes of live LOOP data. When solar analysis is unavailable (night, twilight, no pyranometer, or SZA guard engaged at elevation < 5°), the engine falls back to provider cloud cover via `_cloud_pct_to_sky()` in `enrichment/weather_text.py`, which maps cloud cover percentage to the sky label with day/night vocabulary awareness.
 
