@@ -1,6 +1,6 @@
 # Seasonal Monthly-Normals Calibration Model — Implementation Plan
 
-**Status:** IN PROGRESS — Phases 0-4 complete, Phase 5 next  
+**Status:** IN PROGRESS — Phases 0-8 complete, Phase 9 next  
 **Created:** 2026-06-22  
 **Origin:** Rework of Phase 8 auto-calibration (flat 90-day window) to science-backed monthly normals  
 **Components:** API (`weewx-clearskies-api`), Stack (`weewx-clearskies-stack`), Meta (`weather-belchertown`)
@@ -94,6 +94,31 @@ These are settled — do not re-derive or re-propose alternatives:
 **Lesson captured:** Added rule to `rules/clearskies-process.md` — "Agents commit locally, never on production containers." Prior session committed directly on weewx; recovery required git-bundle extraction. The rule file edit is uncommitted.
 
 **What's next:** Phase 7 (audit + QA), Phase 8 (deploy + verify).
+
+### Session 3 progress (2026-06-22)
+
+**Phases completed:** 7 (audit + QA). Phase 8 (deploy + verify) in progress.
+
+**Meta repo** (weather-belchertown, branch `master`): pushed to origin at `e59a146`.
+- Session 2 uncommitted changes committed (`f23c3f7`): process rule + plan update.
+- Phase 7 doc-code sync fixes (`e59a146`): reset endpoint description corrected in ARCHITECTURE.md, API-MANUAL.md, ADR-068 — "re-bootstrap on next restart" not "trigger re-bootstrap."
+
+**API repo** (weewx-clearskies-api, branch `main`): pushed to origin at `6194bb5`.
+- Bootstrap bug fix (`6194bb5`): OpenAQ API v3 returns `meta.found` as a string in some responses. The ceil-division idiom `-(-total_found // limit)` raised TypeError on strings. Cast to int defensively.
+- API restarted on weewx to pick up new endpoints (calibration-state, calibration-reset) and bootstrap fix.
+
+**Stack repo** (weewx-clearskies-stack, branch `main`): deployed to weather-dev at `47cd514`.
+- `git pull --ff-only` + `pip install --no-deps -e .` + `systemctl restart weewx-clearskies-config`.
+- Admin haze calibration page confirmed rendering: no old param form, 12-month grid area present, reset button present.
+
+**Phase 7 audit results:**
+- Code audit (Sonnet auditor): 9 of 11 items PASS. 2 items (stack template + routes) verified at deploy. F1/F2 (old deployed stack code) confirmed fixed by `47cd514`. F3 (reset endpoint doc mismatch) fixed by coordinator. F4 (intentional backward-compat doc) — no action.
+- Doc-code sync (coordinator): 1 finding fixed (reset endpoint description). Config keys, state names, endpoint inventory, calibration state response schema all match between docs and code.
+- API test baseline: 3210 passed, 358 skipped, 3 pre-existing failures. Zero introduced.
+
+**Bug found during deploy:** API returned 404 on `/setup/calibration-state` because the service hadn't been restarted since the endpoint code was committed (service started at 15:30, endpoint commit at 15:33). Restarted API. Then bootstrap failed with "bad operand type for unary -: 'str'" — OpenAQ `meta.found` returned as string. Fixed in `6194bb5`.
+
+**What's next:** Verify bootstrap completes after fix, verify admin page shows calibration data, final end-to-end checks.
 
 ---
 
@@ -329,15 +354,134 @@ ADR-068 (Auto-Calibration Baseline System) must be amended to reflect the monthl
 
 ---
 
+## Phase 9 — Smart Sensor Selection + Operator Override
+
+**Origin:** Phase 8 deploy revealed bootstrap selected South Long Beach (sensor 1502, port-adjacent, 16 km away) which produced 0 qualifying clean-sky samples. The sensor selection is too naive — picks nearest reference monitor without checking data quality, doesn't try alternatives, gives no operator visibility or control.
+
+**Design decisions (settled in conversation 2026-06-22):**
+
+1. **Try-until-it-works loop.** Automatic mode tries reference sensors nearest-first. If a sensor produces 0 qualifying samples, log the rejection reason and move to the next candidate. Stop at first success or exhaust the list.
+2. **Check data age before fetching.** Use OpenAQ `datetimeFirst`/`datetimeLast` from the `/locations` response to skip sensors with < 12 months of history. No extra API call needed — the data is already in the locations response.
+3. **Reference sensors only in automatic mode and dropdown.** AQMD/reference-grade stations are the default pool. Non-reference (PurpleAir, private) are not listed in the dropdown — data quality is too variable.
+4. **Three tiers of operator control:**
+   - **Automatic** (default): try reference stations nearest-first, reject-and-advance
+   - **Dropdown override**: pick from list of nearby reference stations in admin UI
+   - **Manual ID entry**: type any OpenAQ sensor ID (including non-reference). Escape hatch for operators who know their local sensor network. We don't endorse low-cost sensors by listing them, but we don't block an informed operator.
+5. **Show what was selected.** Admin haze calibration page displays the active sensor: name, distance from station, coordinates, and sensor type (reference vs. non-reference).
+6. **Persist selection in calibration.json.** The selected sensor ID, name, distance, and coordinates are stored alongside the calibration data so the admin UI can display them without re-querying OpenAQ.
+7. **New config key: `openaq_sensor_id`.** Optional in `[conditions]`. When set, bypass automatic search entirely. Accepts any valid OpenAQ sensor ID.
+8. **New API endpoint: `GET /setup/openaq-sensors`.** Returns list of nearby reference PM2.5 sensors (name, distance, coordinates, data date range). Used by admin UI dropdown. Auth: proxy secret.
+
+### T9.1 — Rework sensor selection in `openaq_client.py`
+
+- Owner: `clearskies-api-dev`
+- Rename `find_nearest_pm25_sensor()` → `find_best_pm25_sensor()`. Returns a **ranked list** of candidate sensors, not just one.
+- Each candidate: `(sensor_id, lat, lon, name, distance_km, datetime_first, datetime_last)`.
+- Filter: `isMonitor=true` on the `/locations` query (reference/regulatory only). PM2.5 parameter. Data spanning >= 12 months (`datetimeLast - datetimeFirst >= 365 days`).
+- Sort by distance ascending.
+- New `get_nearby_sensors(lat, lon) -> list[dict]`: returns all reference PM2.5 sensors within range, formatted for the admin UI dropdown. Includes name, distance, coordinates, data date range, sensor ID.
+- Keep `fetch_historical_pm25()` unchanged — it works per-sensor.
+- Accept: `find_best_pm25_sensor()` returns a list. Sensors with < 12 months of data are excluded. Non-reference sensors are excluded.
+
+### T9.2 — Rework bootstrap flow in `__main__.py`
+
+- Owner: `clearskies-api-dev`
+- **Override path:** If `settings.conditions.openaq_sensor_id` is set, use that sensor ID directly. Skip the candidate search. Log: "Using operator-specified OpenAQ sensor {id}."
+- **Automatic path:** Call `find_best_pm25_sensor()` to get ranked candidates. Loop through each:
+  1. Fetch PM data for the candidate.
+  2. Run `run_bootstrap()` with that data.
+  3. If `clean_sky_samples > 0`: success — log selected sensor details, persist sensor info in calibration.json, break.
+  4. If `clean_sky_samples == 0`: log rejection reason with counters (e.g., "Sensor 1502 'South Long Beach' (16.2 km): 3000 records, 2847 PM2.5 >= 12, 153 no archive match, 0 qualifying — skipping"), continue to next candidate.
+- If all candidates exhausted: log "No suitable OpenAQ sensor found within {radius} km. Calibration will proceed organically from real-time observations." No error — this is a valid outcome.
+- Persist selected sensor info in calibration.json v2 (new fields: `openaq_sensor_id`, `openaq_sensor_name`, `openaq_sensor_distance_km`, `openaq_sensor_lat`, `openaq_sensor_lon`).
+- Accept: Bootstrap tries multiple sensors. Rejection reasons logged with counters. Override respected. Sensor info persisted.
+
+### T9.3 — Add `openaq_sensor_id` to `ConditionsSettings`
+
+- Owner: `clearskies-api-dev`
+- New optional key in `ConditionsSettings.__init__`: `self.openaq_sensor_id = section.get("openaq_sensor_id") or None`. Type: `int | None`. No validation beyond int parse — any OpenAQ sensor ID is accepted (operator's responsibility for manual IDs).
+- Accept: Old api.conf without the key loads cleanly. Key round-trips through admin save.
+
+### T9.4 — Add `GET /setup/openaq-sensors` endpoint
+
+- Owner: `clearskies-api-dev`
+- New endpoint in `endpoints/setup.py`.
+- Calls `openaq_client.get_nearby_sensors(station_lat, station_lon)`.
+- Returns: `{"sensors": [{"sensor_id": 1502, "name": "South Long Beach", "distance_km": 16.2, "lat": 33.79, "lon": -118.18, "datetime_first": "2020-01-15", "datetime_last": "2026-06-22"}, ...]}`.
+- Auth: proxy secret.
+- Accept: Endpoint returns sensor list. Empty list if no monitors nearby.
+
+### T9.5 — Admin UI: sensor display + override
+
+- Owner: `clearskies-api-dev`
+- **haze_calibration.html changes:**
+  - New "Bootstrap Sensor" section below the calibration status grid.
+  - Displays current sensor: name, distance, coordinates, type. Reads from calibration state (persisted in calibration.json).
+  - Dropdown: populated via HTMX call to a route that calls `GET /setup/openaq-sensors`. Shows reference sensors only.
+  - "Enter Station ID" option at the bottom of the dropdown — reveals a text input for manual ID entry.
+  - Save writes `openaq_sensor_id` to api.conf `[conditions]` via the existing POST handler.
+  - "Clear override" button resets to automatic mode.
+- **routes.py changes:**
+  - New route `GET /admin/openaq-sensors-fragment`: calls API `/setup/openaq-sensors`, returns HTMX fragment with dropdown options.
+  - POST handler saves `openaq_sensor_id` alongside `haze_detection` and `gamma`.
+- Accept: Admin page shows current sensor info. Dropdown lists reference stations. Manual ID entry works. Override persists across restarts.
+
+### T9.6 — Update calibration state for sensor info
+
+- Owner: `clearskies-api-dev`
+- Extend `get_calibration_state()` return dict with `openaq_sensor` sub-dict: `{"sensor_id": int, "name": str, "distance_km": float, "lat": float, "lon": float}` or `null` if no sensor used yet.
+- Extend calibration.json v2 with the sensor fields (backward compatible — old files just won't have them).
+- `landing.html` haze card: show sensor name + distance if available.
+- Accept: Calibration state includes sensor info. Old calibration.json loads without sensor fields (null).
+
+### T9.7 — Docs update
+
+- Owner: `clearskies-docs-author`
+- **API-MANUAL.md §8:** Add sensor selection algorithm (try-until-it-works, data age check, rejection logging). Document `openaq_sensor_id` config key. Document `GET /setup/openaq-sensors` endpoint.
+- **OPERATIONS-MANUAL.md:** Add `openaq_sensor_id` to `[conditions]` config table. Update admin haze calibration section with sensor display and override UI.
+- **ARCHITECTURE.md:** Add `GET /setup/openaq-sensors` to endpoint table.
+- **ADR-068:** Amend with sensor selection section (Proposed → user approves → Accepted).
+- Accept: No references to single-shot sensor selection. New config key documented. New endpoint in inventory.
+
+### T9.8 — Testing
+
+- Owner: `clearskies-test-author`
+- New tests in `tests/test_openaq_client.py` (or extend existing):
+  - `find_best_pm25_sensor` returns ranked list
+  - Sensors with < 12 months history excluded
+  - Non-reference sensors excluded from automatic results
+  - `get_nearby_sensors` returns dropdown-formatted data
+- Extend `tests/test_auto_calibration.py`:
+  - Sensor info persisted in calibration.json
+  - `get_calibration_state()` includes `openaq_sensor` field
+- Accept: All pass. Zero introduced failures in full suite.
+
+### T9.9 — Deploy + Verify
+
+- Deploy API to weewx, stack to weather-dev.
+- Verify: bootstrap tries multiple sensors (check startup log for rejection messages).
+- Verify: admin haze calibration shows sensor info and dropdown.
+- Verify: manual sensor ID entry works.
+- Verify: full pytest baseline maintained.
+
+**QC gates (coordinator):**
+- After T9.1-T9.2: grep for `find_nearest_pm25_sensor` — zero hits (renamed). Verify bootstrap log shows multi-sensor attempt.
+- After T9.5: load admin page, verify sensor display and dropdown render.
+- After T9.8: full suite run, zero introduced failures.
+
+---
+
 ## Verification
 
 After all phases:
-- ADR-068 amended and re-accepted
+- ADR-068 amended and re-accepted (monthly normals + sensor selection)
 - 3 manuals updated (API-MANUAL, OPS-MANUAL, ARCHITECTURE)
 - auto_calibration.py uses monthly-normals model with 3-year window
 - Bootstrap runs automatically at startup (no CLI, no admin button)
-- Admin shows 12-month calibration grid, reset button, drift warnings
-- No operator-tunable calibration parameters (only haze_detection, gamma, haze_aqi_provider)
+- Bootstrap sensor selection: try-until-it-works with rejection logging, data age check (>= 12 months), reference sensors only in automatic mode
+- Operator sensor override: dropdown of reference stations + manual ID entry for non-reference escape hatch
+- Admin shows 12-month calibration grid, reset button, drift warnings, active sensor info
+- Operator-tunable: haze_detection, gamma, haze_aqi_provider, openaq_sensor_id (optional override)
 - Cross-host calibration state works via API endpoints
 - v1→v2 migration preserves existing data
 - Hardware change detection (reset + drift + station_type)
@@ -349,24 +493,26 @@ After all phases:
 ## Key Files
 
 ### API repo (`repos/weewx-clearskies-api`)
-- `weewx_clearskies_api/sse/auto_calibration.py` — major rewrite (core model)
+- `weewx_clearskies_api/sse/auto_calibration.py` — major rewrite (core model) + sensor info in state/persistence
+- `weewx_clearskies_api/bootstrap/openaq_client.py` — smart sensor selection (multi-candidate, data age check, nearby list)
 - `weewx_clearskies_api/bootstrap/importer.py` — monthly bins, remove --years
-- `weewx_clearskies_api/__main__.py` — auto-bootstrap, remove configure(), sensor checks
-- `weewx_clearskies_api/config/settings.py` — remove calibration params from ConditionsSettings
+- `weewx_clearskies_api/__main__.py` — auto-bootstrap with try-until-it-works loop, sensor override
+- `weewx_clearskies_api/config/settings.py` — remove calibration params, add openaq_sensor_id
 - `weewx_clearskies_api/sse/haze_condition.py` — docstring update, f(RH) None handling
 - `weewx_clearskies_api/sse/enrichment/weather_text.py` — extend deferral for missing sensors
 - `weewx_clearskies_api/sse/enrichment/provider_weather_feed.py` — extend deferral
-- `weewx_clearskies_api/endpoints/setup.py` — new calibration-state + calibration-reset endpoints
-- `tests/test_auto_calibration.py` — complete rewrite
+- `weewx_clearskies_api/endpoints/setup.py` — calibration-state, calibration-reset, openaq-sensors endpoints
+- `tests/test_auto_calibration.py` — complete rewrite + sensor info tests
+- `tests/test_openaq_client.py` — multi-candidate, data age filter, nearby sensors tests
 - `tests/test_haze_condition.py` — minimal updates
 
 ### Stack repo (`repos/weewx-clearskies-stack`)
-- `weewx_clearskies_config/templates/admin/haze_calibration.html` — rework UI
-- `weewx_clearskies_config/templates/admin/landing.html` — update haze card
-- `weewx_clearskies_config/admin/routes.py` — API-based state reads, reset route
+- `weewx_clearskies_config/templates/admin/haze_calibration.html` — rework UI + sensor display/override
+- `weewx_clearskies_config/templates/admin/landing.html` — update haze card + sensor info
+- `weewx_clearskies_config/admin/routes.py` — API-based state reads, reset route, sensor dropdown fragment
 
 ### Meta repo (root)
-- `docs/API-MANUAL.md` — section 8 auto-calibration rewrite
-- `docs/OPERATIONS-MANUAL.md` — conditions config table, admin section, bootstrap
+- `docs/API-MANUAL.md` — section 8 auto-calibration rewrite + sensor selection
+- `docs/OPERATIONS-MANUAL.md` — conditions config table, admin section, bootstrap, sensor override
 - `docs/ARCHITECTURE.md` — auto_calibration description, new endpoints
-- `docs/archive/decisions/ADR-068-*` — amend for monthly normals
+- `docs/archive/decisions/ADR-068-*` — amend for monthly normals + sensor selection
