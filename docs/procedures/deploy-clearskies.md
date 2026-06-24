@@ -33,7 +33,7 @@ These are what the script targets. Re-verify if the container is rebuilt.
 | Build output | `./dist` (default Vite `outDir`; no override in `vite.config.ts`) |
 | Web root | `/var/www/clearskies` (Caddy `root *`; owned `ubuntu:ubuntu`, mode 775) |
 | Webcam mount | `/var/www/clearskies/webcam` — **read-only LXD bind-mount** (host `/mnt/weewx/webcam`) |
-| Reverse proxy | Caddy on `:80`; serves web root, proxies `/api/v1/*` + `/sse` → API on weewx container (`https://192.168.7.20:8765`), config UI paths → `:9876` |
+| Reverse proxy | Caddy on `:80`; serves web root, proxies `/api/v1/*` + `/sse` → API on weewx container (`https://weewx.shaneburkhardt.com:8765`), config UI paths → `:9876` |
 
 ## The webcam exclusion (why it matters)
 
@@ -94,7 +94,7 @@ What it does, in order (each step aborts on failure — `set -euo pipefail`):
 
 ## Deploying API changes to the weewx container
 
-**The API runs on the `weewx` LXD container only** (see [ARCHITECTURE.md](../ARCHITECTURE.md) §Services, §Container inventory). weather-dev does NOT run the API — it only runs Caddy, the dashboard static files, and the config UI. Caddy proxies `/api/v1/*` and `/sse` to the API on the weewx container at `https://192.168.7.20:8765`.
+**The API runs on the `weewx` LXD container only** (see [ARCHITECTURE.md](../ARCHITECTURE.md) §Services, §Container inventory). weather-dev does NOT run the API — it only runs Caddy, the dashboard static files, and the config UI. Caddy proxies `/api/v1/*` and `/sse` to the API on the weewx container at `https://weewx.shaneburkhardt.com:8765`.
 
 When you change code in `weewx-clearskies-api`, deploy to the weewx container:
 

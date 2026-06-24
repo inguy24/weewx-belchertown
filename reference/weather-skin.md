@@ -26,9 +26,9 @@ The site is "synced" via an LXD shared disk, NOT rsync/cron/Ftp/Rsync skins:
 ## Weewx engine
 
 - **Host container:** `weewx` on Ratbert
-- **Container IP:** 192.168.7.20
+- **FQDN:** `weewx.shaneburkhardt.com` (VLAN2, dual-stack)
 - **Database:** MariaDB 10.11 (shared with Kodi)
-- **Database host:** Same weewx container (localhost or 192.168.7.20 from remote)
+- **Database host:** Same weewx container (localhost or `weewx.shaneburkhardt.com` from remote)
 - **Data tables:** `archive` (historical data), `current_observation` (live conditions)
 - **Custom archive columns (added by extensions):** `aqi` (REAL), `main_pollutant` (TEXT), `aqi_level` (TEXT), `aqi_location` (TEXT) — written by `AirVisualService` every archive interval; `ow_*` columns written by `OpenWeatherService` (unused by skin)
 - **Weewx version:** 5.3.1 (verified 2026-04-29)

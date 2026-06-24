@@ -9,7 +9,7 @@ Authoritative map of where every piece of the weather stack lives. Generated fro
 | Host | Role | Network |
 |---|---|---|
 | **Ratbert** (LXD host) | LXD container host on home network | manages bridges `br-vlan2`, `br-vlan7`, `br-internal` |
-| **weewx** (LXD container) | WeeWX 5.3.1 engine, generates static HTML, runs MQTT publisher | eth0 `192.168.7.20` (br-vlan7) |
+| **weewx** (LXD container) | WeeWX 5.3.1 engine, generates static HTML, runs MQTT publisher | `weewx.shaneburkhardt.com` (VLAN2, dual-stack) |
 | **cloud** (LXD container) | Apache HTTPS frontend + EMQX MQTT broker + Nextcloud | eth0 `192.168.7.2` (br-vlan7), eth1 `10.0.1.3` (br-internal) |
 
 The two containers are **on different VLAN bridges**, so traffic between them traverses the home network's L3 router (Mikrotik).

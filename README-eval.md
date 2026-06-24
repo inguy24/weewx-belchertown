@@ -56,7 +56,7 @@ When making changes:
 
 This project integrates with:
 
-- **weewx container** (192.168.7.20) — Weather data engine + MariaDB
+- **weewx container** (`weewx.shaneburkhardt.com`) — Weather data engine + MariaDB
 - **cloud container** (192.168.7.2) — Web server running weather.shaneburkhardt.com
 - **Ratbert** (ratbert.shaneburkhardt.com) — LXD host, reverse proxy, DNS
 - **GitHub fork** — https://github.com/inguy24/weewx-belchertown

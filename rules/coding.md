@@ -118,7 +118,7 @@ Any code that listens, connects, resolves, parses, validates, formats, logs, or 
 - **Database / storage:** if storing an IP, use a column type that holds both (`INET` in PostgreSQL, `VARBINARY(16)` or two columns in MySQL/MariaDB; never `VARCHAR(15)` — that's IPv4-only by length).
 - **Tests:** any test that exercises networking logic includes IPv6 cases. A test suite that only covers IPv4 will let IPv6 bugs through.
 
-**Anti-patterns:** hardcoded `127.0.0.1` defaults; regex like `^(\d{1,3}\.){3}\d{1,3}$` for IP validation; documentation that only shows `192.168.x.y`; storing IPs as `VARCHAR(15)`; calling `gethostbyname`; building URLs by string-concatenation around IPv6 literals.
+**Anti-patterns:** hardcoded `127.0.0.1` defaults; regex like `^(\d{1,3}\.){3}\d{1,3}$` for IP validation; documentation that only shows `192.168.x.y`; storing IPs as `VARCHAR(15)`; calling `gethostbyname`; building URLs by string-concatenation around IPv6 literals; using IP addresses instead of FQDNs to refer to hosts (locks you to one address family and one VLAN assignment — use `weewx.shaneburkhardt.com` not `192.168.7.20`).
 
 This rule applies project-wide — it governs the configuration UI's listener (per ADR-027, now in `docs/OPERATIONS-MANUAL.md` §4), the api and realtime services' listeners, any health-check probe code, any outbound provider call, any logging that includes a remote address, and any future networking code.
 

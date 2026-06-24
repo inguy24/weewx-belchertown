@@ -84,7 +84,7 @@ ssh -F .local/ssh/config weather-dev "curl -s -o /dev/null -w '%{http_code}\n' h
 | Legacy web server | `cloud` | via ratbert: `lxc exec cloud -- bash` | Nextcloud + weather.shaneburkhardt.com (Belchertown skin) |
 | LXD host | `ratbert` | `ssh -F .local/ssh/config ratbert` | Container orchestration only |
 
-**Two-host split (Clear Skies):** The API runs on `weewx` (port 8765), Caddy + dashboard + config UI run on `weather-dev`. Caddy proxies `/api/v1/*` and `/sse` to the API on weewx (`https://192.168.7.20:8765`). See [../ARCHITECTURE.md](../ARCHITECTURE.md) for the full topology.
+**Two-host split (Clear Skies):** The API runs on `weewx` (port 8765), Caddy + dashboard + config UI run on `weather-dev`. Caddy proxies `/api/v1/*` and `/sse` to the API on weewx (`https://weewx.shaneburkhardt.com:8765`). See [../ARCHITECTURE.md](../ARCHITECTURE.md) for the full topology.
 
 ---
 

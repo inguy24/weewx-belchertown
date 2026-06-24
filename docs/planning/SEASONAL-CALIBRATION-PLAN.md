@@ -17,7 +17,7 @@ During Phase 10 (deploy + verify) of the Haze/Fog/NWS Text implementation plan (
 
 Phases 0-9 of the Haze/Fog/NWS Text plan are complete and deployed. Phase 10 deployment is partially done:
 
-- **API on weewx** (`192.168.7.20`): at commit `170805f` (includes openaq_api_key fix for wizard 422). Service running, all Phase 9 audit remediations active. 354 new tests passing. `weatherText`, `weatherTextStandard`, `weatherTextVerbose` fields live.
+- **API on weewx** (`weewx.shaneburkhardt.com`): at commit `170805f` (includes openaq_api_key fix for wizard 422). Service running, all Phase 9 audit remediations active. 354 new tests passing. `weatherText`, `weatherTextStandard`, `weatherTextVerbose` fields live.
 - **Stack on weather-dev** (`192.168.2.113`): at commit `861e121` (includes about_content wizard fixes + openaq_api_key round-trip). Config UI running on port 9876.
 - **Meta repo**: at commit `02a49d0` (Phase 9 plan closeout).
 - **Aeris AQI** is now the active AQI provider (user applied wizard settings this session).

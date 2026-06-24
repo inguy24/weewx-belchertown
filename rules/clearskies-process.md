@@ -238,7 +238,7 @@ When the task originated from a user prompt (not a plan-internal round), walk th
 
 **Dev/test runs in `weather-dev` LXD container, not Windows.** Shell into container: `ssh weather-dev "<command>"`. File sync: push to GitHub from DILBERT, then run `scripts/sync-to-weather-dev.sh`. Browser testing: `http://192.168.2.113:<port>`. DILBERT = editing + git + planning only.
 
-**The API runs on the `weewx` container (192.168.7.20), NOT weather-dev.** The API co-locates with weewx because it reads the weewx archive DB and `weewx.conf` locally. Dashboard, config UI, tests, and builds run on weather-dev. Do not run the API on weather-dev — see `reference/clearskies-dev.md` §"There should be NO clearskies-api running on weather-dev." To deploy API changes: push to GitHub → SSH to the weewx container → `git pull --ff-only` in the API repo → `sudo systemctl restart weewx-clearskies-api`.
+**The API runs on the `weewx` container (`weewx.shaneburkhardt.com`), NOT weather-dev.** The API co-locates with weewx because it reads the weewx archive DB and `weewx.conf` locally. Dashboard, config UI, tests, and builds run on weather-dev. Do not run the API on weather-dev — see `reference/clearskies-dev.md` §"There should be NO clearskies-api running on weather-dev." To deploy API changes: push to GitHub → SSH to the weewx container → `git pull --ff-only` in the API repo → `sudo systemctl restart weewx-clearskies-api`.
 
 **API startup takes ~2 minutes.** After `systemctl restart weewx-clearskies-api`, the cache warmer makes outbound provider API calls (Aeris, NWS, etc.) before uvicorn binds to port 8765. Any deployment script or verification step that restarts the API must wait at least 120 seconds before hitting endpoints. `sleep 10` will get connection refused.
 

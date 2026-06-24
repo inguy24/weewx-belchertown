@@ -2,7 +2,7 @@
 
 Step-by-step procedure for installing the ClearSkiesLoopRelay weewx extension on the weewx host and verifying end-to-end loop packet flow.
 
-**Target host:** weewx LXD container (192.168.7.20) — SSH: `ssh weewx` or `ssh ubuntu@192.168.7.20`.
+**Target host:** weewx LXD container (`weewx.shaneburkhardt.com`) — SSH: `ssh weewx`.
 
 **Prerequisites:**
 - weewx 5.x installed and running

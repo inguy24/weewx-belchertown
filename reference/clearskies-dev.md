@@ -55,7 +55,7 @@ API address is remote   → MQTT mode (broker bridges loop packets between hosts
 
 | Host | IP | Role | Services |
 |---|---|---|---|
-| **weewx** (LXD container) | 192.168.7.20 | weewx + API | weewx, weewx-clearskies-api (port 8765 TLS), Redis (port 6379 loopback) |
+| **weewx** (LXD container) | `weewx.shaneburkhardt.com` (VLAN2, dual-stack) | weewx + API | weewx, weewx-clearskies-api (port 8765 TLS), Redis (port 6379 loopback) |
 | **weather-dev** (LXD container) | 192.168.2.113 | Dashboard + config host | weewx-clearskies-config (9876), dashboard static files, Caddy (ports 80/443) |
 
 ### One-door reverse proxy (ADR-037)
@@ -190,7 +190,7 @@ The public-facing dev dashboard is at:
 https://weather-test.shaneburkhardt.com
 ```
 
-This is the URL to use for visual verification, screenshots, and all browser-based testing. Do NOT use the raw container IP (192.168.2.113) — it is not routable from DILBERT's browser.
+This is the URL to use for visual verification, screenshots, and all browser-based testing. Do NOT use raw container IPs — use FQDNs for dual-stack compatibility.
 
 For direct service ports via SSH (curl from weather-dev), use `ssh weather-dev "curl http://localhost:<port>/..."`.
 
