@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Haze Icon Prototype — Option B (Amber)</title>
+<style>
+  body { font-family: system-ui; margin: 2rem; }
+  .grid { display: grid; grid-template-columns: repeat(4, auto); gap: 2rem; align-items: center; }
+  .cell { text-align: center; padding: 1rem; border-radius: 8px; }
+  .dark { background: #1a1a2e; color: #e0e0e0; }
+  .light { background: #f5f5f5; color: #333; }
+  h2 { grid-column: 1 / -1; margin: 1rem 0 0.5rem; }
+  .label { font-size: 0.75rem; margin-top: 0.5rem; opacity: 0.7; }
+</style>
+</head>
+<body>
+<h1>Haze Icon Prototype — Option B (Amber) #CDAA6D → #A07840</h1>
+<div class="grid">
+
+  <h2>Hazy Day (WMO 5) — 96px</h2>
+  <div class="cell dark">
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD24D"/>
+          <stop offset="100%" stop-color="#F5A623"/>
+        </linearGradient>
+        <linearGradient id="hazeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#CDAA6D"/>
+          <stop offset="100%" stop-color="#A07840"/>
+        </linearGradient>
+        <clipPath id="hazeClipD">
+          <rect x="0" y="0" width="24" height="16.5"/>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#hazeClipD)">
+        <path fill="url(#goldGrad)" d="M11 5V1h2v4zm6.65 2.75l-1.375-1.375l2.8-2.875l1.4 1.425zM19 13v-2h4v2zm-8 10v-4h2v4zM6.35 7.7L3.5 4.925l1.425-1.4L7.75 6.35zm12.7 12.8l-2.775-2.875l1.35-1.35l2.85 2.75zM1 13v-2h4v2zm3.925 7.5l-1.4-1.425l2.8-2.8l.725.675l.725.7zm2.825-4.25Q6 14.5 6 12t1.75-4.25T12 6t4.25 1.75T18 12t-1.75 4.25T12 18t-4.25-1.75"/>
+      </g>
+      <path fill="url(#hazeGrad)" d="M6 19q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19z"/>
+      <path fill="url(#hazeGrad)" d="M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19"/>
+      <path fill="url(#hazeGrad)" d="M10 22q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22z"/>
+      <path fill="url(#hazeGrad)" d="M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22"/>
+    </svg>
+    <div class="label">Dark bg</div>
+  </div>
+  <div class="cell light">
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient id="goldGrad2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD24D"/>
+          <stop offset="100%" stop-color="#F5A623"/>
+        </linearGradient>
+        <linearGradient id="hazeGrad2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#CDAA6D"/>
+          <stop offset="100%" stop-color="#A07840"/>
+        </linearGradient>
+        <clipPath id="hazeClipD2">
+          <rect x="0" y="0" width="24" height="16.5"/>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#hazeClipD2)">
+        <path fill="url(#goldGrad2)" d="M11 5V1h2v4zm6.65 2.75l-1.375-1.375l2.8-2.875l1.4 1.425zM19 13v-2h4v2zm-8 10v-4h2v4zM6.35 7.7L3.5 4.925l1.425-1.4L7.75 6.35zm12.7 12.8l-2.775-2.875l1.35-1.35l2.85 2.75zM1 13v-2h4v2zm3.925 7.5l-1.4-1.425l2.8-2.8l.725.675l.725.7zm2.825-4.25Q6 14.5 6 12t1.75-4.25T12 6t4.25 1.75T18 12t-1.75 4.25T12 18t-4.25-1.75"/>
+      </g>
+      <path fill="url(#hazeGrad2)" d="M6 19q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19z"/>
+      <path fill="url(#hazeGrad2)" d="M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19"/>
+      <path fill="url(#hazeGrad2)" d="M10 22q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22z"/>
+      <path fill="url(#hazeGrad2)" d="M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22"/>
+    </svg>
+    <div class="label">Light bg</div>
+  </div>
+
+  <h2>Hazy Night (WMO 5, isNight) — 96px</h2>
+  <div class="cell dark">
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient id="moonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#86C3DB"/>
+          <stop offset="100%" stop-color="#72B9D5"/>
+        </linearGradient>
+        <linearGradient id="hazeGrad3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#CDAA6D"/>
+          <stop offset="100%" stop-color="#A07840"/>
+        </linearGradient>
+        <clipPath id="hazeClipN">
+          <rect x="0" y="0" width="24" height="16.5"/>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#hazeClipN)">
+        <path fill="url(#moonGrad)" d="M12.1 22q-2.1 0-3.937-.8t-3.2-2.162t-2.163-3.2T2 11.9q0-3.65 2.325-6.437T10.25 2q-.45 2.475.275 4.838t2.5 4.137t4.138 2.5T22 13.75q-.65 3.6-3.45 5.925T12.1 22"/>
+      </g>
+      <path fill="url(#hazeGrad3)" d="M6 19q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19z"/>
+      <path fill="url(#hazeGrad3)" d="M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19"/>
+      <path fill="url(#hazeGrad3)" d="M10 22q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22z"/>
+      <path fill="url(#hazeGrad3)" d="M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22"/>
+    </svg>
+    <div class="label">Dark bg</div>
+  </div>
+  <div class="cell light">
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient id="moonGrad2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#86C3DB"/>
+          <stop offset="100%" stop-color="#72B9D5"/>
+        </linearGradient>
+        <linearGradient id="hazeGrad4" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#CDAA6D"/>
+          <stop offset="100%" stop-color="#A07840"/>
+        </linearGradient>
+        <clipPath id="hazeClipN2">
+          <rect x="0" y="0" width="24" height="16.5"/>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#hazeClipN2)">
+        <path fill="url(#moonGrad2)" d="M12.1 22q-2.1 0-3.937-.8t-3.2-2.162t-2.163-3.2T2 11.9q0-3.65 2.325-6.437T10.25 2q-.45 2.475.275 4.838t2.5 4.137t4.138 2.5T22 13.75q-.65 3.6-3.45 5.925T12.1 22"/>
+      </g>
+      <path fill="url(#hazeGrad4)" d="M6 19q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19z"/>
+      <path fill="url(#hazeGrad4)" d="M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19"/>
+      <path fill="url(#hazeGrad4)" d="M10 22q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22z"/>
+      <path fill="url(#hazeGrad4)" d="M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22"/>
+    </svg>
+    <div class="label">Light bg</div>
+  </div>
+
+  <h2>Comparison — Foggy (existing, grey) vs Hazy (new, amber)</h2>
+  <div class="cell dark">
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient id="greyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#F3F5F8"/>
+          <stop offset="100%" stop-color="#C7CDD6"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#greyGrad)" stroke="rgba(0,0,0,0.12)" stroke-width="0.4" d="M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22m-1-3q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19zm4 3q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22zm-2.5-6q-2.275 0-3.887-1.612T2 10.5q0-2.075 1.375-3.625t3.4-1.825q.8-1.425 2.188-2.238T12 2q2.25 0 3.913 1.438t2.012 3.587q1.725.15 2.9 1.425T22 11.5q0 1.875-1.312 3.188T17.5 16z"/>
+    </svg>
+    <div class="label">Foggy (grey)</div>
+  </div>
+  <div class="cell dark">
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">
+      <defs>
+        <linearGradient id="goldGrad5" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFD24D"/>
+          <stop offset="100%" stop-color="#F5A623"/>
+        </linearGradient>
+        <linearGradient id="hazeGrad5" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#CDAA6D"/>
+          <stop offset="100%" stop-color="#A07840"/>
+        </linearGradient>
+        <clipPath id="hazeClipC">
+          <rect x="0" y="0" width="24" height="16.5"/>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#hazeClipC)">
+        <path fill="url(#goldGrad5)" d="M11 5V1h2v4zm6.65 2.75l-1.375-1.375l2.8-2.875l1.4 1.425zM19 13v-2h4v2zm-8 10v-4h2v4zM6.35 7.7L3.5 4.925l1.425-1.4L7.75 6.35zm12.7 12.8l-2.775-2.875l1.35-1.35l2.85 2.75zM1 13v-2h4v2zm3.925 7.5l-1.4-1.425l2.8-2.8l.725.675l.725.7zm2.825-4.25Q6 14.5 6 12t1.75-4.25T12 6t4.25 1.75T18 12t-1.75 4.25T12 18t-4.25-1.75"/>
+      </g>
+      <path fill="url(#hazeGrad5)" d="M6 19q-.425 0-.712-.288T5 18t.288-.712T6 17h9q.425 0 .713.288T16 18t-.288.713T15 19z"/>
+      <path fill="url(#hazeGrad5)" d="M18 19q-.425 0-.712-.288T17 18t.288-.712T18 17t.713.288T19 18t-.288.713T18 19"/>
+      <path fill="url(#hazeGrad5)" d="M10 22q-.425 0-.712-.288T9 21t.288-.712T10 20h7q.425 0 .713.288T18 21t-.288.713T17 22z"/>
+      <path fill="url(#hazeGrad5)" d="M7 22q-.425 0-.712-.288T6 21t.288-.712T7 20t.713.288T8 21t-.288.713T7 22"/>
+    </svg>
+    <div class="label">Hazy (amber)</div>
+  </div>
+
+</div>
+</body>
+</html>

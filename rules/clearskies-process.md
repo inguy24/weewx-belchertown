@@ -274,6 +274,16 @@ When the task originated from a user prompt (not a plan-internal round), walk th
 
 **Why (2026-06-18):** The archive_interval was hardcoded as 300 across the entire Clear Skies stack. Belchertown correctly reads it from weewx.conf and passes it to the frontend. We had the code in the repo and didn't look at it. Every timing-dependent component was built on a false assumption.
 
+## Meteorological threshold discipline
+
+**Verify external thresholds against primary meteorological research before coding.** EPA AQI breakpoints are health standards, not meteorological observation thresholds. Use IMPROVE, WMO, NWS, CMA, and peer-reviewed atmospheric science as sources for visibility and haze parameters. Document the research source in the code comment and in the governing manual.
+
+**Why (2026-06-24):** PM2.5 > 12 µg/m³ (EPA "Good/Moderate" breakpoint) was used as the haze detection threshold. This is a health standard with zero relationship to visible haze — no meteorological service worldwide uses it. The correct thresholds are RH-graduated values from CMA, IMPROVE, and WMO research (PM2.5: 50/35/25 µg/m³ at dry/moderate/humid RH). The mismatch caused false haze reports under clean SoCal skies with PM2.5 = 11 and AQI = 46 ("Good").
+
+**Exact label matching for sample filters.** When a filter says "clear days," use `label in {"Clear", "Sunny"}`, not substring matching on "Clear". Substring matching is a category error — "Mostly Clear" contains "Clear" but is not a clear sky. Cloud-enhancement-adjacent readings under "Mostly Clear" contaminate the clean-sky sample pool and inflate baselines.
+
+**Why (2026-06-24):** The auto-calibration clean-sky filter used `any(sub in sky_label for sub in ("Clear", "Sunny"))`, which matched "Mostly Clear" because it contains "Clear". Kcs 1.0–1.06 readings from "Mostly Clear" skies leaked into the clean-sky pool, inflating the June baseline to 1.035 — physically impossible for a clean sky.
+
 ## Communication rules
 
 **Plain English to the user.** Define every technical term the first time it appears in a conversation. One phrase, not a paragraph. If a reply uses 5+ unfamiliar terms, rewrite.

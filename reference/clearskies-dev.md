@@ -182,6 +182,21 @@ ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest tes
 ssh weather-dev "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest -m integration --tb=short"
 ```
 
+### Run condition module tests (on weewx, NOT weather-dev)
+
+The API is installed natively on the weewx container. Condition module tests (haze, calibration, sky, fog) run there — weather-dev is for dashboard and config UI only.
+
+```bash
+# Haze + calibration tests only
+ssh -F .local/ssh/config weewx "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest tests/test_haze_condition.py tests/test_auto_calibration.py --tb=short -q"
+
+# All four condition modules
+ssh -F .local/ssh/config weewx "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest tests/test_haze_condition.py tests/test_auto_calibration.py tests/test_sky_condition.py tests/test_fog_condition.py --tb=short -q"
+
+# Full API suite (only when needed)
+ssh -F .local/ssh/config weewx "cd /home/ubuntu/repos/weewx-clearskies-api && uv run pytest --tb=short -q"
+```
+
 ### Browser testing
 
 The public-facing dev dashboard is at:
