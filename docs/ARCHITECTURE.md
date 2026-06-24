@@ -281,8 +281,8 @@ The API hosts a multi-module, stateful conditions-text engine that produces the 
 | `weewx_clearskies_api/sse/sky_condition.py` | Stateful classifier — Kv-first (Duchon-O'Malley architecture with CAELUS indices), 30-min ring buffer of 1-min GHI averages, produces the sky label |
 | `weewx_clearskies_api/sse/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
 | `weewx_clearskies_api/sse/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict. Provider cross-check for fog/mist confirmation. |
-| `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit + PM), solar elevation gate, f(RH) correction |
-| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, automatic bootstrap with smart sensor selection, sensor info persistence. Bootstrap uses McClear clear-sky GHI (ADR-072). |
+| `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit + RH-graduated PM confirmation: PM2.5 50/35/25, PM10 100/75/50 µg/m³ at dry/moderate/humid RH), solar elevation gate, f(RH) correction, 5-min coherence |
+| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, exact "Clear"/"Sunny" label filter, automatic bootstrap with smart sensor selection, sensor info persistence. Bootstrap uses McClear clear-sky GHI (ADR-072). |
 | `weewx_clearskies_api/bootstrap/mcclear_client.py` | McClear data fetcher — retrieves historical clear-sky GHI via `pvlib.iotools.get_cams()` for bootstrap Kcs computation (ADR-072) |
 | `weewx_clearskies_api/sse/text_generation.py` | NWS-style text engine — terse/standard/verbose verbosity, GFE threshold tables |
 | `weewx_clearskies_api/sse/observation_model.py` | Structured local observation model — METAR-like field mapping |

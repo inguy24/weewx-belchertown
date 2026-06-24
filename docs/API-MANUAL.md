@@ -799,11 +799,13 @@ Two-channel confirmation is required before the engine labels conditions as hazy
 
 **PM confirmation thresholds:**
 
-| Condition | PM threshold | Applied when |
-|-----------|-------------|--------------|
-| Dry haze | PM2.5 > 12 µg/m³ | RH < 80% (EPA "Moderate" breakpoint) |
-| Humid disambiguation | PM2.5 > 35 µg/m³ | T-Td ≤ 4°F (distinguishes particulate haze from fog) |
-| Coarse-mode dust/sand | PM10 > 50 µg/m³ | Any RH |
+| RH range | PM2.5 threshold | PM10 threshold | Basis |
+|----------|----------------|----------------|-------|
+| < 60% (dry) | > 50 µg/m³ | > 100 µg/m³ | CMA dry haze threshold (~54 µg/m³ PM2.5 for vis < 10 km). Coarse mass scaled by IMPROVE extinction ratio. |
+| 60–80% (moderate) | > 35 µg/m³ | > 75 µg/m³ | CMA moderate humidity, EPA 24-hr NAAQS, WMO dusty-air midpoint, China secondary standard. |
+| 80–90% (humid) | > 25 µg/m³ | > 50 µg/m³ | Hygroscopic swelling — less mass produces same extinction. EEA annual standard, WMO/Australia lower bound. |
+
+Both PM2.5 and PM10 are independent first-class indicators evaluated in parallel. Either species alone confirms Channel 2. PM10 is NOT a fallback. See `docs/reference/haze-detection-research.md` for the full research backing these thresholds.
 
 **f(RH) hygroscopic correction:** Applied to the Kcs-deficit channel before threshold comparison:
 
@@ -824,7 +826,7 @@ Default γ = 0.45 (moderate, composition-unknown). γ is a composition property 
 **Gates and suppression:**
 
 1. **Wet deposition gate:** Suppress haze during active precipitation and for 30 minutes after rain ends. Rain scavenges aerosols.
-2. **Temporal coherence:** 15-minute persistence filter (matches sky classifier). Prevents haze label flicker.
+2. **Temporal coherence:** 5-minute persistence filter (matches sky classifier coherence window). Prevents haze label flicker.
 3. **Clear-sky-only constraint:** Haze is a clear-sky modifier. Do NOT apply haze when sky is classified as Mostly Cloudy, Cloudy, Overcast, or Heavy Overcast. "Hazy and Overcast" is invalid.
 4. **Stale PM data:** If last PM reading is > 2 hours old, treat as unavailable. Do not conclude "no haze" from stale data — absence of fresh evidence is not evidence of absence.
 
@@ -857,7 +859,7 @@ The haze detection channel compares current Kcs against a station-specific clean
 
 1. PM2.5 < 12 µg/m³ AND PM10 < 50 µg/m³ (EPA "Good" AQI breakpoints)
 2. Solar elevation > 10°
-3. Sky classifier returns CLOUDLESS or THIN_CLOUDS
+3. Sky classifier returns exactly "Clear" or "Sunny" (exact label match — `sky_label in {"Clear", "Sunny"}`). Partial matches such as "Mostly Clear" or "Mostly Sunny" do not qualify.
 4. No rain in the prior 30 minutes
 
 **Minimum samples per month:** A month's learned baseline activates only when it has >= 30 qualifying clean-sky samples. Below this threshold, that month falls back to the flat baseline.
