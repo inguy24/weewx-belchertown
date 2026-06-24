@@ -8,6 +8,17 @@ These rules are concrete and actionable. When in doubt, prefer "boring and obvio
 
 ## 1. Security & safety — zero-trust posture
 
+### Weather data is safety-critical — never cache it like a static asset
+
+People make real decisions based on weather data: alerts, conditions, sun position, forecasts. Stale data can be dangerous. Rules:
+
+- **Alerts, warnings, and hazard data:** Never cache. Always serve fresh from the provider.
+- **Current conditions, sun position, wind, temperature:** These change continuously. Any endpoint serving "current" values must recompute or re-fetch on every request, or use TTLs measured in seconds, not minutes.
+- **Forecasts and AQI:** Short TTLs are acceptable (per ARCHITECTURE.md: forecast 30 min, alerts 5 min, AQI 15 min), but the TTLs must match what the provider recommends and what the data's natural update frequency is.
+- **When in doubt, don't cache.** The cost of a redundant computation or API call is trivial compared to someone seeing a stale tornado warning or acting on a sun position that stopped updating.
+
+**Why (2026-06-23):** The almanac endpoint's sun altitude was stuck at -8.3° for 30+ minutes — it computed once and never refreshed. The sky condition classifier held a stale "Overcast" label from backfill instead of handing off to the provider when the sun was too low. Both bugs trace to the same root cause: treating dynamic weather data as cacheable.
+
 ### Treat your own output as untrusted
 
 LLM-generated code (including yours) is unverified until reviewed and tested against the real data shape. Before committing:

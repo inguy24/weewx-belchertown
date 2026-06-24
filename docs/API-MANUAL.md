@@ -524,14 +524,15 @@ The conditions text engine is a multi-module stateful system that produces the `
 
 - Measure GHI (radiation from weewx) and clear-sky reference (maxSolarRad from weewx).
 - Bin 5-second LOOP packets into 1-minute averages. Maintain a 30-minute ring buffer of MinuteRecord entries.
-- Compute four indices from the ring buffer:
+- Compute five indices from the ring buffer:
 
-| Index | Formula | Window |
-|-------|---------|--------|
-| Kcs | latest GHI / latest maxSolarRad, clamped [0, 1.2] | Latest minute |
-| Km | mean(all GHI) / mean(all maxSolarRad) | 30 min |
-| Kv | Σ\|ΔGHI - ΔmaxSolarRad\| / window_span | 30 min |
-| Kvf | Same formula as Kv | 10 min |
+| Index | Formula | Window | Used in |
+|-------|---------|--------|---------|
+| Kcs | latest GHI / latest maxSolarRad, clamped [0, 1.2] | Latest minute | Cloud enhancement gate, uniform clear check |
+| Km | mean(all GHI) / mean(all maxSolarRad) | 30 min | Uniform branch (clear vs. overcast thickness) |
+| Kmf | Same formula as Km | 10 min | Variable branch (coverage degree) |
+| Kv | Σ\|ΔGHI - ΔmaxSolarRad\| / window_span | 30 min | Asymmetric gate (both must be calm for uniform) |
+| Kvf | Same formula as Kv | 10 min | Asymmetric gate (either triggers variable), cloud enhancement |
 
 Kv is the cumulative absolute first-derivative of **clear-sky-detrended** GHI. Each minute-to-minute GHI change has the corresponding maxSolarRad change subtracted before taking the absolute value and summing. This removes the deterministic solar geometry signal (the sun rising and setting changes GHI even under clear skies) and isolates cloud-induced variability. Without detrending, a clear afternoon's steady GHI decline produces elevated Kv, causing false "Mostly Clear" classifications.
 
@@ -553,11 +554,20 @@ Kv is the cumulative absolute first-derivative of **clear-sky-detrended** GHI. E
 
 Cloud enhancement (GHI exceeding clear-sky) physically requires nearby cloud edges — a broken-cloud scenario. Maps to "Partly Cloudy" rather than "Clear" for physical accuracy. See ADR-073 §6.
 
-*Step 2: Primary axis — Kv (Kv < 0.05 = uniform sky; Kv ≥ 0.05 = variable sky)*
+*Step 2: Primary axis — asymmetric Kv/Kvf gate (uniform vs. variable sky)*
 
 Six independent papers confirm the inverted-U relationship between cloud fraction and irradiance variability: variability peaks at ~50% cloud fraction and drops to near-zero at 0% (clear) and 100% (overcast). Low Kv means uniform sky (either clear or fully overcast). Elevated Kv means broken coverage. See ADR-073 §1.
 
-*Step 3: Uniform sky (Kv < 0.05) — Km distinguishes clear vs. overcast*
+The gate uses asymmetric sensitivity across the two variability windows:
+
+| Condition | Branch | Rationale |
+|-----------|--------|-----------|
+| Kv ≥ 0.05 OR Kvf ≥ 0.05 | Variable sky → Step 4 | Responsive: any recent variability (even only in the 10-min window) means the sky is broken *now* |
+| Kv < 0.05 AND Kvf < 0.05 | Uniform sky → Step 3 | Conservative: declaring "no breaks" requires sustained calm across both the 30-min and 10-min windows |
+
+This asymmetry matches perception: a single cloud transit is immediately visible to anyone looking at the sky, but "the sky has been completely uniform for a while" is a stronger claim that needs more evidence. It also replaces explicit hysteresis — entering the variable branch is easy (fast response to cloud transits), returning to uniform is hard (prevents premature "Overcast" calls during brief lulls in a broken sky).
+
+*Step 3: Uniform sky (both Kv AND Kvf < 0.05) — Km distinguishes clear vs. overcast*
 
 | Conditions | Display label |
 |-----------|---------------|
@@ -565,18 +575,20 @@ Six independent papers confirm the inverted-U relationship between cloud fractio
 | Km > 0.35 | Overcast |
 | Km ≤ 0.35 | Heavy Overcast |
 
-In the uniform branch, Kv has confirmed no cloud-edge transitions. Every non-clear outcome is overcast by definition (NWS OVC, 8/8, no gaps). Km distinguishes cloud thickness within the overcast family: thin to moderate uniform layer (Overcast) vs. thick layer with low transmittance, correlated with imminent precipitation (Heavy Overcast).
+In the uniform branch, both variability windows confirm no cloud-edge transitions. Every non-clear outcome is overcast by definition (NWS OVC, 8/8, no gaps). Km distinguishes cloud thickness within the overcast family: thin to moderate uniform layer (Overcast) vs. thick layer with low transmittance, correlated with imminent precipitation (Heavy Overcast).
 
-*Step 4: Variable sky (Kv ≥ 0.05) — Km distinguishes coverage degree*
+*Step 4: Variable sky (Kv OR Kvf ≥ 0.05) — Kmf distinguishes coverage degree*
 
 | Conditions | Display label |
 |-----------|---------------|
-| Km > 0.85 | Mostly Clear |
-| Km > 0.60 | Partly Cloudy |
-| Km > 0.40 | Mostly Cloudy |
-| Km ≤ 0.40 | Cloudy |
+| Kmf > 0.85 | Mostly Clear |
+| Kmf > 0.60 | Partly Cloudy |
+| Kmf > 0.40 | Mostly Cloudy |
+| Kmf ≤ 0.40 | Cloudy |
 
-In the variable branch, Kv has confirmed cloud-edge transitions exist. "Cloudy" here (NWS: 87–100%, includes 7/8 BKN) differs from "Overcast" (8/8 OVC) by the existence of breaks — Kv confirms them even when infrequent.
+The variable branch uses **Kmf** (10-minute mean transmittance) instead of Km (30-minute). When the sky has breaks and conditions are actively changing, the last 10 minutes reflect what the visitor sees now — not what the sky looked like 20 minutes ago. The uniform branch retains Km (30-minute) because stable sky conditions warrant a longer average.
+
+"Cloudy" here (NWS: 87–100%, includes 7/8 BKN) differs from "Overcast" (8/8 OVC) by the existence of breaks — variability confirms them even when infrequent.
 
 **Threshold constants:**
 
@@ -592,7 +604,7 @@ In the variable branch, Kv has confirmed cloud-edge transitions exist. "Cloudy" 
 
 Threshold initial values are from physical reasoning and literature review; not per-station calibrated. Tuning deferred to post-deployment observation. See ADR-073 §1.
 
-**Temporal coherence filter:** A raw classification must persist for 15 consecutive minutes before becoming the stable label. On startup, 3-minute grace applies.
+**Temporal coherence filter:** A raw classification must persist for 5 consecutive minutes before becoming the stable label. On startup, 2-minute grace applies. (Reduced from 15/3 minutes — the 30-minute Kv/Km averaging and the asymmetric Kv/Kvf gate already provide substantial smoothing; stacking a 15-minute coherence filter on top created up to 45 minutes of lag, which is unacceptable for a weather display.)
 
 **Startup backfill:** On API restart, `backfill()` seeds the ring buffer from archive records (last 30 minutes) for immediate classification. Full accuracy after ~30 minutes of live LOOP data.
 
