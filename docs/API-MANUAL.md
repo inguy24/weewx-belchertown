@@ -10,7 +10,7 @@ Companion documents:
 - **PROVIDER-MANUAL.md** — provider module rules
 - **contracts/canonical-data-model.md** — per-field data catalog (the field inventory)
 
-Last updated: 2026-06-23
+Last updated: 2026-06-24
 
 ---
 
@@ -27,7 +27,8 @@ Last updated: 2026-06-23
 9. [Charts System — API Side](#9-charts-system--api-side)
 10. [weewx Integration](#10-weewx-integration)
 11. [SSE and Realtime](#11-sse-and-realtime)
-12. [Anti-Patterns](#12-anti-patterns)
+12. [Radar Endpoints and Capability Model](#12-radar-endpoints-and-capability-model)
+13. [Anti-Patterns](#13-anti-patterns)
 
 ---
 
@@ -529,7 +530,7 @@ The conditions text engine is a multi-module stateful system that produces the `
 | Index | Formula | Window | Used in |
 |-------|---------|--------|---------|
 | Kcs | latest GHI / latest maxSolarRad, clamped [0, 1.2] | Latest minute | Cloud enhancement gate, uniform clear check |
-| Km | mean(all GHI) / mean(all maxSolarRad) | 30 min | Uniform branch (clear vs. overcast thickness) |
+| Km | (1/n) Σ(GHI_i / maxSolarRad_i) — mean of per-minute ratios | 30 min | Uniform branch (clear vs. overcast thickness) |
 | Kmf | Same formula as Km | 10 min | Variable branch (coverage degree) |
 | Kv | Σ\|ΔGHI - ΔmaxSolarRad\| / window_span | 30 min | Asymmetric gate (both must be calm for uniform) |
 | Kvf | Same formula as Kv | 10 min | Asymmetric gate (either triggers variable), cloud enhancement |
@@ -543,7 +544,7 @@ Kv is the cumulative absolute first-derivative of **clear-sky-detrended** GHI. E
 *Step 0: Pre-checks*
 
 - Night/twilight (max(radiation, maxSolarRad) < 20 W/m²) → clear ring buffer, return None
-- Solar elevation < 5° → return last stable label (SZA guard; see below)
+- Solar elevation < 15° → return None (SZA guard; see below)
 - Ring buffer < 3 entries → return None (insufficient data)
 
 *Step 1: Cloud enhancement (evaluated before Kv split)*
@@ -590,19 +591,46 @@ The variable branch uses **Kmf** (10-minute mean transmittance) instead of Km (3
 
 "Cloudy" here (NWS: 87–100%, includes 7/8 BKN) differs from "Overcast" (8/8 OVC) by the existence of breaks — variability confirms them even when infrequent.
 
-**Threshold constants:**
+**Dynamic threshold function:**
+
+Km thresholds are not fixed constants. `get_dynamic_clear_threshold(α)` computes the boundary as a function of solar elevation α (degrees):
+
+```
+K_threshold(α) = K_min + (K_max - K_min) · (1 − e^(−b · α))
+```
+
+This exponential saturating function approaches K_max at high solar elevations and floors at K_min near the horizon. Scientific basis: Smith, Bright & Crook (2017) proved that clear-sky index distributions shift with solar elevation — fixed thresholds cannot work across all elevations. Full derivation in `docs/reference/sky-classification-science.md` §14.
+
+**Default parameters:**
+
+| Parameter | Default | Role |
+|---|---|---|
+| `dt_k_max_clear` | 0.80 | Asymptotic upper bound (K_max) for the clear/mostly-clear boundary |
+| `dt_k_min` | 0.35 | Floor value (K_min) at zero elevation |
+| `dt_b` | 0.1 | Scaling factor controlling how quickly the threshold rises with elevation |
+
+**Threshold constants (non-dynamic):**
 
 | Constant | Value | Role |
 |---|---|---|
 | `_KV_UNIFORM` | 0.05 | Primary split: uniform vs. variable sky |
-| `_UNIFORM_CLEAR_MIN_KM` | 0.85 | Uniform branch: clear sky minimum Km |
 | `_UNIFORM_CLEAR_MIN_KCS` | 0.80 | Uniform branch: clear sky Kcs sanity check |
-| `_UNIFORM_HEAVY_MAX_KM` | 0.35 | Uniform branch: heavy overcast maximum Km |
-| `_VARIABLE_CLEAR_MIN_KM` | 0.85 | Variable branch: mostly clear minimum Km |
-| `_VARIABLE_PARTLY_MIN_KM` | 0.60 | Variable branch: partly cloudy minimum Km |
-| `_VARIABLE_MOSTLY_MIN_KM` | 0.40 | Variable branch: mostly cloudy minimum Km |
+| `_UNIFORM_HEAVY_MAX_KM` | 0.35 | Uniform branch: heavy overcast maximum Km (not elevation-adjusted) |
 
-Threshold initial values are from physical reasoning and literature review; not per-station calibrated. Tuning deferred to post-deployment observation. See ADR-073 §1.
+**How the dynamic threshold applies:**
+
+Both the uniform and variable branches call `get_dynamic_clear_threshold(α)` with branch-specific K_max values:
+
+| Branch | Boundary | K_max applied |
+|--------|----------|---------------|
+| Uniform | Clear vs. Overcast | 0.80 |
+| Variable | Mostly Clear vs. Partly Cloudy | 0.80 |
+| Variable | Partly Cloudy vs. Mostly Cloudy | 0.60 |
+| Variable | Mostly Cloudy vs. Cloudy | 0.40 |
+
+K_min (0.35) and b (0.1) are shared across all branches.
+
+**Operator adjustability:** `configure()` accepts `dt_k_max_clear`, `dt_k_min`, `dt_b`, and `sza_guard_elevation` to override defaults. These will be exposed in `api.conf [sky_classification]` (not yet wired — future task).
 
 **Temporal coherence filter:** A raw classification must persist for 5 consecutive minutes before becoming the stable label. On startup, 2-minute grace applies. (Reduced from 15/3 minutes — the 30-minute Kv/Km averaging and the asymmetric Kv/Kvf gate already provide substantial smoothing; stacking a 15-minute coherence filter on top created up to 45 minutes of lag, which is unacceptable for a weather display.)
 
@@ -610,7 +638,7 @@ Threshold initial values are from physical reasoning and literature review; not 
 
 **GHI mirroring across sunrise/sunset:** At sunrise, the trailing 30-minute window has only a few minutes of data. Under overcast, this inflates Km (diffuse radiation at low angles is a high fraction of the small clear-sky reference), producing incorrect sunny/scattered labels. The mirroring algorithm (adapted from CAELUS `sky_indices.py:mirror_ghi_with_pandas()`) generates synthetic pre-sunrise data points using cos(zenith) interpolation from post-sunrise measurements, stabilizing the rolling statistics. Station coordinates (lat/lon/altitude from `services/station.py`) and Skyfield ephemeris (from `services/almanac.py`) are used to compute cos(zenith) for both real and mirrored entries. Full scientific description in `docs/reference/sky-classification-science.md` §3. See ADR-073 §4.
 
-**SZA < 85° classification guard:** When solar elevation < 5° (SZA > 85°), `classify()` returns None. The downstream consumer (`enrichment/weather_text.py`) falls back to provider cloud cover. Solar elevation is computed via Skyfield from station coordinates (same ephemeris used by the almanac service). The `_MIN_SOLAR_RAD = 20 W/m²` proxy is retained for ring buffer data acceptance — data still accumulates below the SZA threshold to be available when elevation crosses 5°. See ADR-073 §5.
+**SZA < 75° classification guard:** When solar elevation < 15° (SZA > 75°), `classify()` returns None. The downstream consumer (`enrichment/weather_text.py`) falls back to provider cloud cover. Below 15° elevation, pyranometer readings are dominated by diffuse radiation and cosine error — the clear-sky index loses discriminatory power. Solar elevation is computed via Skyfield from station coordinates (same ephemeris used by the almanac service). The `_MIN_SOLAR_RAD = 20 W/m²` proxy is retained for ring buffer data acceptance — data still accumulates below the SZA threshold to be available when elevation crosses 15°. See ADR-073 §5.
 
 **Haze/smoke detection:** Implemented — see §8 Haze detection subsection below (ADR-067).
 
@@ -632,7 +660,7 @@ Apply day/night vocabulary at display time via substring replacement ("Clear"→
 | Overcast | Overcast | Overcast |
 | Heavy Overcast | Heavy Overcast | Heavy Overcast |
 
-Solar zenith > 96° = night; 85–96° = twilight/SZA guard zone (fall back to provider); < 85° = day (solar classification active). Solar elevation computed via Skyfield from station lat/lon/altitude (`services/almanac.py`). The SZA < 85° guard (elevation ≥ 5°) gates classification; below this threshold `classify()` returns None and the provider fallback supplies the sky label.
+Solar zenith > 96° = night; 75–96° = twilight/SZA guard zone (fall back to provider); < 75° = day (solar classification active). Solar elevation computed via Skyfield from station lat/lon/altitude (`services/almanac.py`). The SZA < 75° guard (elevation ≥ 15°) gates classification; below this threshold `classify()` returns None and the provider fallback supplies the sky label.
 
 **Scientific basis:** ADR-073 (supersedes ADR-044). Full citations in `docs/reference/sky-classification-science.md`.
 
@@ -793,9 +821,9 @@ Two endpoint keys receive enrichment:
 
 ### Haze detection
 
-Two-channel confirmation is required before the engine labels conditions as hazy. Haze is only reported when BOTH channels confirm: (1) pyranometer Kcs deficit below the auto-calibrated clean-sky baseline (§8 Auto-calibration baseline) AND (2) PM2.5 or PM10 from an observed-data AQI provider (ADR-066) exceeds the confirmation threshold.
+Two-channel confirmation is required before the engine labels conditions as hazy. Haze is only reported when BOTH channels confirm: (1) pyranometer Kcs deficit below the dynamic clear-sky threshold (Channel 1 uses `get_dynamic_clear_threshold(α)` from `sky_condition.py` — the same elevation-dependent threshold function used by the sky classifier) AND (2) PM2.5 or PM10 from an observed-data AQI provider (ADR-066) exceeds the confirmation threshold.
 
-**Solar elevation gate:** el > 10° required. The Ryan-Stolzenbach model underestimates maxSolarRad by ~20% below this elevation, making Kcs unreliable. Haze detection is inactive when el ≤ 10°.
+**Solar elevation gate:** el > 15° required. Below 15°, the clear-sky index is unreliable due to diffuse radiation dominance and cosine error. Haze detection is inactive when el ≤ 15°. This gate matches the sky classifier's SZA guard.
 
 **PM confirmation thresholds:**
 
@@ -843,93 +871,26 @@ Default γ = 0.45 (moderate, composition-unknown). γ is a composition property 
 
 **WMO weather code:** 05 (Haze). Priority ordering: precipitation > fog > mist > haze > sky.
 
----
-
-### Auto-calibration baseline
-
-The haze detection channel compares current Kcs against a station-specific clean-sky baseline. This baseline is computed from locally measured clean-sky Kcs values rather than a fixed global constant, because station altitude, local horizon obstructions, and seasonal water vapor all shift the expected Kcs.
-
-**Monthly normals model:** The system maintains 12 independent per-month Kcs baselines (January through December). A sample is assigned to the calendar month in which it was recorded (station local time). Today's Kcs is compared against the baseline for the current calendar month, not a seasonal average. This approach follows established radiation network science (ARM, BSRN, SURFRAD) which uses monthly stratification as standard practice.
-
-**3-year rolling window:** Within each month bucket, samples older than 3 years are pruned. Sensor drift and hardware changes make older data unreliable. cos(Z) normalization via Kcs handles the diurnal cycle — no time-of-day binning is needed or used.
-
-**Percentile target:** Fixed at the 92nd percentile of qualifying clean-sky Kcs samples per month. Higher than the 85th percentile used in climate research (Renner et al. 2019) because haze detection needs a reference that excludes routinely hazy-but-accepted days. Not operator-tunable — the value is science-determined.
-
-**Clean-sample selection criteria** — a sample qualifies only when ALL of the following are true:
-
-1. PM2.5 < 12 µg/m³ AND PM10 < 50 µg/m³ (EPA "Good" AQI breakpoints)
-2. Solar elevation > 10°
-3. Sky classifier returns exactly "Clear" or "Sunny" (exact label match — `sky_label in {"Clear", "Sunny"}`). Partial matches such as "Mostly Clear" or "Mostly Sunny" do not qualify.
-4. No rain in the prior 30 minutes
-
-**Minimum samples per month:** A month's learned baseline activates only when it has >= 30 qualifying clean-sky samples. Below this threshold, that month falls back to the flat baseline.
-
-**Flat fallback baseline:** A pooled baseline computed across all months is used for any month that has not yet reached 30 samples. This preserves v1 behavior during the learning period.
-
-**Progressive activation:** Each month independently transitions from the flat fallback to its learned monthly normal once it reaches 30 samples. The admin UI shows "N of 12 months calibrated."
-
-**State transitions:**
-
-| State | Condition | Behavior |
-|-------|-----------|----------|
-| `no-data` | No samples collected yet | Haze detection inactive |
-| `bootstrapping` | Samples accumulating; current month < 30 | Flat fallback baseline active; haze detection may be active if flat baseline is available |
-| `partial` | Some months >= 30 samples, others not | Mixed: calibrated months use learned normals, uncalibrated months use flat fallback |
-| `fully-calibrated` | All 12 months >= 30 samples | All months use learned normals; haze detection fully active |
-
-**Auto-bootstrap at startup:** At API startup, if an OpenAQ API key is present in `secrets.env`, the calibration state has fewer than 12 months calibrated, and a pyranometer is present (radiation column in the archive schema), the system automatically bootstraps from OpenAQ historical data. Bootstrap runs synchronously after `load_persisted()` but before packet-tap registration (2–5 minutes). No CLI command, no admin button, no SSH required.
-
-**Bootstrap data source:** OpenAQ API v3. Provides hourly PM2.5 from government reference monitors in 141 countries (~2016–present). Free API key required (register at https://explore.openaq.org/register). Bootstrap uses the sensor selection algorithm below to choose among nearby reference monitors. Samples are distributed into per-month bins during import.
-
-**Sensor selection algorithm (Phase 9).** Bootstrap automatically selects the best reference-grade PM2.5 sensor from nearby OpenAQ monitors:
-
-1. Query OpenAQ `/locations` with `isMonitor=true` (reference/regulatory only) within 25 km of the station.
-2. Filter: sensors must have >= 12 months of data history (`datetimeLast - datetimeFirst >= 365 days`).
-3. Sort by distance ascending.
-4. Try each candidate: fetch PM data, run bootstrap, check for qualifying clean-sky samples.
-5. First sensor producing > 0 clean-sky samples is selected and persisted.
-6. If all candidates produce 0 samples, log the outcome and proceed without bootstrap data. Calibration will accumulate from real-time observations.
-
-Rejection reasons are logged with per-sensor counters (total records, PM>=12, no archive match, no radiation, qualifying samples) for operator troubleshooting.
-
-**Operator sensor override.** The `openaq_sensor_id` key in `[conditions]` allows operators to bypass automatic sensor selection:
-- When set to any valid OpenAQ sensor ID (integer), that sensor is used directly — no candidate search.
-- Non-reference sensors (PurpleAir, private monitors) are accepted. The system does not endorse low-cost sensors but does not block an informed operator.
-- Set via the admin UI (dropdown of reference stations or manual ID entry) or directly in `api.conf`.
-- Clear the override to return to automatic selection.
-
-**Selected sensor persistence.** The selected sensor's ID, name, distance, and coordinates are stored in `calibration.json` alongside calibration data. The admin UI displays this information without re-querying OpenAQ.
-
-**Hardware change detection:**
-- Station type tracking: `calibration.json` records the `station_type` from `weewx.conf` at last persist. On startup, if the current station type differs from the persisted value, a WARNING is logged.
-- Drift detection: Within each month, if the mean of the last 10 samples diverges from the month's baseline by more than 0.05 (5%), a drift warning is generated and reported in the admin UI.
-- Manual reset: The admin UI "Reset Calibration" button clears all samples and baselines. Re-bootstrap runs automatically on the next API restart if conditions are met (OpenAQ key present, radiation column available).
-
-**Graceful sensor failover:**
-
-| Sensor absent | Failover |
-|---------------|---------|
-| `radiation` (no pyranometer) | Sky: provider cloud cover % (unchanged). Haze: provider present weather (HZ) 24/7. Calibration: skipped entirely. |
-| `dewpoint` (no hygrometer) | Fog/mist: provider present weather (BR/FG). f(RH) correction: skipped (uncorrected Kcs deficit used). |
-
-Dashboard never shows null data — absent sensors silently defer to provider present-weather codes.
-
-**Persistent storage:** Baseline samples and computed percentiles are written to `/etc/weewx-clearskies/calibration.json` (v2 format, month-keyed structure) and read back on API restart. v1 format (flat sample list) is automatically migrated to v2 on load by distributing flat samples into month buckets using station timezone.
-
-**Clear-sky GHI for bootstrap Kcs computation:** The bootstrap importer uses CAMS McClear historical clear-sky GHI (fetched via `pvlib.iotools.get_cams()`) instead of the archive's `maxSolarRad` column. McClear provides atmosphere-adjusted GHI at ground level with real atmospheric conditions — this eliminates the sunrise/sunset Kcs poisoning that occurred with the Ryan-Stolzenbach model (ADR-072). The `maxSolarRad` archive column is fetched but not used for Kcs computation (retained in the query for future fallback use). Implemented in `bootstrap/mcclear_client.py`; gate: McClear GHI > 50 W/m²; Kcs ceiling: 1.5.
-
 ### Haze detection configuration (api.conf [conditions])
 
-The following keys in the `[conditions]` section of `api.conf` control haze detection behavior (ADR-067/068). Calibration parameters are fixed by the algorithm and are not operator-configurable. All keys are optional; defaults match the algorithm constants.
+The following keys in the `[conditions]` section of `api.conf` control haze detection behavior (ADR-067/068). All keys are optional; defaults match the algorithm constants.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `haze_detection` | bool | `true` | Enable or disable haze detection entirely. When `false`, `detect_haze()` always returns `None`. |
 | `haze_aqi_provider` | str or absent | (inherits from `[aqi]`) | Override the AQI provider used for haze PM data. If absent or empty, uses the provider configured in `[aqi]`. |
 | `gamma` | float | `0.45` | Hygroscopic correction exponent γ (Hanel 1976 / Tang 1996). Controls how strongly relative humidity amplifies apparent aerosol extinction. Advanced operator override — the default 0.45 is the composition-unknown value suitable for most stations. Range: 0.1–1.0. |
-| `openaq_sensor_id` | int (optional) | (automatic) | OpenAQ sensor ID override for bootstrap. When set, the bootstrap process uses this sensor directly instead of searching for the nearest reference monitor. Accepts any valid OpenAQ sensor ID including non-reference sensors. Clear to return to automatic selection. |
 
 Validation errors in any of these keys cause a fatal startup failure with a descriptive message.
+
+**Graceful sensor failover:**
+
+| Sensor absent | Failover |
+|---------------|---------|
+| `radiation` (no pyranometer) | Sky: provider cloud cover % (unchanged). Haze: provider present weather (HZ) 24/7. |
+| `dewpoint` (no hygrometer) | Fog/mist: provider present weather (BR/FG). f(RH) correction: skipped (uncorrected Kcs deficit used). |
+
+Dashboard never shows null data — absent sensors silently defer to provider present-weather codes.
 
 ---
 
@@ -1312,7 +1273,58 @@ For dual-stack binding (IPv4 and IPv6), bind Caddy on both `0.0.0.0:443` and `[:
 
 ---
 
-## §12 Anti-Patterns
+## §12 Radar Endpoints and Capability Model
+
+### Capability model extension for multi-layer providers
+
+The `ProviderCapability` dataclass supports an optional `layers` list for providers that offer multiple data layers (e.g., the unified NOAA provider). Single-layer providers (LibreWxR, RainViewer, MSC, DWD, OWM) continue working unchanged — `layers` is optional and defaults to `None`.
+
+Each layer in the list declares:
+
+| Field | Type | Description |
+|---|---|---|
+| `layer_id` | string | Stable identifier (e.g., `"nexrad"`, `"mrms"`, `"goes_visible"`, `"spc_day1_cat"`) |
+| `layer_name` | string | Display name for the UI layer panel |
+| `layer_type` | string | One of: `"radar"`, `"satellite"`, `"overlay"`, `"alerts"` |
+| `wms_endpoint_url` | string or None | Full WMS endpoint URL (for WMS layers the browser fetches directly) |
+| `tile_url_template` | string or None | XYZ tile URL template (for tile-based layers) |
+| `wms_layer_name` | string or None | WMS layer name parameter (e.g., `"nexrad-n0r-wmst"`) |
+| `time_enabled` | bool | Whether this layer supports time-based animation (has frame metadata) |
+| `geographic_coverage` | string | Coverage description (e.g., `"CONUS"`, `"US all territories"`) |
+| `default_enabled` | bool | Whether the layer is enabled by default in the dashboard |
+| `browser_direct` | bool | `True` = browser fetches tiles directly from the source. `False` = tiles proxied through the API. |
+
+The `/api/v1/capabilities` response includes `layers` when present on a provider's capability declaration. The dashboard uses this to populate the layer panel in the expanded radar view.
+
+### Radar endpoints
+
+**Frame metadata:**
+- `GET /api/v1/radar/providers/{id}/frames` — existing endpoint, returns frame timestamps for the primary radar layer.
+- `GET /api/v1/radar/providers/{id}/layers/{layer_id}/frames` — **new** per-layer frame metadata for multi-layer providers. Returns time steps for a specific sub-layer (e.g., NOAA MRMS, NOAA satellite bands). The endpoint fetches WMS-T GetCapabilities and extracts the TIME dimension for the requested layer.
+
+**Tile proxy:**
+- `GET /api/v1/radar/providers/{provider_id}/tiles/{z}/{x}/{y}` — serves tile bytes for proxied providers. Query parameters: `?t=` (frame timestamp), `?color=` (color scheme ID, LibreWxR only).
+- Internal constant renamed: `_KEYED_RADAR_PROVIDERS` → `_PROXIED_RADAR_PROVIDERS`. Contains `librewxr` and `openweathermap` (not `aeris` — removed from radar).
+
+### LibreWxR configuration
+
+Config field: `[radar] librewxr_endpoint` in `api.conf`.
+Default: `https://api.librewxr.net`.
+Self-hosted operators provide their own URL. The API fetches tile bytes from this endpoint and serves them to the browser via the tile proxy.
+
+### Deprecated providers
+
+`iem_nexrad` and `noaa_mrms` modules remain on disk. When configured, they log a migration warning at startup:
+```
+WARNING: Radar provider 'iem_nexrad' is deprecated. Migrate to 'noaa' for unified US radar coverage.
+```
+They continue to function as before — no breaking change for existing operators.
+
+`aeris` is removed from `_PROXIED_RADAR_PROVIDERS` and from the radar domain's capability wiring. Aeris credentials are still wired for forecast/AQI/alerts.
+
+---
+
+## §13 Anti-Patterns
 
 Never do any of the following.
 

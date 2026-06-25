@@ -4,7 +4,7 @@ Single source of truth for what each service is, where it runs, what it exposes,
 
 Authoritative for current system state. ADRs are authoritative for *why* decisions were made. If this document conflicts with an ADR, investigate — one of them is stale.
 
-Last verified: 2026-06-23 (ADR-072: added weewx-clearskies-truesun extension, McClear bootstrap, pvlib dependency; ADR-073: Kv-first sky classification replaces CAELUS Km-first tree).
+Last verified: 2026-06-24 (sky classification: mean-of-ratios Km, dynamic thresholds, SZA guard raised to 15°, auto_calibration.py + mcclear_client.py removed; ADR-072 McClear bootstrap superseded).
 
 ---
 
@@ -221,7 +221,7 @@ The OpenAPI spec lists 35+ data endpoints. Key groups for orientation:
 | Almanac | `/api/v1/almanac`, `/api/v1/almanac/sun-times`, `/api/v1/almanac/moon-phases`, `/api/v1/almanac/seeing-forecast`, `/api/v1/almanac/planets`, `/api/v1/almanac/moon-names`, `/api/v1/almanac/eclipses/lunar`, `/api/v1/almanac/eclipses/solar`, `/api/v1/almanac/meteor-showers`, `/api/v1/almanac/positions` | Skyfield-based; background cache warming for expensive computations. |
 | Earthquakes | `/api/v1/earthquakes`, `/api/v1/earthquakes/config`, `/api/v1/earthquakes/faults` | `/faults` serves GEM Active Faults GeoJSON radius-clipped. `/config` returns provider configuration. |
 | Charts | `/api/v1/charts/config`, `/api/v1/charts/groups`, `/api/v1/charts/custom-query/{series_id}` | Config-driven; custom SQL from `charts.conf` only (disk-only trust model). |
-| Radar | `/api/v1/radar/providers/{id}/frames`, `/api/v1/radar/providers/{id}/tiles/{z}/{x}/{y}` | Keyed providers proxied server-side; keys never reach browser. |
+| Radar | `/api/v1/radar/providers/{id}/frames`, `/api/v1/radar/providers/{id}/layers/{layer_id}/frames`, `/api/v1/radar/providers/{id}/tiles/{z}/{x}/{y}` | Proxied providers (LibreWxR, OWM) served through tile proxy; NOAA WMS layers browser-direct. Multi-layer capability model for NOAA (radar + satellite + SPC + alerts). |
 | Content & nav | `/api/v1/pages`, `/api/v1/pages/{slug}/content`, `/api/v1/reports`, `/api/v1/content/about`, `/api/v1/content/legal` | `/pages` returns all 9 built-in pages unconditionally — page visibility filtering is the dashboard's responsibility via `pages.json` (ADR-024 amendment 2026-06-21). |
 | Infrastructure | `/api/v1/status`, `/api/v1/capabilities`, `/api/v1/records` | `/status` returns `{configured: bool}` — works in both setup and configured modes. |
 
@@ -278,16 +278,14 @@ The API hosts a multi-module, stateful conditions-text engine that produces the 
 | Module | Role |
 |--------|------|
 | `weewx_clearskies_api/sse/conditions_text.py` | Stateless composer — assembles the `weatherText` string from per-component labels |
-| `weewx_clearskies_api/sse/sky_condition.py` | Stateful classifier — Kv-first (Duchon-O'Malley architecture with CAELUS indices), 30-min ring buffer of 1-min GHI averages, produces the sky label |
+| `weewx_clearskies_api/sse/sky_condition.py` | Stateful classifier — Kv-first (Duchon-O'Malley architecture with CAELUS indices), 30-min ring buffer of 1-min GHI averages, mean-of-ratios Km, elevation-dependent dynamic thresholds, produces the sky label |
 | `weewx_clearskies_api/sse/temperature_comfort.py` | Stateless 2D matrix — maps (appTemp, dewpoint) to comfort label |
 | `weewx_clearskies_api/sse/enrichment/weather_text.py` | Enrichment adapter — reads smoothed inputs + sky class, calls `build_weather_text()`, injects result into the `/current` response dict. Provider cross-check for fog/mist confirmation. |
-| `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit + RH-graduated PM confirmation: PM2.5 50/35/25, PM10 100/75/50 µg/m³ at dry/moderate/humid RH), solar elevation gate, f(RH) correction, 5-min coherence |
-| `weewx_clearskies_api/sse/auto_calibration.py` | Clean-sky baseline — monthly-normals model, 12 per-month Kcs baselines, 3-year rolling window, exact "Clear"/"Sunny" label filter, automatic bootstrap with smart sensor selection, sensor info persistence. Bootstrap uses McClear clear-sky GHI (ADR-072). |
-| `weewx_clearskies_api/bootstrap/mcclear_client.py` | McClear data fetcher — retrieves historical clear-sky GHI via `pvlib.iotools.get_cams()` for bootstrap Kcs computation (ADR-072) |
+| `weewx_clearskies_api/sse/haze_condition.py` | Haze detection — two-channel (Kcs deficit below dynamic clear threshold from `sky_condition.get_dynamic_clear_threshold()` + RH-graduated PM confirmation: PM2.5 50/35/25, PM10 100/75/50 µg/m³ at dry/moderate/humid RH), solar elevation gate (el > 15°), f(RH) correction, 5-min coherence |
 | `weewx_clearskies_api/sse/text_generation.py` | NWS-style text engine — terse/standard/verbose verbosity, GFE threshold tables |
 | `weewx_clearskies_api/sse/observation_model.py` | Structured local observation model — METAR-like field mapping |
 
-**AQI data flow:** PM2.5/PM10 from observed-data AQI providers (Aeris, IQAir) flow through the enrichment pipeline via new 60-minute smoothing buffers in `input_smoother.py`. Smoothed PM values feed the haze detection module and fog/mist disambiguation. Model-based AQI providers (Open-Meteo) are excluded from haze confirmation. At night (solar elevation below the 10-15° detection gate), haze/smoke defers to provider current conditions observations; fog/mist remains local.
+**AQI data flow:** PM2.5/PM10 from observed-data AQI providers (Aeris, IQAir) flow through the enrichment pipeline via new 60-minute smoothing buffers in `input_smoother.py`. Smoothed PM values feed the haze detection module and fog/mist disambiguation. Model-based AQI providers (Open-Meteo) are excluded from haze confirmation. At night (solar elevation at or below the 15° detection gate), haze/smoke defers to provider current conditions observations; fog/mist remains local.
 
 **New response fields on `/api/v1/current`:** `weatherTextStandard` (NWS one-sentence format) and `weatherTextVerbose` (full narrative). `weatherText` continues to carry terse format (backward compatible).
 
@@ -299,9 +297,9 @@ The API hosts a multi-module, stateful conditions-text engine that produces the 
 
 **Registration:** The API's `__main__.py` registers `enrich_weather_text` against the `"current"` endpoint key. Every `GET /api/v1/current` response is enriched before being returned to the browser.
 
-**Sky classification (ADR-073):** Kv-first decision tree in the Duchon & O'Malley (1999) tradition — variability-primary, clearness-secondary — using CAELUS-derived indices (Ruiz-Arias & Gueymard 2023). Four indices (Kcs, Km, Kv, Kvf) computed from 1-minute GHI averages over a 30-minute ring buffer. Kv and Kvf are **clear-sky-detrended**: each minute-to-minute GHI change has the corresponding maxSolarRad change subtracted, isolating cloud-induced variability from deterministic solar geometry (Stein et al. 2012, Sandia Variability Index). Primary axis: Kv distinguishes uniform sky (Kv < 0.05: clear or overcast) from variable sky (Kv ≥ 0.05: broken coverage) — the inverted-U relationship between cloud fraction and irradiance variability (Xie & Sengupta 2021, Mol et al. 2023). Within uniform: Km distinguishes Clear (high) from Overcast (moderate) from Heavy Overcast (low transmittance). Within variable: Km distinguishes Mostly Clear / Partly Cloudy / Mostly Cloudy / Cloudy. Cloud enhancement (Kcs > 1.06 + high Kv + high Kvf) → "Partly Cloudy" (broken-cloud scenario, not clear-sky). Seven labels total: Clear, Mostly Clear, Partly Cloudy, Mostly Cloudy, Cloudy, Overcast, Heavy Overcast. Temporal coherence filter (15-min persistence). Startup backfill from archive records. **GHI mirroring** across sunrise/sunset boundaries via cos(zenith) interpolation (adapted from CAELUS `sky_indices.py`), stabilizing Km at low solar elevations. **SZA < 85° guard**: `classify()` returns None when solar elevation < 5°, falling back to provider cloud cover. Solar elevation computed via Skyfield from station coordinates. Full scientific citations in `docs/reference/sky-classification-science.md`.
+**Sky classification (ADR-073):** Kv-first decision tree in the Duchon & O'Malley (1999) tradition — variability-primary, clearness-secondary — using CAELUS-derived indices (Ruiz-Arias & Gueymard 2023). Four indices (Kcs, Km, Kv, Kvf) computed from 1-minute GHI averages over a 30-minute ring buffer. **Km** is computed as the mean of per-minute ratios: (1/n) Σ(GHI_i / maxSolarRad_i) — not ratio of integrals. Kv and Kvf are **clear-sky-detrended**: each minute-to-minute GHI change has the corresponding maxSolarRad change subtracted, isolating cloud-induced variability from deterministic solar geometry (Stein et al. 2012, Sandia Variability Index). Primary axis: Kv distinguishes uniform sky (Kv < 0.05: clear or overcast) from variable sky (Kv ≥ 0.05: broken coverage). Within uniform and variable branches, Km is compared against **elevation-dependent dynamic thresholds** computed by `get_dynamic_clear_threshold(α) = K_min + (K_max − K_min) · (1 − e^(−b · α))` — fixed constants cannot work across all solar elevations (Smith, Bright & Crook 2017). Cloud enhancement (Kcs > 1.06 + high Kv + high Kvf) → "Partly Cloudy" (broken-cloud scenario, not clear-sky). Seven labels total: Clear, Mostly Clear, Partly Cloudy, Mostly Cloudy, Cloudy, Overcast, Heavy Overcast. Temporal coherence filter (5-min persistence). Startup backfill from archive records. **GHI mirroring** across sunrise/sunset boundaries via cos(zenith) interpolation (adapted from CAELUS `sky_indices.py`), stabilizing Km at low solar elevations. **SZA < 75° guard**: `classify()` returns None when solar elevation < 15°, falling back to provider cloud cover. Solar elevation computed via Skyfield from station coordinates. Full scientific citations in `docs/reference/sky-classification-science.md`.
 
-**Startup behavior:** On API restart, `backfill()` seeds the sky classifier's ring buffer from archive records (last 30 minutes), enabling immediate classification. The temporal coherence filter applies a 3-minute startup grace. Full CAELUS-quality classification after ~30 minutes of live LOOP data. When solar analysis is unavailable (night, twilight, no pyranometer, or SZA guard engaged at elevation < 5°), the engine falls back to provider cloud cover via `_cloud_pct_to_sky()` in `enrichment/weather_text.py`, which maps cloud cover percentage to the sky label with day/night vocabulary awareness.
+**Startup behavior:** On API restart, `backfill()` seeds the sky classifier's ring buffer from archive records (last 30 minutes), enabling immediate classification. The temporal coherence filter applies a 3-minute startup grace. Full CAELUS-quality classification after ~30 minutes of live LOOP data. When solar analysis is unavailable (night, twilight, no pyranometer, or SZA guard engaged at elevation < 15°), the engine falls back to provider cloud cover via `_cloud_pct_to_sky()` in `enrichment/weather_text.py`, which maps cloud cover percentage to the sky label with day/night vocabulary awareness.
 
 ## Input mode (ADR-058)
 
@@ -386,6 +384,7 @@ Wizard steps are defined by `wizard/routes.py` and `templates/wizard/step_*.html
 | `/reports` | Reports | Yes |
 | `/about` | About | Yes |
 | `/legal` | Legal/Privacy | Yes |
+| `/radar` | Expanded radar view (full-viewport overlay) | Yes |
 | `/:slug` | Custom pages | Yes |
 | `/*` | 404 Not Found | Yes |
 
@@ -492,10 +491,10 @@ weewx_clearskies_api/providers/
 ├── alerts/           # nws, aeris, openweathermap
 ├── earthquakes/      # usgs, geonet, emsc, renass
 ├── seeing/           # seven_timer (keyless, 7Timer ASTRO product)
-└── radar/            # rainviewer, openweathermap, aeris, iem_nexrad, noaa_mrms, msc_geomet, dwd_radolan, iframe
+└── radar/            # librewxr, noaa, rainviewer, openweathermap, iem_nexrad (deprecated), noaa_mrms (deprecated), msc_geomet, dwd_radolan, iframe
 ```
 
-Each module: outbound API call → response parsing → canonical field translation → capability declaration → error handling. Keyed providers proxied server-side (keys never reach browser).
+Each module: outbound API call → response parsing → canonical field translation → capability declaration → error handling. Proxied providers (LibreWxR, OpenWeatherMap) served through the API tile proxy — the API is the gateway to external services. NOAA WMS layers and other keyless providers (RainViewer, MSC, DWD) are browser-direct — the browser fetches tiles from government/public endpoints with no proxy. LibreWxR is an external service the API communicates with (not a container in our inventory, no Caddy route). The proxy model: Caddy → API only. API → external services (LibreWxR, etc.). Browser → government WMS endpoints directly (NOAA, IEM, MSC, DWD).
 
 ## Caching (ADR-017)
 

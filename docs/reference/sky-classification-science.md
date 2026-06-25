@@ -5,7 +5,7 @@ behind the sky condition classifier in `weewx_clearskies_api/sse/sky_condition.p
 
 If a claim is not cited here, it does not have documented provenance.
 
-Last updated: 2026-06-21
+Last updated: 2026-06-24
 
 ---
 
@@ -523,6 +523,72 @@ accumulates below the SZA guard to be available when elevation crosses 5°.
 
 ---
 
+## 14. Dynamic Km Thresholds and Mean-of-Ratios Km
+
+### 14.1 The volume-under-the-curve problem with ratio-of-integrals Km
+
+The original Km formula used the ratio of window means:
+
+```
+Km_old = mean(GHI) / mean(maxSolarRad)
+       = [Σ GHI_i / n] / [Σ maxSolarRad_i / n]
+       = Σ GHI_i / Σ maxSolarRad_i
+```
+
+This is the **ratio of integrals** (equivalently, ratio of accumulated energy volumes over the window). The denominator accumulates the total clear-sky energy available over the 30-minute window.
+
+Near sunrise and sunset, both GHI and maxSolarRad approach zero simultaneously. The accumulated maxSolarRad in the denominator grows slowly because the per-minute values are small. Meanwhile, a single sensor reading taken at moderate elevation earlier in the window contributes disproportionately to the numerator. The result: the accumulated denominator volume is inflated relative to the sensor readings actually being compared, producing Km values that are systematically lower than what a rational per-minute comparison would yield. This causes false "Overcast" or "Mostly Cloudy" labels during the low-elevation window when the sky may be clear.
+
+### 14.2 The mean-of-ratios fix
+
+The updated formula normalizes **each minute independently**:
+
+```
+Km_new = (1/n) Σ (GHI_i / maxSolarRad_i)
+```
+
+Each term is a per-minute Kcs value (clamped [0, 1.2]). Km is the arithmetic mean of those per-minute ratios. Under this formula, a reading taken at low solar elevation carries no more weight in the sum than a reading taken at high elevation — both are normalized by their own contemporaneous clear-sky reference. The solar geometry bias cancels out per-minute rather than accumulating over the window.
+
+The same change applies to Kmf (10-minute mean).
+
+**Numerical equivalence at constant irradiance:** When GHI and maxSolarRad are proportional and uniform across the window (ideal clear-sky day at a fixed elevation), both formulas return the same value. The difference only appears when per-minute ratios vary — which is precisely the low-elevation case where the old formula misbehaved.
+
+### 14.3 Why fixed thresholds cannot work across all elevations
+
+**Source:** Smith, C.J., Bright, J.M., & Crook, R. (2017). Cloud cover effect of clear-sky index distributions and direct normal irradiance for five UK locations. *Solar Energy*, 146, 327–338. DOI: 10.1016/j.solener.2017.02.006
+
+Smith, Bright & Crook (2017) analyzed clear-sky index (Kcs) distributions as a function of solar elevation across five UK measurement sites. Key finding: the distribution of Kcs under clear skies is **not stationary with respect to solar elevation**. At high solar elevations, the Kcs distribution is tightly clustered near 1.0. At low solar elevations (below ~20°), the distribution spreads and the median shifts downward — a clear sky at 10° elevation may produce Kcs of only 0.65–0.75 under otherwise identical atmospheric conditions.
+
+This is physically expected: at low elevations, the atmospheric path length is long (air mass > 5 at 10°), increasing absorption and scattering. The clear-sky model accounts for these effects, but does so with idealized atmospheric parameters. Real-world deviation from those parameters (humidity, aerosols, local horizon) is amplified at long path lengths. Consumer pyranometers also introduce additional cosine-response error at high incidence angles.
+
+**Consequence for fixed thresholds:** A fixed `K_clear = 0.85` boundary was calibrated against the high-elevation distribution. At 10–20° elevation, a genuinely clear sky may produce Km of 0.60–0.75, which a fixed threshold of 0.85 would classify as "Partly Cloudy." The sky is clear — the threshold is wrong for this elevation.
+
+### 14.4 The dynamic threshold formula
+
+```
+K_threshold(α) = K_min + (K_max − K_min) · (1 − e^(−b · α))
+```
+
+Where:
+- α = solar elevation in degrees
+- K_max = asymptotic upper bound (the threshold at high elevation, in the range where fixed thresholds historically applied)
+- K_min = floor value at zero elevation (the lowest meaningful threshold, accounting for maximum atmospheric path-length effects)
+- b = scaling factor (controls how quickly the threshold rises from K_min toward K_max as elevation increases)
+
+**Shape:** At α = 0, the formula returns K_min. As α increases, the threshold rises exponentially toward K_max. By α = 30°, it is within ~5% of K_max (for b = 0.1). This matches the physical picture: the threshold converges to the traditional fixed value at moderate and high elevations, and relaxes toward K_min at low elevations.
+
+**Default parameters:** K_max = 0.80 (clear boundary), K_min = 0.35 (horizon floor), b = 0.1 (scaling factor).
+
+The same formula is applied to each variable-branch boundary with its own K_max (0.80 / 0.60 / 0.40), while K_min and b are shared. This preserves the boundary-ratio structure at high elevations while relaxing all boundaries proportionally at low elevations.
+
+### 14.5 Tikhonov regularization analogy
+
+The additive K_min term in the dynamic threshold formula is conceptually analogous to **Tikhonov regularization** (also known as ridge regression or L2 regularization). In regularization, an additive term prevents the solution from collapsing to zero when the problem is ill-conditioned. Here, K_min prevents the threshold from collapsing to zero at zero elevation — which would make the classifier trivially classify everything as "Clear" near the horizon, defeating the purpose of the threshold.
+
+K_min is the "regularization floor": a minimum meaningful threshold that reflects the irreducible atmospheric attenuation at long path lengths, even under clear skies with real (non-idealized) atmospheric conditions.
+
+---
+
 ## Full Reference List
 
 1. Coimbra, C.F.M., Kleissl, J., & Marquez, R. (2013). Overview of solar-forecasting methods and a metric for accuracy evaluation. In *Solar Energy Forecasting and Resource Assessment*, Ch. 8. Academic Press.
@@ -536,3 +602,4 @@ accumulates below the SZA guard to be available when elevation crosses 5°.
 9. Stein, J.S., Hansen, C.W., & Reno, M.J. (2012). The Variability Index. Sandia SAND2012-3464C. *World Renewable Energy Forum*, Denver, CO.
 10. Stull, R. (2011). Wet-bulb temperature from relative humidity and air temperature. *J. Applied Meteorology and Climatology*, 50(11), 2267–2269.
 11. Tapakis, R. & Charalambides, A.G. (2014). Enhanced values of global irradiance due to the presence of clouds. *Renewable Energy*, 62, 459–467.
+12. Smith, C.J., Bright, J.M., & Crook, R. (2017). Cloud cover effect of clear-sky index distributions and direct normal irradiance for five UK locations. *Solar Energy*, 146, 327–338. DOI: 10.1016/j.solener.2017.02.006
