@@ -24,7 +24,8 @@ Last updated: 2026-06-18
 7. [Data Refresh & Realtime](#7-data-refresh--realtime)
 8. [Card Plugin Contract](#8-card-plugin-contract)
 9. [Dynamic Now Page & Page Visibility](#9-dynamic-now-page--page-visibility)
-10. [Anti-Patterns](#10-anti-patterns)
+10. [Radar Card and Expanded View](#10-radar-card-and-expanded-view)
+11. [Anti-Patterns](#11-anti-patterns)
 
 ---
 
@@ -510,7 +511,116 @@ The Not Found page (`not-found.tsx`) renders:
 
 ---
 
-## §10 Anti-Patterns
+## §10 Radar Card and Expanded View
+
+### Radar card (Now page)
+
+The radar card renders on the Now page (footprint: wide, rowSpan: 2.5). It shows the operator's configured radar provider with basic animation controls.
+
+**Expand-to-fullscreen button.** Phosphor `ArrowsOut` icon, positioned in the card header or map top-right corner. Click navigates to `/radar` (pushes to browser history). `aria-label="Expand radar to full screen"`.
+
+**Provider-adaptive tile fetching:**
+- LibreWxR: tiles fetched via API proxy (`/api/v1/radar/providers/librewxr/tiles/{z}/{x}/{y}?t={time}&color={scheme}`). Browser never contacts LibreWxR directly.
+- NOAA: two WMS-T tile layers rendered simultaneously (NEXRAD CONUS + MRMS non-CONUS). Each uses its WMS endpoint URL and layer name from the capability response's `layers` array. Both animate in sync. Tiles fetched browser-direct from government WMS endpoints.
+- RainViewer: existing behavior (browser-direct, XYZ tiles).
+- Other providers: existing behavior unchanged.
+
+**Adaptive animation.** When frame count > 20, reduce TICK_MS or SUBSTEPS to maintain ~15–20 second total loop duration. Card view limits displayed frames to the most recent ~2 hours (cap at 24 frames for high-frame-count providers like NOAA). Expanded view shows full history.
+
+**Nowcast frames** rendered with visual distinction (e.g., reduced opacity or dashed timeline marker in frame counter).
+
+**Provider-adaptive legend.** Legend gradient adapts to the active color scheme — not hardcoded to RainViewer Universal Blue. For NOAA: use standard NWS reflectivity color scale. For LibreWxR: update with selected color scheme.
+
+**Attribution** from capability response, rendered in Leaflet attribution control. CC-BY-4.0 attribution for LibreWxR.
+
+**Frame counter** shows relative time ("45 min ago", "Now", "+10 min") instead of absolute timestamps when frame count is high.
+
+### Expanded radar view (`/radar`)
+
+Full-viewport overlay opened by the expand button on the radar card or by direct navigation to `/radar`.
+
+**Overlay behavior:**
+- Full viewport (100vw × 100vh), z-index above nav.
+- Leaflet map fills entire viewport.
+- `role="dialog"`, `aria-modal="true"`, focus trap while open.
+- Close button (X, top-right, `aria-label="Close expanded radar"`) + Escape key → navigates back.
+- Direct navigation to `/radar` opens the expanded view. Browser back returns to previous page.
+- Reuses same base map logic (theme-aware OSM/CartoDB dark) and same provider data fetching as radar card.
+
+**Time slider (horizontal, bottom):**
+- Scrubable: drag to any point in time range.
+- Play/pause button (left). Speed control: 0.5x, 1x, 2x (right).
+- Full available history (not capped like card view).
+- Current frame timestamp displayed prominently (station timezone per ADR-020).
+- Nowcast frames visually distinguished on the timeline (different color segment or label).
+- For NOAA: time range can span 25+ hours — slider tick marks at 1-hour intervals.
+- Keyboard: arrow keys scrub, accessible value announcements.
+
+**Layer panel (collapsible sidebar desktop / bottom sheet mobile):**
+- Toggle button to show/hide panel (`aria-label="Toggle layer panel"`).
+- Layer list populated from provider capability's `layers` array.
+- Each layer: checkbox toggle + name + type badge (Radar / Satellite / Overlay / Alerts).
+- Layers grouped by type.
+- Default state: radar layers enabled, others off (respecting `default_enabled` from capability).
+- For single-layer providers (LibreWxR, RainViewer): panel shows one radar layer entry.
+- For NOAA: full layer tree (radar sub-layers, satellite bands, SPC outlooks, alerts).
+- Panel state persisted in localStorage (`clearskies.radar-layers`).
+
+**Color scheme picker (LibreWxR only):**
+- Only shown when provider supports multiple color schemes.
+- LibreWxR: 13 schemes (see `docs/reference/api-docs/librewxr.md` for the full list).
+- Selection changes the `color` parameter in the API proxy tile URL.
+- Legend gradient updates to match selected scheme.
+- Persisted in localStorage.
+- Hidden for NOAA/RainViewer (fixed color scheme).
+
+**Opacity slider:**
+- 0% to 100%, default 70% (matching current `MAX_OPACITY`).
+- `aria-label="Radar opacity"`, `aria-valuemin="0"`, `aria-valuemax="100"`.
+- Affects all radar tile layers.
+
+**Layer z-order:** base map → satellite → radar → SPC overlays → alert polygons.
+
+**Provider-adaptive features:**
+- NOAA: satellite bands + SPC + alerts in layer panel. Satellite layers time-animated alongside radar.
+- LibreWxR: color scheme picker + nowcast frames.
+- RainViewer: basic radar only (degraded).
+
+**NOAA satellite rendering:**
+- WMS TileLayer added when satellite layer enabled.
+- WMS endpoint URL and layer name from capability declaration.
+- Time-enabled: animate alongside radar (synced to time slider).
+- Frame metadata from `/api/v1/radar/providers/noaa/layers/{layer_id}/frames`.
+- Renders below radar layers (z-order: base map → satellite → radar).
+- Grayscale acceptable for v0.1 (client-side colorization deferred).
+
+**NOAA SPC overlay rendering:**
+- GeoJSON fetched from mapservices endpoint in layer capability.
+- Leaflet GeoJSON layer with stroke/fill colors from properties.
+- NOT time-animated (current snapshot). Auto-refresh every 5 minutes when enabled.
+- Click shows risk details popup. Renders above radar (z-order: base → satellite → radar → SPC → alerts).
+
+**NOAA alert polygon rendering:**
+- Alert data from existing `/api/v1/alerts` endpoint (no new endpoint needed).
+- Leaflet GeoJSON layer, color-coded by severity level.
+- Click shows alert details popup (event name, description, instructions).
+- Topmost z-order layer. Auto-refresh every 5 minutes when enabled.
+
+**Accessibility (WCAG 2.1 AA):**
+- Focus trap in overlay (`role="dialog"`, `aria-modal="true"`).
+- Escape key closes overlay.
+- All controls keyboard navigable (Tab order, Enter/Space activate).
+- Time slider: arrow keys scrub, accessible value announcements.
+- Layer checkboxes: proper labels, state announced.
+- Color contrast on all controls (4.5:1 text, 3:1 UI components).
+- Screen reader: layer changes announced via `aria-live` region.
+- `prefers-reduced-motion`: pause animation by default.
+
+**Route:** `/radar` is a dashboard SPA route (no Caddy change — `try_files` fallback handles it). Direct navigation opens expanded view. Browser back returns to previous page.
+
+---
+
+## §11 Anti-Patterns
 
 Never do the following in dashboard code.
 

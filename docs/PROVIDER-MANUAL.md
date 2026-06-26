@@ -607,53 +607,156 @@ Dashboard progressive fill rule (max 4 columns, no horizontal scroll):
 
 ### Map library
 
-Use **Leaflet** with **OpenStreetMap** base tiles. OSM attribution is required. Do not use MapLibre — it is a heavier WebGL stack with no advantage for the use cases here. Do not use Mapbox — Mapbox JMA tilesets are raster-array / GL-JS-only and incompatible with Leaflet; Japan radar falls back to RainViewer at v0.1.
+Use **Leaflet** with **OpenStreetMap** base tiles. OSM attribution is required. Do not use MapLibre — it is a heavier WebGL stack with no advantage for the use cases here.
 
 ### Day-1 radar provider modules
 
 Eight modules ship at v0.1 in `providers/radar/`:
 
-| Module | Type | Key required | Coverage |
-|---|---|---|---|
-| `rainviewer` | XYZ tiles | No | Global mosaic (default fallback) |
-| `openweathermap` | XYZ tiles | Yes | Global — labeled "Model precipitation" in UI, NOT "Radar" |
-| `aeris` | XYZ tiles | Yes | Global real radar mosaic (AerisWeather Maps API) |
-| `iem_nexrad` | WMS-T | No | US CONUS NEXRAD (Iowa Environmental Mesonet) |
-| `noaa_mrms` | WMS-T | No | US AK / HI / PR / Guam (NOAA MapServer) |
-| `msc_geomet` | WMS-T | No | Canada national mosaic (Environment Canada) |
-| `dwd_radolan` | WMS-T | No | Germany RADOLAN (DWD GeoWebService) |
-| `iframe` | Iframe | Operator-supplied URL | Operator-defined (BoM Australia, MetService NZ, etc.) |
+| Module | Type | Key required | Coverage | Status |
+|---|---|---|---|---|
+| `librewxr` | XYZ tiles (RainViewer v2 API compatible) | No | Global (radar, satellite, nowcast) | **New — global default** |
+| `noaa` | WMS-T + GeoJSON (multi-layer) | No | US (all territories) | **New — US-native provider** |
+| `openweathermap` | XYZ tiles | Yes | Global — labeled "Model precipitation" in UI, NOT "Radar" | Unchanged |
+| `msc_geomet` | WMS-T | No | Canada national mosaic (Environment Canada) | Unchanged |
+| `dwd_radolan` | WMS-T | No | Germany RADOLAN (DWD GeoWebService) | Unchanged |
+| `iframe` | Iframe | Operator-supplied URL | Operator-defined (BoM Australia, MetService NZ, etc.) | Unchanged |
+| `rainviewer` | XYZ tiles | No | Global mosaic | **Demoted — degraded** |
+| `iem_nexrad` | WMS-T | No | US CONUS NEXRAD | **Deprecated — use `noaa`** |
+| `noaa_mrms` | WMS-T | No | US AK/HI/PR/Guam | **Deprecated — use `noaa`** |
 
-### Keyed provider proxy
+**Deprecated modules:** `iem_nexrad` and `noaa_mrms` remain on disk but log a migration warning at startup suggesting the operator switch to the unified `noaa` module. They are not removed to avoid breaking existing configs.
 
-For `aeris` and `openweathermap`, clearskies-api proxies tile requests server-side. API keys must never reach the browser.
+**Removed from radar:** `aeris` is dropped from the radar domain. 3,000 map units/day on the PWS contributor tier is unviable for radar tiles (a few visitors leaving the page open exhausts the daily quota). Aeris remains for forecast, AQI, and alerts where API call volumes are lower.
 
-- Tile proxy endpoint: `GET /radar/providers/{provider_id}/tiles/{z}/{x}/{y}`
-- Frame metadata endpoint: `GET /radar/providers/{id}/frames`
+### LibreWxR module rules
 
-Keyless providers (`rainviewer`, `iem_nexrad`, `noaa_mrms`, `msc_geomet`, `dwd_radolan`) are fetched directly by the browser — no proxy needed or permitted for these.
+Module file: `providers/radar/librewxr.py`
+
+**Configurable upstream.** The LibreWxR endpoint is operator-configurable via `[radar] librewxr_endpoint` in `api.conf`. Default: `https://api.librewxr.net`. Self-hosted operators provide their own reachable URL.
+
+**Frame metadata.** `get_frames()` fetches `{endpoint}/public/weather-maps.json` and returns canonical `RadarFrameList`. Wire format is RainViewer v2 compatible — same structure and frame-kind mapping as `rainviewer.py`:
+- Single `past` entry with `max(time)` → `"current"`
+- All other `past` entries → `"past"`
+- All `nowcast` entries → `"nowcast"`
+
+Cache TTL: 60 seconds for frame metadata (same as `rainviewer.py`).
+
+**Tile proxy.** `get_tile(z, x, y, *, t=None, color=None)` fetches tile bytes from the LibreWxR upstream and returns `(bytes, content_type)`. URL composed from the response-level `host` + frame `path` + tile coordinates + color scheme + options. Tile format is WebP (`image/webp` content type). Cache TTL: 300 seconds (same envelope pattern as Aeris/OWM tile proxy — base64-encoded, SHA-256 cache key).
+
+**Tile URL template:** `{host}{path}/{size}/{z}/{x}/{y}/{color}/{smooth}_{snow}.{ext}`
+
+Color scheme parameter: stored in config (default: scheme `2` — NEXRAD Level III). Passed as query parameter on the proxy endpoint so the dashboard can request different schemes.
+
+**Attribution:** `"LibreWxR (https://librewxr.net/) — Data: CC-BY-4.0"`
+
+**Rate limiter:** Polite-use guard (5 req/s), same pattern as `rainviewer.py`.
+
+### Unified NOAA module rules
+
+Module file: `providers/radar/noaa.py`
+
+Replaces the separate `iem_nexrad` and `noaa_mrms` modules with a unified module that declares multiple data layers through the capability model (see API-MANUAL.md for the `layers` extension on `ProviderCapability`).
+
+**Two radar sub-layers:**
+
+| Sub-layer | Source | WMS endpoint | WMS layer name | Coverage | Time cadence |
+|-----------|--------|-------------|----------------|----------|--------------|
+| `nexrad` | IEM NEXRAD | `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r-t.cgi` | `nexrad-n0r-wmst` | CONUS (24°N–50°N, 126°W–66°W) | 5 min |
+| `mrms` | NOAA MapServer | `https://mapservices.weather.noaa.gov/.../radar_base_reflectivity_time/ImageServer/WMSServer` | `radar_base_reflectivity_time` | Full US (9°N–72°N, incl. AK/HI/PR/Guam) | 5 min |
+
+Both sub-layers are browser-direct (free government endpoints, no proxy needed). The API declares their availability and WMS endpoint URLs in the capability response; the dashboard's Leaflet map makes the WMS GetMap requests directly.
+
+**`get_frames()`** returns frames from IEM NEXRAD (primary, CONUS) by parsing the WMS-T GetCapabilities TIME dimension.
+**`get_frames(layer="mrms")`** returns frames from NOAA MRMS.
+
+Reuse existing `parse_wms_time_dimension()` from `_common/wms_capabilities.py` for both.
+
+Cache TTL: 60 seconds per sub-layer.
+
+**Additional layer declarations** (non-radar, declared in capability only — API provides layer metadata and endpoints; browser fetches directly):
+
+| Layer ID | Layer name | Layer type | Source | Time-enabled | Browser-direct |
+|----------|-----------|------------|--------|-------------|----------------|
+| `goes_visible` | GOES Visible | satellite | nowCOAST WMS-T `goes_visible_imagery` | Yes | Yes |
+| `goes_longwave` | GOES Longwave IR | satellite | nowCOAST WMS-T `goes_longwave_imagery` | Yes | Yes |
+| `goes_water_vapor` | GOES Water Vapor | satellite | nowCOAST WMS-T `goes_water_vapor_imagery` | Yes | Yes |
+| `goes_snow_ice` | GOES Snow/Ice | satellite | nowCOAST WMS-T `goes_snow_ice_imagery` | Yes | Yes |
+| `spc_day1_cat` | SPC Day 1 Categorical | overlay | mapservices GeoJSON | No | Yes |
+| `spc_day1_tornado` | SPC Day 1 Tornado | overlay | mapservices GeoJSON | No | Yes |
+| `spc_day1_hail` | SPC Day 1 Hail | overlay | mapservices GeoJSON | No | Yes |
+| `spc_day1_wind` | SPC Day 1 Wind | overlay | mapservices GeoJSON | No | Yes |
+| `spc_mesoscale` | SPC Mesoscale Discussions | overlay | mapservices GeoJSON | No | Yes |
+| `spc_fire` | SPC Fire Weather | overlay | mapservices GeoJSON | No | Yes |
+| `alerts` | Alert Polygons | alerts | existing `/api/v1/alerts` | No | No (uses existing API endpoint) |
+
+For satellite layers: the module provides a frame metadata endpoint that fetches the nowCOAST WMS-T GetCapabilities and extracts the TIME dimension values.
+
+For SPC/alert layers: these are current-snapshot only (not time-animated). The layer declaration provides the endpoint URL for the dashboard to fetch directly.
+
+**Attribution:** `"NEXRAD imagery courtesy of Iowa Environmental Mesonet. MRMS data courtesy of NOAA."`
+
+**Rate limiter:** Polite-use guard, same pattern as other keyless providers.
+
+No API key required for any NOAA layer.
+
+### Proxied vs. browser-direct providers
+
+The concept formerly called "keyed providers" is broadened to "proxied providers" — the API is the gateway to external services regardless of whether an API key is involved.
+
+**Proxied providers** (tiles fetched by API, served to browser via `GET /radar/providers/{id}/tiles/{z}/{x}/{y}`):
+- `librewxr` — API fetches tiles from LibreWxR upstream, caches, serves to browser. No API key involved, but proxying keeps the LibreWxR instance reachable only by the API (operator can run it on an internal network).
+- `openweathermap` — API key protection (existing behavior).
+
+**Browser-direct providers** (browser fetches tiles directly from the source):
+- `noaa` — All WMS layers are free government endpoints with no rate limits or keys. Browser makes WMS GetMap requests directly.
+- `rainviewer` — Keyless, public CDN.
+- `msc_geomet` — Keyless, WMS-T.
+- `dwd_radolan` — Keyless, WMS-T.
+
+Internal constant: `_PROXIED_RADAR_PROVIDERS` (renamed from `_KEYED_RADAR_PROVIDERS`).
 
 ### OpenWeatherMap radar label
 
 Always label OpenWeatherMap radar as **"Model precipitation"** in the UI, operator notes, and documentation. Never label it as "Radar." It provides model-derived precipitation data, not true radar reflectivity.
 
+### RainViewer degradation note
+
+RainViewer remains available but is degraded since 2026-01-01:
+- Zoom capped at 7 (~1.2 km/pixel at equator — city-level only)
+- Nowcast discontinued
+- Satellite IR discontinued
+- All color schemes removed except Universal Blue
+- PNG only (no WebP)
+- Rate limited to 100 req/IP/min
+
+The wizard notes these limitations when operators select RainViewer. CAPABILITY `operator_notes` includes the degradation summary.
+
 ### Setup wizard radar suggestion
 
-The wizard reads operator lat/lon and suggests a radar module:
-
-| Region | Suggested module |
-|---|---|
-| US CONUS | `iem_nexrad` |
-| US AK / HI / PR / Guam | `noaa_mrms` |
-| Canada | `msc_geomet` |
-| Germany | `dwd_radolan` |
-| All other regions | `rainviewer` |
-
-Operator may override the suggestion freely.
+| Region | Suggested module | Notes |
+|---|---|---|
+| US (any) | `noaa` | Full experience: radar + satellite + SPC + alerts |
+| Canada | `msc_geomet` | Or LibreWxR (uses MSC data) |
+| Germany | `dwd_radolan` | Or LibreWxR (uses OPERA data) |
+| Europe (non-DE) | `librewxr` | Uses EUMETNET OPERA composite |
+| Japan | `librewxr` | Uses JMA HRPN |
+| All other regions | `librewxr` | NWP model global fallback where no native radar |
 
 ### Attribution
 
-Render attribution per each source's terms on the radar map. Required attribution strings come from the respective provider's terms. Both the in-map Leaflet attribution control and any below-map caption must agree.
+Render attribution per each source's terms on the radar map. Required attribution strings:
+
+| Provider | Attribution |
+|----------|------------|
+| `librewxr` | `"LibreWxR (https://librewxr.net/) — Data: CC-BY-4.0"` |
+| `noaa` | `"NEXRAD imagery courtesy of Iowa Environmental Mesonet. MRMS data courtesy of NOAA."` |
+| `rainviewer` | `"RainViewer (https://www.rainviewer.com/)"` |
+| `openweathermap` | Per OWM attribution requirements |
+| `msc_geomet` | `"Data source: Environment and Climate Change Canada"` |
+| `dwd_radolan` | `"Deutscher Wetterdienst"` |
+
+Both the in-map Leaflet attribution control and any below-map caption must agree.
 
 ---
 

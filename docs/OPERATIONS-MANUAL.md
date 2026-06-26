@@ -634,6 +634,28 @@ The admin UI shows the selected sensor (name, distance, coordinates) and provide
 
 To clear an override and return to automatic selection, use the "Clear override" button on the admin haze calibration page, or remove `openaq_sensor_id` from `[conditions]` in `api.conf`.
 
+### LibreWxR radar configuration
+
+LibreWxR is the global default radar provider. Two modes:
+
+**Public API (no infrastructure):** Set `[radar] provider = librewxr` in `api.conf`. No additional configuration needed. The API fetches tile data from `api.librewxr.net` and proxies it to visitors' browsers. Limitations: no SLA, no uptime guarantee, "reasonable request rates" only. Suitable for evaluation and low-traffic sites.
+
+**Self-hosted:** Set `[radar] provider = librewxr` and `[radar] librewxr_endpoint = https://your-librewxr-host:8080` in `api.conf`. The operator is responsible for deploying and maintaining their own LibreWxR instance. The endpoint must be reachable by the Clear Skies API — visitors' browsers never contact LibreWxR directly (tiles are proxied through the API). Recommend setting `LIBREWXR_MAX_FRAMES=24` or higher on the LibreWxR instance for smoother animation (4+ hours of radar history instead of the default 2 hours).
+
+**What Clear Skies does NOT provide:** Docker compose snippets, Caddyfile routes, systemd units, or any other infrastructure configuration for LibreWxR. The operator sets up LibreWxR using LibreWxR's own documentation at https://librewxr.net/docs. Clear Skies only configures the endpoint URL so the API knows where to fetch tiles.
+
+**Security model:** The API is the sole consumer of the LibreWxR endpoint. Caddy never routes to LibreWxR. Visitors' browsers never contact LibreWxR. This means:
+- Self-hosted LibreWxR can run on an internal network with no public exposure.
+- No additional TLS configuration needed for the LibreWxR-to-API link (the API's `ProviderHTTPClient` handles outbound TLS).
+- The tradeoff: all tile traffic flows through the API, adding load. Tile cache (300s TTL) reduces upstream calls.
+
+**Config reference:**
+
+| `api.conf` key | Default | Description |
+|----------------|---------|-------------|
+| `[radar] provider` | *(none)* | Set to `librewxr` to use LibreWxR |
+| `[radar] librewxr_endpoint` | `https://api.librewxr.net` | LibreWxR upstream URL (public API or self-hosted) |
+
 ---
 
 ## §5 Logging
