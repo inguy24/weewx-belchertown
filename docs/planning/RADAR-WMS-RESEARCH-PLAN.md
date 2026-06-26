@@ -74,10 +74,40 @@ Once the ADR is accepted, update the governing manuals with the implementation r
 
 These manual updates are what unblock Phases 3-4 of the main plan. The dashboard agent follows the manual, not the ADR — the ADR records why; the manual says what to do.
 
+### D5 — Agent-ready implementation reference
+Save to `docs/reference/wms-t-implementation-ref.md`. This is NOT a manual section or narrative doc — it is a terse, code-heavy cheat sheet designed to be inlined into a dashboard-dev agent prompt. Structure:
+
+**DO (proven in PoC):**
+- Exact react-leaflet code snippets for WMS-T TIME animation (copy from PoC, adapt for React component)
+- Exact preload/buffer technique that worked
+- Exact dual-layer sync wiring (if tested in PoC)
+- Exact component tree with prop signatures
+
+**DO NOT (proven failures from first attempt):**
+- Do NOT pre-render all frames as separate TileLayer components — causes 600+ simultaneous WMS server-side render requests
+- Do NOT use `TileLayer` for WMS URLs — crashes on `{bbox-epsg-3857}` template variable
+- Do NOT pass `undefined` to the `pane` prop — Leaflet `appendChild` crash
+- Do NOT treat WMS tiles like CDN XYZ tiles — WMS renders server-side on every request
+- Any other gotchas discovered during PoC development
+
+**Component architecture:**
+- What components exist, what props they take, what hooks they use
+- How the time slider drives frame changes (event flow)
+- How dual-layer sync is wired (shared state, coordinated TIME updates)
+
+**Integration notes:**
+- Library version and import paths
+- Any react-leaflet compatibility workarounds
+- CSS containment for Leaflet z-index (stacking context)
+
+**Format rule:** Code snippets over prose. If a pattern can be shown in 5 lines of code, show the code — don't write 3 paragraphs explaining it. The agent reading this should be able to copy-adapt, not interpret.
+
+The coordinator inlines relevant sections of this document into the agent prompt for T3.2 and T4.6. The agent should also be pointed at the PoC source code directly (`docs/reference/wms-t-poc/`).
+
 ### Dependency chain
 ```
 Research (D1, D2) → ADR draft (D3, Proposed) → user approval → ADR Accepted
-→ Manual updates (D4) → Phases 3-4 of main plan UNBLOCKED
+→ Manual updates (D4) + Implementation ref (D5) → Phases 3-4 of main plan UNBLOCKED
 ```
 
 ---
