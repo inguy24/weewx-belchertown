@@ -1,9 +1,10 @@
 # Radar Provider Replacement — Execution Plan
 
-**Status:** FAILED — code reverted 2026-06-25, docs restored to pre-plan state
-**Created:** 2026-06-23
+**Status:** REVISING — first attempt failed (code reverted 2026-06-25), plan under revision
+**Created:** 2026-06-23 | **Revised:** 2026-06-25
 **Brief:** [docs/briefs/RADAR-PROVIDER-REPLACEMENT.md](docs/briefs/RADAR-PROVIDER-REPLACEMENT.md)
-**Amends:** ADR-015 (radar/map tiles strategy), PROVIDER-MANUAL.md §7, ARCHITECTURE.md, DASHBOARD-MANUAL.md, DESIGN-MANUAL.md, OPERATIONS-MANUAL.md
+**Governs:** PROVIDER-MANUAL.md §7, API-MANUAL.md, DASHBOARD-MANUAL.md, DESIGN-MANUAL.md, OPERATIONS-MANUAL.md, ARCHITECTURE.md
+**Research dependency:** Dashboard Phases 3-4 are BLOCKED until the WMS-T rendering research is complete. See [RADAR-WMS-RESEARCH-PLAN.md](RADAR-WMS-RESEARCH-PLAN.md).
 
 ---
 
@@ -12,8 +13,10 @@
 RainViewer gutted its free API tier on 2026-01-01: zoom capped at 7, no nowcast, single color scheme, PNG only. The radar card is nearly useless for local weather awareness. Aeris radar is unviable at the PWS contributor tier (3,000 map units/day, ToS gray area on caching).
 
 This plan replaces the radar provider set with two complementary paths:
-- **LibreWxR** — global default, RainViewer v2 API drop-in, 13 color schemes, zoom 12, WebP, 6-frame nowcast, configurable frame retention (`LIBREWXR_MAX_FRAMES`). Operator configures their LibreWxR endpoint (public API or self-hosted); the Clear Skies API fetches metadata, the browser fetches tiles directly — same model as current RainViewer.
-- **NOAA unified** — US-only, IEM NEXRAD (CONUS) + NOAA MRMS (AK/HI/PR/Guam) as two seamless radar sub-layers, plus GOES satellite (5 bands), SPC severe weather overlays, and alert polygons. All free government WMS endpoints — browser fetches directly.
+- **LibreWxR** — global default, RainViewer v2 API drop-in, 13 color schemes, zoom 12, WebP, 6-frame nowcast, configurable frame retention (`LIBREWXR_MAX_FRAMES`). Operator configures their LibreWxR endpoint (public API or self-hosted); tiles proxied through the Clear Skies API (API is the gateway, not browser-direct).
+- **NOAA unified** — US-only, IEM NEXRAD (CONUS) + NOAA MRMS (AK/HI/PR/Guam) as two seamless radar sub-layers, plus GOES satellite (5 bands), SPC severe weather overlays, and alert polygons. All free government WMS-T endpoints — browser fetches WMS tiles directly.
+
+**Scope boundary:** This plan adds two new providers (librewxr, noaa) and adjusts the existing provider set accordingly (demote RainViewer, drop Aeris from radar). It does NOT add existing regional providers (dwd_radolan, msc_geomet) to the wizard — those modules exist in the API from the original radar domain work but are not part of this plan's scope.
 
 The plan also adds an expand-to-fullscreen mode for the radar card — visitors tap an expand button on the Now page card to open a full-viewport overlay with layer toggles, time slider, color scheme picker, and provider-adaptive controls. The overlay pushes `/radar` to browser history for bookmarkability.
 
@@ -96,18 +99,12 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 - Do: Hit the three NOAA WMS GetCapabilities endpoints listed in the brief. Verify layer names, TIME dimension formats, and geographic extents. Save captured capabilities to `docs/reference/api-docs/noaa-wms-layers.md`. Verify IEM NEXRAD layer name (`nexrad-n0q-wmst`), nowCOAST satellite layer names, MRMS layer name.
 - Accept: All WMS endpoints respond. Layer names confirmed. TIME dimension formats documented.
 
-**T0.3 — Amend ADR-015**
+**T0.3 — Amend ADR-015 (decision record update)**
 - Owner: Coordinator (Opus)
 - File: `docs/archive/decisions/ADR-015-radar-map-tiles-strategy.md`
-- Do: Add amendment section (2026-06-23) covering:
-  - LibreWxR added as global default fallback (replaces RainViewer)
-  - Unified NOAA module added (replaces `iem_nexrad` + `noaa_mrms`, adds satellite/SPC/alerts layers)
-  - RainViewer demoted (zoom 7 cap, no nowcast, single color scheme)
-  - Aeris dropped from radar domain (rate limit unviable; remains for forecast/AQI/alerts)
-  - Expand-to-fullscreen model for radar card (not a new page)
-  - LibreWxR tiles proxied through the API (API is the gateway, not Caddy)
-  - Updated wizard suggestion table
-- Accept: ADR-015 amendment is complete, internally consistent, references the brief.
+- Do: Add amendment section recording the changed decisions: LibreWxR replaces RainViewer as global default, unified NOAA module replaces separate iem_nexrad + noaa_mrms, RainViewer demoted, Aeris dropped from radar, expand-to-fullscreen model, LibreWxR tiles proxied through API.
+- **Note:** This updates the ADR as a historical decision record. The ADR is NOT the source of truth for implementation — the manuals are. Agents follow manuals, not ADRs. The ADR records WHY decisions were made; the manuals say WHAT to build.
+- Accept: ADR-015 amendment reflects the current decisions. No implementation work depends on this task.
 
 **T0.4 — Update PROVIDER-MANUAL.md §7 (Radar)**
 - Owner: Coordinator (Opus)
@@ -117,9 +114,9 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
   - **LibreWxR module rules**: configurable upstream (`[radar] librewxr_endpoint`, default `https://api.librewxr.net`), CC-BY-4.0 attribution, weather-maps.json wire format (RainViewer v2 compatible), tile URL template (`{host}{path}/{size}/{z}/{x}/{y}/{color}/{smooth_snow}.webp`), WebP content type, tile proxy through API (not browser-direct), 60s frame cache / 300s tile cache
   - **NOAA unified module rules**: replaces `iem_nexrad` + `noaa_mrms`. Two radar sub-layers (NEXRAD via IEM WMS-T for CONUS, MRMS via NOAA MapServer WMS-T for AK/HI/PR/Guam). Multi-layer capability declaration with additional layers: GOES satellite (5 bands via nowCOAST WMS-T), SPC outlooks (mapservices GeoJSON), alert polygons (from existing `/api/v1/alerts`). Browser-direct for WMS layers (free government endpoints). Per-layer frame metadata endpoint.
   - **Proxied provider set**: rename concept from "keyed providers" to "proxied providers". LibreWxR is proxied (API is the gateway to external services). NOAA WMS layers are browser-direct (free government endpoints with no rate limits). RainViewer remains browser-direct (keyless, public CDN).
-  - **Updated wizard suggestion table**: US → `noaa`, Canada → `msc_geomet`, Germany → `dwd_radolan`, Europe → `librewxr`, Japan → `librewxr`, global → `librewxr`
+  - **Updated wizard suggestion table**: US → `noaa`, all other regions → `librewxr`
   - **Attribution requirements** per provider
-- Accept: §7 is internally consistent, matches ADR-015 amendment, covers all provider modules. An api-dev agent reading only this section would know exactly what to build.
+- Accept: §7 is internally consistent, covers all provider modules. An api-dev agent reading only this section would know exactly what to build.
 
 **T0.5 — Update ARCHITECTURE.md**
 - Owner: Coordinator (Opus)
@@ -146,23 +143,23 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 **T0.7 — Update DASHBOARD-MANUAL.md (radar card + expanded view)**
 - Owner: Coordinator (Opus)
 - File: `docs/DASHBOARD-MANUAL.md`
-- Do: Add/update sections that guide `clearskies-dashboard-dev`:
-  - **Radar card (Now page)**: update existing description. Add: expand-to-fullscreen button (Phosphor `ArrowsOut` icon, top-right), navigates to `/radar`. Adaptive animation speed (target ~15-20s loop regardless of frame count; cap card view at ~24 most recent frames for high-frame-count providers like NOAA). Nowcast frames visually distinguished on timeline. Provider-adaptive legend (color matches active scheme). Attribution from capability response. LibreWxR tiles fetched via API proxy; NOAA WMS tiles fetched browser-direct.
-  - **NOAA dual-layer rendering**: when provider is `noaa`, render two WMS-T tile layers simultaneously (NEXRAD CONUS + MRMS non-CONUS). Both animate in sync. No overlap.
-  - **Expanded radar view (`/radar`)**: full-viewport overlay (`role="dialog"`, `aria-modal`, focus trap, Escape closes). Reuses same Leaflet map + provider data. Components:
-    - Time slider (horizontal, bottom, scrubable, play/pause, 0.5x/1x/2x speed, full history range, nowcast visually distinct)
-    - Layer panel (collapsible sidebar desktop / bottom sheet mobile, populated from capability `layers`, grouped by type, checkbox toggles, persisted in localStorage)
-    - Color scheme picker (LibreWxR only, 13 schemes, updates tiles + legend, persisted)
-    - Opacity slider (0-100%, default 70%)
-    - Close button (X, top-right) + Escape key
-  - **Layer z-order**: base map → satellite → radar → SPC overlays → alert polygons
-  - **Provider-adaptive features**: NOAA gets satellite bands + SPC + alerts in layer panel. LibreWxR gets color schemes + nowcast. RainViewer gets basic radar only (degraded).
-  - **NOAA satellite**: WMS-T layers, time-animated alongside radar, grayscale acceptable for v0.1
-  - **NOAA SPC overlays**: GeoJSON from mapservices, stroke/fill from properties, click for risk details, auto-refresh 5 min, NOT time-animated
-  - **NOAA alert polygons**: from existing `/api/v1/alerts`, severity-colored, click for details, auto-refresh 5 min
-  - **Accessibility**: all WCAG 2.1 AA requirements (focus trap, keyboard nav, `aria-live` for layer changes, `prefers-reduced-motion` pauses animation)
-  - **Route**: `/radar` is a dashboard SPA route (no Caddy change). Direct navigation opens expanded view. Browser back returns to previous page.
-- Accept: A dashboard-dev agent reading this section would know exactly what to build for both the card upgrades and the expanded view.
+- Do: Add/update sections that guide `clearskies-dashboard-dev` on WHAT the dashboard does (features, UI behavior, a11y). This is a two-pass task:
+  - **Pass 1 (Phase 0):** Document the feature set — expand button, expanded view overlay, time slider, layer panel, color scheme picker, opacity, provider-adaptive behavior, SPC/alert overlays, accessibility. Document everything EXCEPT the WMS-T rendering approach.
+  - **Pass 2 (after research):** Once the WMS-T rendering ADR is accepted, add the rendering rules — library to use, animation pattern, component architecture, dual-layer sync. This is deliverable D4 from the research plan.
+- Feature set to document in Pass 1:
+  - Radar card: expand button (Phosphor `ArrowsOut`), adaptive animation speed, nowcast distinction, provider-adaptive legend, attribution
+  - Expanded view (`/radar`): full-viewport overlay, close button + Escape, focus trap, `/radar` route
+  - Time slider: scrubable, play/pause, speed control, nowcast visual distinction
+  - Layer panel: sidebar desktop / bottom sheet mobile, populated from capability `layers`, localStorage persistence
+  - Color scheme picker: LibreWxR only (13 schemes), hidden for NOAA/RainViewer
+  - Opacity slider: 0-100%, default 70%
+  - Layer z-order: base map → satellite → radar → SPC → alerts
+  - SPC overlays: GeoJSON, auto-refresh 5 min, NOT time-animated
+  - Alert polygons: from existing `/api/v1/alerts`, severity-colored, auto-refresh 5 min
+  - WCAG 2.1 AA: focus trap, keyboard nav, aria-live, prefers-reduced-motion
+- Do NOT prescribe the WMS-T rendering approach in Pass 1. That comes from the research.
+- Accept (Pass 1): Dashboard-dev agent knows what features to build, what UI components exist, and what the a11y requirements are. WMS-T rendering approach is explicitly marked TBD.
+- Accept (Pass 2): Dashboard-dev agent also knows HOW to render WMS-T layers — library, pattern, component architecture. All blocked tasks can proceed.
 
 **T0.8 — Update DESIGN-MANUAL.md (radar card + expanded view design spec)**
 - Owner: Coordinator (Opus)
@@ -188,15 +185,14 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 - Accept: Ops manual covers both modes without providing LibreWxR infrastructure.
 
 **QC (Opus) — after Phase 0:** Comprehensive manual review:
-1. ADR-015 amendment is consistent with the brief
-2. PROVIDER-MANUAL §7 — an api-dev agent could build both provider modules from this section alone
-3. API-MANUAL — endpoint shapes, capability model, config fields all specified
-4. DASHBOARD-MANUAL — card upgrades + expanded view fully described
-5. DESIGN-MANUAL — visual layout, component anatomy, responsive behavior specified
-6. ARCHITECTURE.md — proxy model correct, no stale Caddy/container references
-7. OPERATIONS-MANUAL — LibreWxR config documented
-8. Reference docs (T0.1, T0.2) have capture-date headers
-9. Cross-check: no manual contradicts another manual or the ADR
+1. PROVIDER-MANUAL §7 — an api-dev agent could build both provider modules from this section alone
+2. API-MANUAL — endpoint shapes, capability model, config fields all specified
+3. DASHBOARD-MANUAL — card upgrades + expanded view described (rendering approach TBD pending research)
+4. DESIGN-MANUAL — visual layout, component anatomy, responsive behavior specified
+5. ARCHITECTURE.md — proxy model correct, no stale Caddy/container references
+6. OPERATIONS-MANUAL — LibreWxR config documented
+7. Reference docs (T0.1, T0.2) have capture-date headers
+8. Cross-check: no manual contradicts another manual
 
 ---
 
@@ -295,12 +291,9 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 - File: `repos/weewx-clearskies-stack/weewx_clearskies_config/wizard/providers.py`
 - Do: Update `recommend_providers(latitude, longitude)` for radar domain:
   - US (lat 24-50, lon -125 to -66) → `noaa`
-  - Canada → `msc_geomet` (unchanged)
-  - Germany → `dwd_radolan` (unchanged)
-  - Europe (non-DE, lat 35-72, lon -25 to 45) → `librewxr`
-  - Japan (lat 24-46, lon 122-146) → `librewxr`
   - All other → `librewxr`
-- Accept: US locations get `noaa` suggested. European locations get `librewxr`. Global fallback is `librewxr`.
+- Do NOT add region-specific entries for Canada, Germany, Japan, or Europe. Existing providers (msc_geomet, dwd_radolan) remain available in the API for operators who configure them manually, but this plan does not promote them in the wizard.
+- Accept: US locations get `noaa` suggested. All other locations get `librewxr`. No other radar providers appear in recommendations.
 
 **T2.3 — LibreWxR endpoint configuration**
 - Owner: `clearskies-stack-dev` (Sonnet)
@@ -333,192 +326,80 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 
 ### PHASE 3 — Dashboard: Radar Card Upgrades
 
+> **BLOCKED — pending WMS-T rendering research.** The first attempt at this phase failed because the implementation agent did not understand WMS-T animation in Leaflet. Phases 3-4 cannot proceed until the research session (see [RADAR-WMS-RESEARCH-PLAN.md](RADAR-WMS-RESEARCH-PLAN.md)) establishes the correct rendering approach. The research output will provide the specific implementation guidance (library choice, animation pattern, component architecture) that these task descriptions currently lack.
+>
+> **What went wrong (2026-06-25):** The agent treated WMS tiles like CDN XYZ tiles — pre-rendering every frame as a separate TileLayer (300 frames × 2 layers = 600 simultaneous WMS server-side render requests). 10 consecutive fix commits failed to correct the fundamental architecture. The correct WMS-T animation pattern (single layer, TIME parameter swap per frame) was never attempted. See commit history `91a5524..79b82f6` in the dashboard repo for the full failure sequence.
+
 **T3.1 — LibreWxR tile support (via API proxy)**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- Files: `src/components/shared/radar-map.tsx`, `src/lib/client.ts` (types)
-- Do:
-  - LibreWxR tiles are fetched through the API tile proxy (`/api/v1/radar/providers/librewxr/tiles/{z}/{x}/{y}?t={time}`), same as keyed providers — the browser never calls LibreWxR directly
-  - Update `buildTileUrl()` to route LibreWxR through the API proxy endpoint (detect from capability that LibreWxR is a proxied provider)
-  - Nowcast frames rendered with visual distinction (e.g., reduced opacity or dashed timeline marker in frame counter)
-  - Color scheme selection passed as query parameter to the proxy endpoint (API forwards to LibreWxR)
-- Accept: LibreWxR tiles render on the radar card via API proxy. Nowcast frames animate after current frame. `tsc --noEmit` passes.
+- LibreWxR tiles fetched through the API proxy (browser never calls LibreWxR directly)
+- Nowcast frames visually distinguished
+- Color scheme passed as query parameter
+- **Implementation approach:** LibreWxR uses XYZ tiles (same as RainViewer) — existing animation pattern applies. No WMS-T involvement. This task is NOT blocked by research.
 
 **T3.2 — NOAA dual-layer WMS-T rendering**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- Files: `src/components/shared/radar-map.tsx`
-- Do:
-  - When provider is `noaa`, render two WMS-T tile layers simultaneously (NEXRAD + MRMS)
-  - Each layer uses its own WMS endpoint URL and layer name from the capability response's `layers` array
-  - Both layers animate in sync (same time slider position)
-  - Layers tile seamlessly — NEXRAD covers CONUS, MRMS covers AK/HI/PR/Guam, no overlap
-  - WMS `GetMap` request with TIME parameter for animation
-  - Frame metadata fetched per sub-layer from `/api/v1/radar/providers/noaa/layers/{layer_id}/frames`
-  - Use the larger frame set (NEXRAD, typically 300 frames capped) for the animation timeline; MRMS frames align to the same time window
-- Accept: US radar shows CONUS + non-CONUS coverage. Animation smooth at 5-min cadence. `tsc --noEmit` passes.
+- Two WMS-T layers (NEXRAD CONUS + MRMS non-CONUS) animated in sync
+- Frame metadata per sub-layer from API
+- **Implementation approach:** TBD — pending research. The research session must establish: which library/pattern to use for WMS-T TIME animation in react-leaflet, how to handle dual-layer sync, preload strategy, and frame count management.
 
 **T3.3 — Provider-adaptive legend + attribution**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- Files: `src/components/shared/radar-map.tsx`
-- Do:
-  - Legend gradient adapts to provider color scheme (current hard-coded RainViewer "Universal Blue" gradient → dynamic based on selected color scheme)
-  - For NOAA: use standard NWS reflectivity color scale
-  - Attribution line in Leaflet attribution control shows provider-specific text from capability response
-  - CC-BY-4.0 attribution for LibreWxR
-- Accept: Legend matches active color scheme. Attribution correct per provider. Accessible (sufficient contrast per WCAG AA).
+- Legend adapts to active color scheme (not hardcoded to RainViewer Universal Blue)
+- Attribution from capability response
+- This task is NOT blocked by research.
 
 **T3.4 — Expand-to-fullscreen button**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- Files: `src/components/shared/radar-card.tsx`, `src/components/shared/radar-map.tsx`
-- Do:
-  - Add expand button (Phosphor `ArrowsOut` icon) in the card header or top-right corner of the map
-  - Click navigates to `/radar` route (pushes to browser history)
-  - Button has `aria-label="Expand radar to full screen"`
-  - Mobile: same button, same behavior
-- Accept: Button renders. Click navigates to `/radar`. `tsc --noEmit` passes. axe-core 0 violations on button.
+- Phosphor `ArrowsOut` icon, navigates to `/radar`
+- This task is NOT blocked by research.
 
 **T3.5 — Animation defaults for higher frame counts**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-map.tsx`
-- Do:
-  - Current animation settings (SUBSTEPS=5, TICK_MS=100) work for 13 frames but would be slow for 48+ NOAA frames
-  - Add adaptive animation speed: when frame count > 20, reduce TICK_MS or SUBSTEPS to maintain ~15-20 second total loop duration
-  - Card view: limit displayed frames to most recent ~2 hours (cap at 24 frames for NOAA). Expanded view shows full history.
-  - Frame counter shows relative time ("45 min ago", "Now", "+10 min") instead of absolute timestamps when frame count is high
-- Accept: NOAA radar animates smoothly through ~24 frames in card view. Loop duration feels natural (~15-20s). Frame counter readable.
+- Adaptive animation speed for NOAA's 300-frame set (target ~15-20s loop in card view)
+- Card view caps at ~24 most recent frames
+- **Implementation approach:** Partially blocked — adaptive speed for XYZ providers is straightforward, but WMS-T animation timing depends on the rendering pattern chosen in research.
 
-**QC (Opus) — after Phase 3:** Visual verification of radar card with LibreWxR tiles (color, zoom 12, nowcast). Visual verification with NOAA tiles (dual-layer, 5-min animation). Expand button navigates to `/radar`. Legend matches color scheme. Attribution correct. `tsc --noEmit` + `vite build` clean. axe-core 0 violations.
+**QC (Opus) — after Phase 3:** Visual verification with LibreWxR (color, zoom 12, nowcast). Visual verification with NOAA (dual-layer WMS-T). Expand button. Legend. Attribution. `tsc --noEmit` + `vite build` clean. axe-core 0 violations.
 
 ---
 
 ### PHASE 4 — Dashboard: Expanded Radar View
 
+> **BLOCKED — same research dependency as Phase 3.** The expanded view adds controls (time slider, layer panel) that drive the WMS-T animation established in Phase 3. The UI components themselves (overlay, slider, panel) are not blocked, but wiring them to WMS-T layer animation is.
+
 **T4.1 — Full-viewport overlay component**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- Files: New `src/components/shared/radar-expanded.tsx`, modify `src/routes/app.tsx` (add `/radar` route)
-- Do:
-  - Full-viewport overlay (100vw × 100vh, z-index above nav)
-  - Leaflet map fills entire viewport
-  - Close button (X, top-right, `aria-label="Close expanded radar"`) + Escape key → navigates back
-  - `/radar` route renders the expanded view directly (bookmarkable)
-  - Navigating to `/radar` from anywhere opens expanded view; navigating back returns to previous page
-  - Reuses same base map logic (theme-aware OSM/CartoDB) and same provider data fetching as radar card
-  - Focus trap while overlay is open (`role="dialog"`, `aria-modal="true"`)
-- Accept: Overlay renders full-viewport. Close returns to previous page. Direct navigation to `/radar` works. Keyboard accessible (Escape closes, focus trapped). axe-core 0 violations.
+- Full-viewport overlay (100vw × 100vh), `/radar` route, close button + Escape, focus trap
+- NOT blocked by research — this is standard React/a11y work.
 
 **T4.2 — Enhanced time slider + animation controls**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - Horizontal time slider at bottom of viewport (replaces card's simple prev/next)
-  - Scrubable: drag to any point in time range
-  - Play/pause button
-  - Speed control (0.5x, 1x, 2x)
-  - Time range shows full available history (not capped like card view)
-  - Current frame timestamp displayed prominently (station timezone per ADR-020)
-  - Nowcast frames visually distinguished on the timeline (different color segment or label)
-  - For NOAA: time range can span 25+ hours — slider tick marks at 1-hour intervals
-- Accept: Slider scrubs through full frame history. Play/pause/speed work. Nowcast visually distinct. Keyboard accessible (arrow keys scrub).
+- Horizontal scrubable slider, play/pause, speed control, nowcast distinction
+- **Partially blocked:** slider UI is standard, but driving WMS-T frame changes depends on the rendering pattern from research.
 
 **T4.3 — Layer panel (collapsible, provider-adaptive)**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - Collapsible sidebar (desktop) / bottom sheet (mobile)
-  - Toggle button to show/hide panel (`aria-label="Toggle layer panel"`)
-  - Layer list populated from provider capability's `layers` array
-  - Each layer: checkbox toggle + name + type badge (Radar / Satellite / Overlay / Alerts)
-  - Layers grouped by type
-  - Default state: radar layers enabled, others off (respecting `default_enabled` from capability)
-  - For single-layer providers (LibreWxR, RainViewer): panel still available but only shows one radar layer entry
-  - For NOAA: shows full layer tree (radar, satellite bands, SPC, alerts)
-  - Panel state persisted in localStorage (`clearskies.radar-layers`)
-- Accept: Panel renders with correct layers per provider. Toggles enable/disable layers on map. Panel collapses/expands. Mobile bottom sheet works. localStorage persistence works.
+- Sidebar (desktop) / bottom sheet (mobile), populated from capability `layers`, localStorage persistence
+- NOT blocked by research — this is UI driven by capability data.
 
-**T4.4 — Color scheme picker (LibreWxR)**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - Only shown when provider supports multiple color schemes (LibreWxR: 13 schemes)
-  - Dropdown or grid picker in the layer panel or as a separate control
-  - Schemes: NEXRAD Level III, TWC, Dark Sky, MRMS CREF, Original, Universal Blue, etc.
-  - Selection changes the `{color}` parameter in tile URL template
-  - Legend gradient updates to match selected scheme
-  - Selection persisted in localStorage
-  - For NOAA/RainViewer: picker hidden (fixed color scheme)
-- Accept: Picker shows for LibreWxR. Selecting a scheme changes tiles and legend. Persists across sessions.
+**T4.4 — Color scheme picker (LibreWxR only)**
+- 13 schemes, updates tile URL `color` parameter + legend. Hidden for NOAA/RainViewer.
+- NOT blocked by research.
 
 **T4.5 — Opacity control**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - Slider control for radar overlay opacity (0% to 100%, default 70% matching current MAX_OPACITY)
-  - Located in layer panel or control bar
-  - Affects all radar tile layers
-  - `aria-label="Radar opacity"`, `aria-valuemin="0"`, `aria-valuemax="100"`
-- Accept: Slider adjusts radar tile opacity in real time. Accessible.
+- 0-100% slider, default 70%, affects all radar tile layers.
+- NOT blocked by research.
 
 **T4.6 — NOAA satellite layer rendering**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - When a NOAA satellite layer is enabled, add a WMS TileLayer to the Leaflet map
-  - WMS endpoint URL and layer name from the layer capability declaration
-  - Time-enabled: satellite layers animate alongside radar (synced to time slider)
-  - Satellite frame metadata fetched from `/api/v1/radar/providers/noaa/layers/{layer_id}/frames`
-  - Satellite layers render below radar layers (z-order: base map → satellite → radar)
-  - Grayscale satellite is acceptable for v0.1 (client-side colorization deferred — noted in brief open question #2)
-- Accept: Satellite layers render when toggled on. Time animation works. Layer z-order correct.
+- WMS-T satellite layers animated alongside radar, z-order below radar
+- **BLOCKED by research** — same WMS-T rendering pattern as radar.
 
 **T4.7 — NOAA SPC overlay rendering**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - When a NOAA SPC layer is enabled, fetch GeoJSON from the mapservices endpoint declared in the layer capability
-  - Render as Leaflet GeoJSON layer with stroke/fill colors from the GeoJSON properties
-  - NOT time-animated (current snapshot, updates when SPC issues new products)
-  - Auto-refresh every 5 minutes when enabled
-  - Risk level labels rendered as popups on click
-  - Render above radar layers (z-order: base → satellite → radar → SPC → alerts)
-- Accept: SPC outlooks render with correct colors. Click shows risk details. Auto-refreshes.
+- GeoJSON from mapservices, stroke/fill from properties, auto-refresh 5 min, NOT time-animated
+- NOT blocked by research — standard Leaflet GeoJSON.
 
 **T4.8 — NOAA alert polygon overlay**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do:
-  - When alerts layer is enabled, fetch alert data from existing `/api/v1/alerts` endpoint
-  - Render alert polygons as Leaflet GeoJSON layer
-  - Color-coded by severity level (existing alert severity model)
-  - Click shows alert details popup (event name, description, instructions)
-  - Topmost z-order layer
-  - Auto-refresh every 5 minutes when enabled
-- Accept: Alert polygons render with severity colors. Click shows details. Z-order correct.
+- From existing `/api/v1/alerts`, severity-colored, auto-refresh 5 min
+- NOT blocked by research — standard Leaflet GeoJSON.
 
 **T4.9 — WCAG accessibility audit**
-- Owner: `clearskies-dashboard-dev` (Sonnet)
-- File: `src/components/shared/radar-expanded.tsx`
-- Do: Verify all expanded view controls meet WCAG 2.1 AA:
-  - Focus trap in overlay (`role="dialog"`, `aria-modal="true"`)
-  - Escape key closes overlay
-  - All controls keyboard navigable (Tab order, Enter/Space activate)
-  - Time slider: arrow keys scrub, accessible value announcements
-  - Layer checkboxes: proper labels, state announced
-  - Color contrast on all controls (4.5:1 text, 3:1 UI components)
-  - Screen reader: layer changes announced via `aria-live` region
-  - Reduced motion: respect `prefers-reduced-motion` (pause animation by default)
-- Accept: axe-core 0 violations. Keyboard-only navigation works end-to-end. `prefers-reduced-motion` respected.
+- Focus trap, keyboard nav, aria-live, prefers-reduced-motion, axe-core 0 violations
+- NOT blocked by research.
 
-**QC (Opus) — after Phase 4:** Full expanded view walkthrough on weather-dev:
-1. Navigate to `/radar` directly — expanded view renders
-2. Click expand on Now page radar card — overlay opens, URL changes to `/radar`
-3. Close (X and Escape) — returns to Now page
-4. Layer panel: toggle satellite, SPC, alerts layers (NOAA provider)
-5. Time slider: scrub through full history, play/pause, speed control
-6. Color scheme picker: change LibreWxR color scheme, verify tiles + legend update
-7. Opacity slider: adjust radar transparency
-8. Mobile: bottom sheet layer panel, all controls accessible
-9. Keyboard: Tab through all controls, Escape closes, arrow keys scrub
-10. axe-core: 0 violations on expanded view
-11. `tsc --noEmit` + `vite build` clean
+**QC (Opus) — after Phase 4:** Full expanded view walkthrough (same 11-point checklist as before, detailed acceptance criteria to be finalized after research establishes the rendering approach).
 
 ---
 
@@ -551,34 +432,34 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 - Accept: All providers render correctly. Expanded view fully functional. No regressions on other pages.
 
 **Final QC (Opus):** Walk every acceptance criterion. Verify code against all manuals (written in Phase 0):
-- ADR-015 amendment (provider set, expand-to-fullscreen model)
 - PROVIDER-MANUAL §7 (module rules, proxy rules, attribution)
 - API-MANUAL (endpoint shapes, capability model, tile proxy)
 - ARCHITECTURE.md (proxy model, endpoint descriptions)
 - DASHBOARD-MANUAL (radar card, expanded view, layer panel, animation)
 - DESIGN-MANUAL (component specs, layout, responsive behavior)
 - OPERATIONS-MANUAL (LibreWxR configuration)
-- ADR-026 (WCAG AA on all new UI)
+- WCAG AA compliance on all new UI
 - Flag any manual drift (implementation deviated from what Phase 0 prescribed) → amend manual before closing.
 
 ---
 
 ## 3. Agent Assignments
 
-| Phase | Task | Owner | Model | QC Timing |
-|-------|------|-------|-------|-----------|
-| 0 | T0.1-T0.2 Reference doc capture | Coordinator | Opus | After Phase 0 |
-| 0 | T0.3 ADR-015 amendment | Coordinator | Opus | After Phase 0 |
-| 0 | T0.4-T0.9 ALL manual updates | Coordinator | Opus | After Phase 0 |
-| 1 | T1.1 LibreWxR module (metadata + tiles) | `clearskies-api-dev` | Sonnet | After Phase 1 |
-| 1 | T1.2 NOAA unified module | `clearskies-api-dev` | Sonnet | After Phase 1 |
-| 1 | T1.3 Capability model extension | `clearskies-api-dev` | Sonnet | After Phase 1 |
-| 1 | T1.4 NOAA satellite/SPC/alert layers | `clearskies-api-dev` | Sonnet | After Phase 1 |
-| 1 | T1.5 Provider set changes | `clearskies-api-dev` | Sonnet | After Phase 1 |
-| 2 | T2.1-T2.5 Wizard + admin | `clearskies-stack-dev` | Sonnet | After Phase 2 |
-| 3 | T3.1-T3.5 Radar card upgrades | `clearskies-dashboard-dev` | Sonnet | After Phase 3 |
-| 4 | T4.1-T4.9 Expanded radar view | `clearskies-dashboard-dev` | Sonnet | After Phase 4 |
-| 5 | Deploy + verify | Coordinator | Opus | After Phase 5 |
+| Phase | Task | Owner | Model | QC Timing | Status |
+|-------|------|-------|-------|-----------|--------|
+| 0 | T0.1-T0.2 Reference doc capture | Coordinator | Opus | After Phase 0 | Not started |
+| 0 | T0.3 ADR-015 amendment (decision record) | Coordinator | Opus | After Phase 0 | Not started |
+| 0 | T0.4-T0.9 ALL manual updates | Coordinator | Opus | After Phase 0 | Not started |
+| 1 | T1.1 LibreWxR module (metadata + tiles) | `clearskies-api-dev` | Sonnet | After Phase 1 | Not started |
+| 1 | T1.2 NOAA unified module | `clearskies-api-dev` | Sonnet | After Phase 1 | Not started |
+| 1 | T1.3 Capability model extension | `clearskies-api-dev` | Sonnet | After Phase 1 | Not started |
+| 1 | T1.4 NOAA satellite/SPC/alert layers | `clearskies-api-dev` | Sonnet | After Phase 1 | Not started |
+| 1 | T1.5 Provider set changes | `clearskies-api-dev` | Sonnet | After Phase 1 | Not started |
+| 2 | T2.1-T2.5 Wizard + admin (librewxr + noaa ONLY) | `clearskies-stack-dev` | Sonnet | After Phase 2 | Not started |
+| R | WMS-T rendering research | Separate session | — | Before Phase 3 | **BLOCKING** |
+| 3 | T3.1-T3.5 Radar card upgrades | `clearskies-dashboard-dev` | Sonnet | After Phase 3 | Blocked by R |
+| 4 | T4.1-T4.9 Expanded radar view | `clearskies-dashboard-dev` | Sonnet | After Phase 4 | Blocked by R |
+| 5 | Deploy + verify | Coordinator | Opus | After Phase 5 | Not started |
 
 **Sequencing:**
 - Phase 0 (ADR + ALL manuals + reference docs) → blocks everything. Agents cannot start code without updated manuals.
@@ -606,8 +487,7 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 - Phase 3: Radar card renders with all provider types. Expand button navigates. Animation smooth.
 - Phase 4: Expanded view functional test (10-point checklist in Phase 4 QC above).
 
-### Gate 3 — ADR + Manual Compliance (after Phase 5)
-- ADR-015: Provider set matches amendment. Expand model matches.
+### Gate 3 — Manual Compliance (after Phase 5)
 - PROVIDER-MANUAL §7: All module rules followed. Attribution correct.
 - ARCHITECTURE.md: Endpoint descriptions current. No incorrect Caddy/container references for LibreWxR.
 - DASHBOARD-MANUAL: Radar card + expanded view described.
@@ -651,4 +531,6 @@ The plan also adds an expand-to-fullscreen mode for the radar card — visitors 
 
 **Risk: Self-hosted LibreWxR reachability.** The operator's LibreWxR instance only needs to be reachable by the Clear Skies API (not by visitors' browsers), since tiles are proxied through the API. This simplifies self-hosting — the operator can run LibreWxR on an internal network as long as the API can reach it. The tradeoff is that tile traffic flows through the API, adding load. Mitigation: tile cache (300s TTL) reduces upstream calls; the API already handles tile proxying for Aeris/OWM at similar scale.
 
-**Architecture boundary: Caddy never calls external services.** Caddy only talks to the Clear Skies API. LibreWxR (like all external services) is accessed by the API for metadata and by the browser for tiles. No Caddy routes, no Docker compose services, no infrastructure config for LibreWxR in our codebase. This was corrected during plan review — the brief's "Caddy proxies to LibreWxR" proposal violated the security model.
+**Architecture boundary: Caddy never calls external services.** Caddy only talks to the Clear Skies API. LibreWxR (like all external services) is accessed by the API for metadata; tiles are proxied through the API to the browser. No Caddy routes, no Docker compose services, no infrastructure config for LibreWxR in our codebase.
+
+**RISK (REALIZED): WMS-T rendering in Leaflet.** The first implementation attempt (2026-06-24) failed because the dashboard agent did not understand how WMS-T animation works. It treated WMS tiles like CDN XYZ tiles (pre-rendering every frame as a separate TileLayer — 300 frames × 2 layers = 600 simultaneous server-side render requests). 10 consecutive fix commits failed to correct the fundamental architecture. The correct WMS-T pattern (single layer, TIME parameter swap per frame) was never implemented. **Mitigation:** A dedicated research session ([RADAR-WMS-RESEARCH-PLAN.md](RADAR-WMS-RESEARCH-PLAN.md)) must establish the correct rendering approach — including library choice (e.g., leaflet-timedimension), animation pattern, and a working proof-of-concept — before Phases 3-4 resume. The research output plugs directly into the dashboard task specifications.
