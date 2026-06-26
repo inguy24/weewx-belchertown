@@ -934,64 +934,7 @@ Every form field in the wizard uses this exact structure:
 
 ---
 
-## 18. Radar Card & Expanded View Design
-
-### Radar card
-
-**Expand button:** Phosphor `ArrowsOut` icon in the card header or map top-right corner. Follows the same visual weight as other card-header icons. Touch target ≥ 44×44px.
-
-**Legend gradient:** Horizontal bar at the bottom of the map area showing the active color scheme's dBZ-to-color mapping. Adapts to the provider's color scheme (not hardcoded to RainViewer Universal Blue). Height: 20px. Labels at 0, 20, 40, 60+ dBZ tick marks. Text uses `var(--font-chart)` at `var(--text-xs)`.
-
-**Attribution line:** Leaflet attribution control (bottom-right). Font: `var(--text-xs)`. Provider-specific text from capability response.
-
-**Nowcast indicator:** Frame counter shows a visual distinction for nowcast frames — either a "+" prefix on time labels or a different color segment on the timeline.
-
-### Expanded radar overlay
-
-**Layout:** Full viewport overlay (100vw × 100vh). Controls overlay the map. Z-index above all other page content including nav.
-
-**Time slider (bottom bar):**
-- Full width, fixed to bottom. Height: ~56px.
-- Scrub track: horizontal, full width minus button areas.
-- Play button: left side, 44×44px tap target.
-- Speed control: right side (0.5×/1×/2×), 44×44px tap targets.
-- Current timestamp: centered above the track, `var(--font-sans)` at `var(--text-sm)`.
-- Nowcast region of the track: visually distinct (different background color or dashed border).
-- Background: theme-aware semi-transparent glass (`var(--card-glass)` with `backdrop-filter: blur(8px)`).
-
-**Layer panel (sidebar on desktop, bottom sheet on mobile):**
-- Desktop: right sidebar, width 280px. Collapsible via toggle button (Phosphor `List` icon).
-- Mobile: bottom sheet with drag handle. Default half-height, drag up for full height.
-- Background: theme-aware glass surface.
-- Section headers by layer type (Radar, Satellite, Overlay, Alerts): `var(--font-sans)` at `var(--text-sm)`, `font-weight: 600`.
-- Each layer row: checkbox (16×16) + layer name (`var(--text-sm)`) + type badge (`var(--text-xs)`, muted foreground, pill shape).
-- Collapse/expand toggle: Phosphor `CaretRight`/`CaretDown`.
-
-**Color scheme picker (LibreWxR only):**
-- Grid of color swatches (4 columns) or dropdown. Each swatch: 32×32px with dBZ gradient preview.
-- Located in the layer panel below the radar layer section.
-- Active scheme highlighted with `var(--primary)` ring.
-
-**Opacity slider:**
-- Horizontal, located in the layer panel or control bar. Width: 120px minimum.
-- Track and thumb use theme tokens.
-
-**Close button:** Phosphor `X` icon, top-right corner. `aria-label="Close expanded radar"`. 44×44px tap target. Same visual weight as modal close buttons.
-
-**Dark/light theme adaptation:**
-- Base map switches: OSM (light) ↔ CartoDB Dark Matter (dark).
-- All control surfaces use theme tokens (`var(--card-glass)`, `var(--foreground)`, `var(--muted-foreground)`).
-- Layer panel background matches theme.
-
-**Z-order tokens (stacking context):**
-- Leaflet map: base (z-index 0 within the overlay's stacking context).
-- Time slider bar: above map controls.
-- Layer panel: above time slider.
-- Close button: above layer panel.
-
----
-
-## 19. Anti-Patterns
+## 18. Anti-Patterns
 
 ### Layout
 

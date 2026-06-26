@@ -1,6 +1,6 @@
 # Radar Provider Replacement — Execution Plan
 
-**Status:** APPROVED
+**Status:** FAILED — code reverted 2026-06-25, docs restored to pre-plan state
 **Created:** 2026-06-23
 **Brief:** [docs/briefs/RADAR-PROVIDER-REPLACEMENT.md](docs/briefs/RADAR-PROVIDER-REPLACEMENT.md)
 **Amends:** ADR-015 (radar/map tiles strategy), PROVIDER-MANUAL.md §7, ARCHITECTURE.md, DASHBOARD-MANUAL.md, DESIGN-MANUAL.md, OPERATIONS-MANUAL.md
