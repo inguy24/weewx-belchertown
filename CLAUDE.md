@@ -20,11 +20,11 @@ At the start of a task, identify which domain(s) apply and read the matching fil
 | GitHub operations (branches, PRs, releases) | [rules/github.md](rules/github.md) |
 | Clear Skies project (planning, ADRs, contracts, research) | [rules/clearskies-process.md](rules/clearskies-process.md) — facts live in ADRs at [docs/archive/decisions/](docs/archive/decisions/) and contracts at [docs/contracts/](docs/contracts/) |
 | Clear Skies architecture (services, containers, endpoints, routing, deployment) | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — **read first, before any manuals** + [rules/clearskies-process.md](rules/clearskies-process.md) |
-| API development, data model, units, enrichment, DB access, SSE | [docs/API-MANUAL.md](docs/API-MANUAL.md) + [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Provider modules, external APIs, caching, compliance | [docs/PROVIDER-MANUAL.md](docs/PROVIDER-MANUAL.md) |
-| Deployment, security, auth, monitoring, config, wizard | [docs/OPERATIONS-MANUAL.md](docs/OPERATIONS-MANUAL.md) |
-| Dashboard technical behavior, i18n, timezone, performance, data refresh | [docs/DASHBOARD-MANUAL.md](docs/DASHBOARD-MANUAL.md) |
-| UI design, visual patterns, tokens, component styling, card anatomy, backgrounds, icons | [docs/DESIGN-MANUAL.md](docs/DESIGN-MANUAL.md) — **single authority for all UI design rules**. ADRs explain *why*; the manual says *what to do*. |
+| API development, data model, units, enrichment, DB access, SSE | [docs/manuals/API-MANUAL.md](docs/manuals/API-MANUAL.md) + [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Provider modules, external APIs, caching, compliance | [docs/manuals/PROVIDER-MANUAL.md](docs/manuals/PROVIDER-MANUAL.md) |
+| Deployment, security, auth, monitoring, config, wizard | [docs/manuals/OPERATIONS-MANUAL.md](docs/manuals/OPERATIONS-MANUAL.md) |
+| Dashboard technical behavior, i18n, timezone, performance, data refresh | [docs/manuals/DASHBOARD-MANUAL.md](docs/manuals/DASHBOARD-MANUAL.md) |
+| UI design, visual patterns, tokens, component styling, card anatomy, backgrounds, icons | [docs/manuals/DESIGN-MANUAL.md](docs/manuals/DESIGN-MANUAL.md) — **single authority for all UI design rules**. ADRs explain *why*; the manual says *what to do*. |
 | Clear Skies development: repo paths, dev site URL, SSH access, sync, toolchain, pytest | [reference/clearskies-dev.md](reference/clearskies-dev.md) — **always load when debugging or deploying Clear Skies code** |
 | Writing or modifying code in any language (Python, PHP, JS/TS, shell, Cheetah, SQL) | [rules/coding.md](rules/coding.md) |
 

@@ -15,7 +15,7 @@ The dashboard displays a `weatherText` field describing current conditions (e.g.
 
 The original implementation used a single-reading clearness index (Kt) for sky condition. Testing revealed it reports "Clear" under uniform overcast — Duchon & O'Malley (1999) established that a single-point clearness index cannot distinguish thin uniform overcast from partly cloudy because both can produce the same instantaneous kc value. The system needed a methodology that classifies the *pattern* of irradiance over time, not a snapshot.
 
-**Prescriptive rules** (formulas, thresholds, code module paths) are in `docs/API-MANUAL.md` §8. This ADR records the scientific reasoning behind those rules.
+**Prescriptive rules** (formulas, thresholds, code module paths) are in `docs/manuals/API-MANUAL.md` §8. This ADR records the scientific reasoning behind those rules.
 
 **Detailed citations** are in `docs/reference/sky-classification-science.md`.
 

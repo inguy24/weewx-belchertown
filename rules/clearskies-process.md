@@ -31,11 +31,11 @@ Incident history and rationale at [reference/process-rule-history.md](../referen
 1. Decision needed → draft ADR as Proposed
 2. User approves → ADR becomes Accepted
 3. Rules extracted into the target manual:
-   - API rules → `docs/API-MANUAL.md`
-   - Provider rules → `docs/PROVIDER-MANUAL.md`
-   - Ops/security/config rules → `docs/OPERATIONS-MANUAL.md`
-   - Dashboard technical rules → `docs/DASHBOARD-MANUAL.md`
-   - UI design rules → `docs/DESIGN-MANUAL.md`
+   - API rules → `docs/manuals/API-MANUAL.md`
+   - Provider rules → `docs/manuals/PROVIDER-MANUAL.md`
+   - Ops/security/config rules → `docs/manuals/OPERATIONS-MANUAL.md`
+   - Dashboard technical rules → `docs/manuals/DASHBOARD-MANUAL.md`
+   - UI design rules → `docs/manuals/DESIGN-MANUAL.md`
 4. ADR archived → moved to `docs/archive/decisions/`, status "Archived — consolidated into {MANUAL-NAME}.md"
 5. Future reference → archived ADR explains *why*; the manual is where you *follow* it
 

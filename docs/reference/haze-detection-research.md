@@ -1,6 +1,6 @@
 # Haze Detection PM Threshold Research
 
-**Purpose:** Research backing for the PM2.5 and PM10 confirmation thresholds used in `haze_condition.py`. These thresholds are cited in `docs/API-MANUAL.md` §8 "Haze detection" and implemented in `weewx_clearskies_api/sse/haze_condition.py`.
+**Purpose:** Research backing for the PM2.5 and PM10 confirmation thresholds used in `haze_condition.py`. These thresholds are cited in `docs/manuals/API-MANUAL.md` §8 "Haze detection" and implemented in `weewx_clearskies_api/sse/haze_condition.py`.
 
 **Created:** 2026-06-24
 

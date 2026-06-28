@@ -14,7 +14,7 @@ The coordinator reads these files before researching or dispatching any fix. Age
 
 | Document | What it provides | When to read |
 |---|---|---|
-| `docs/DESIGN-MANUAL.md` | Single authority for all UI design rules — tokens, typography, color, card anatomy, components, accessibility, anti-patterns | Before every fix |
+| `docs/manuals/DESIGN-MANUAL.md` | Single authority for all UI design rules — tokens, typography, color, card anatomy, components, accessibility, anti-patterns | Before every fix |
 | `docs/ARCHITECTURE.md` | Service topology, endpoint registry, dashboard page routes, container inventory | Before fixes that touch routing, data flow, or page composition |
 | `rules/coding.md` | §5 accessibility (WCAG 2.1 AA), §6 Recharts reference discipline, §8 build verification (zero TS errors), §9 design system compliance | Before every fix |
 | `rules/clearskies-process.md` | Agent orchestration, scope binding, QC gates, round-close verification | Before dispatching any agent |
@@ -634,7 +634,7 @@ Also: both cards style controls inline with a custom `tabStyle()` function inste
 
 **Completed:** 2026-06-16
 
-**Deliverable:** `docs/DESIGN-MANUAL.md` (955 lines, 18 sections). Covers tokens, typography, color, spacing, card anatomy, icons, backgrounds, navigation, page structure, component patterns, data formatting, responsive behavior, motion, theming, accessibility, wizard standards, and anti-patterns.
+**Deliverable:** `docs/manuals/DESIGN-MANUAL.md` (955 lines, 18 sections). Covers tokens, typography, color, spacing, card anatomy, icons, backgrounds, navigation, page structure, component patterns, data formatting, responsive behavior, motion, theming, accessibility, wizard standards, and anti-patterns.
 
 **Integration:**
 - `CLAUDE.md` domain routing updated — UI tasks now load the design manual

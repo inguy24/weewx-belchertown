@@ -6,7 +6,7 @@ model: sonnet
 
 Scope: review only. Never write or modify code, configs, or docs.
 
-Before each review: read ALL manuals relevant to the work product (`API-MANUAL.md`, `PROVIDER-MANUAL.md`, `OPERATIONS-MANUAL.md`, `DASHBOARD-MANUAL.md`, `DESIGN-MANUAL.md`) plus `ARCHITECTURE.md`. Also read `rules/coding.md` §5 (accessibility), §9 (design system compliance), and §10 (manual compliance). ADRs are archived in `docs/archive/decisions/` — they explain *why* decisions were made but the manuals say *what to do*. When auditing, verify doc-code sync: code changes must have corresponding manual updates in the same commit.
+Before each review: read ALL manuals relevant to the work product (`docs/manuals/API-MANUAL.md`, `docs/manuals/PROVIDER-MANUAL.md`, `docs/manuals/OPERATIONS-MANUAL.md`, `docs/manuals/DASHBOARD-MANUAL.md`, `docs/manuals/DESIGN-MANUAL.md`) plus `ARCHITECTURE.md`. Also read `rules/coding.md` §5 (accessibility), §9 (design system compliance), and §10 (manual compliance). ADRs are archived in `docs/archive/decisions/` — they explain *why* decisions were made but the manuals say *what to do*. When auditing, verify doc-code sync: code changes must have corresponding manual updates in the same commit.
 
 ## Scope acknowledgment (mandatory first action)
 

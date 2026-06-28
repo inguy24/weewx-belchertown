@@ -4,11 +4,11 @@ All ADRs have been consolidated into authoritative manuals. ADRs preserve the hi
 
 | Manual | Authority for |
 |--------|--------------|
-| [API-MANUAL.md](../API-MANUAL.md) | API implementation rules |
-| [PROVIDER-MANUAL.md](../PROVIDER-MANUAL.md) | Provider module rules |
-| [OPERATIONS-MANUAL.md](../OPERATIONS-MANUAL.md) | Deployment, security, config, monitoring |
-| [DASHBOARD-MANUAL.md](../DASHBOARD-MANUAL.md) | Dashboard technical behavior |
-| [DESIGN-MANUAL.md](../DESIGN-MANUAL.md) | UI design rules |
+| [API-MANUAL.md](../manuals/API-MANUAL.md) | API implementation rules |
+| [PROVIDER-MANUAL.md](../manuals/PROVIDER-MANUAL.md) | Provider module rules |
+| [OPERATIONS-MANUAL.md](../manuals/OPERATIONS-MANUAL.md) | Deployment, security, config, monitoring |
+| [DASHBOARD-MANUAL.md](../manuals/DASHBOARD-MANUAL.md) | Dashboard technical behavior |
+| [DESIGN-MANUAL.md](../manuals/DESIGN-MANUAL.md) | UI design rules |
 | [ARCHITECTURE.md](../ARCHITECTURE.md) | System topology, ports, containers |
 
 Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/clearskies-process.md](../../rules/clearskies-process.md).
@@ -30,6 +30,10 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-056](../archive/decisions/ADR-056-api-weewx-co-location.md) | API co-location with weewx | 2026-06-18 | 2026-06-13 |
 | [ADR-057](../archive/decisions/ADR-057-api-weewx-application-layer.md) | API = weewx application layer | 2026-06-18 | 2026-06-13 |
 | [ADR-058](../archive/decisions/ADR-058-fold-realtime-into-api.md) | Fold realtime into API | 2026-06-18 | 2026-06-14 |
+| [ADR-069](../archive/decisions/ADR-069-fog-mist-detection-rework.md) | Fog/mist detection rework | 2026-06-27 | 2026-06-21 |
+| [ADR-070](../archive/decisions/ADR-070-nws-text-generation-system.md) | NWS-style text generation system | 2026-06-27 | 2026-06-21 |
+| [ADR-073](../archive/decisions/ADR-073-sky-condition-kv-first-classification.md) | Sky condition Kv-first classification (supersedes ADR-044) | 2026-06-27 | 2026-06-23 |
+| [ADR-075](../archive/decisions/ADR-075-temporal-consistency-model.md) | Temporal consistency model (supersedes ADR-020) | 2026-06-27 | 2026-06-27 |
 
 ## Archived — consolidated into PROVIDER-MANUAL.md
 
@@ -49,6 +53,11 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-052](../archive/decisions/ADR-052-geography-correct-alert-model.md) | Geography-correct alert severity model | 2026-06-18 | 2026-06-01 |
 | [ADR-053](../archive/decisions/ADR-053-almanac-visibility-rankings.md) | Almanac visibility rankings | 2026-06-18 | 2026-06-04 |
 | [ADR-059](../archive/decisions/ADR-059-multi-jurisdiction-aqi.md) | Multi-jurisdiction AQI | 2026-06-18 | 2026-06-14 |
+| [ADR-063](../archive/decisions/ADR-063-aeris-xcast-model-selection.md) | Aeris forecast model selection (Standard vs Xcast) | 2026-06-27 | 2026-06-20 |
+| [ADR-066](../archive/decisions/ADR-066-aqi-provider-restructuring.md) | AQI provider restructuring for observed data | 2026-06-27 | 2026-06-21 |
+| [ADR-067](../archive/decisions/ADR-067-haze-detection-architecture.md) | Haze detection architecture | 2026-06-27 | 2026-06-21 |
+| [ADR-068](../archive/decisions/ADR-068-auto-calibration-baseline.md) | Auto-calibration baseline system | 2026-06-27 | 2026-06-22 |
+| [ADR-071](../archive/decisions/ADR-071-nighttime-provider-deferral.md) | Nighttime mode — provider deferral pattern | 2026-06-27 | 2026-06-21 |
 
 ## Archived — consolidated into OPERATIONS-MANUAL.md
 
@@ -77,6 +86,8 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-024](../archive/decisions/ADR-024-page-taxonomy.md) | Dashboard page taxonomy | 2026-06-18 | 2026-05-04 |
 | [ADR-025](../archive/decisions/ADR-025-browser-support-matrix.md) | Browser support matrix | 2026-06-18 | 2026-05-02 |
 | [ADR-055](../archive/decisions/ADR-055-client-data-refresh-policy.md) | Client data refresh policy | 2026-06-18 | 2026-06-10 |
+| [ADR-064](../archive/decisions/ADR-064-card-plugin-contract.md) | Card plugin contract | 2026-06-27 | 2026-06-21 |
+| [ADR-065](../archive/decisions/ADR-065-now-page-layout-configuration.md) | Now page layout configuration | 2026-06-27 | 2026-06-21 |
 
 ## Archived — consolidated into DESIGN-MANUAL.md
 
@@ -104,6 +115,7 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-011](../archive/decisions/ADR-011-multi-station-scope.md) | Multi-station scope | 2026-06-18 | 2026-05-04 |
 | [ADR-032](../archive/decisions/ADR-032-versioning-across-repos.md) | Versioning across repos | 2026-06-18 | 2026-05-02 |
 | [ADR-036](../archive/decisions/ADR-036-workspace-layout.md) | Workspace layout | 2026-06-18 | 2026-05-04 |
+| [ADR-072](../archive/decisions/ADR-072-solar-radiation-model-replacement.md) | Solar radiation model replacement (R-S → Solis) | 2026-06-23 | 2026-06-23 |
 
 ## Superseded (archived)
 
@@ -112,42 +124,7 @@ Format defined in [_TEMPLATE.md](_TEMPLATE.md). Process discipline in [rules/cle
 | [ADR-005](../archive/decisions/ADR-005-realtime-architecture.md) | Realtime architecture | ADR-058 | 2026-04-30 |
 | [ADR-019](../archive/decisions/ADR-019-units-handling.md) | Units handling (original) | ADR-041, ADR-042 | 2026-05-02 |
 | [ADR-044](../archive/decisions/ADR-044-sky-condition-classification.md) | Current conditions text / sky condition classification | ADR-073 | 2026-05-26 |
-
-## Accepted — pending consolidation into API-MANUAL.md
-
-| ADR | Title | Date |
-|---|---|---|
-| [ADR-073](ADR-073-sky-condition-kv-first-classification.md) | Sky condition Kv-first classification (supersedes ADR-044) | 2026-06-23 |
-
-## Accepted — pending consolidation into PROVIDER-MANUAL.md
-
-| ADR | Title | Date |
-|---|---|---|
-| [ADR-063](ADR-063-aeris-xcast-model-selection.md) | Aeris forecast model selection (Standard vs Xcast) | 2026-06-20 |
-
-## Accepted — pending consolidation into DASHBOARD-MANUAL.md + ARCHITECTURE.md + OPERATIONS-MANUAL.md + DESIGN-MANUAL.md
-
-| ADR | Title | Date |
-|---|---|---|
-| [ADR-064](ADR-064-card-plugin-contract.md) | Card plugin contract | 2026-06-21 |
-| [ADR-065](ADR-065-now-page-layout-configuration.md) | Now page layout configuration | 2026-06-21 |
-
-## Accepted — pending consolidation into API-MANUAL.md + PROVIDER-MANUAL.md + OPERATIONS-MANUAL.md + ARCHITECTURE.md + DESIGN-MANUAL.md
-
-| ADR | Title | Date |
-|---|---|---|
-| [ADR-066](ADR-066-aqi-provider-restructuring.md) | AQI provider restructuring for observed data (amended: AirNow excluded) | 2026-06-21 |
-| [ADR-067](ADR-067-haze-detection-architecture.md) | Haze detection architecture | 2026-06-21 |
-| [ADR-068](ADR-068-auto-calibration-baseline.md) | Auto-calibration baseline system | 2026-06-21 |
-| [ADR-069](ADR-069-fog-mist-detection-rework.md) | Fog/mist detection rework | 2026-06-21 |
-| [ADR-070](ADR-070-nws-text-generation-system.md) | NWS-style text generation system | 2026-06-21 |
-| [ADR-071](ADR-071-nighttime-provider-deferral.md) | Nighttime mode — provider deferral pattern | 2026-06-21 |
-
-## Archived — consolidated into API-MANUAL.md + OPERATIONS-MANUAL.md + ARCHITECTURE.md
-
-| ADR | Title | Archived | Original Date |
-|---|---|---|---|
-| [ADR-072](../archive/decisions/ADR-072-solar-radiation-model-replacement.md) | Solar radiation model replacement (R-S → McClear / Solis) | 2026-06-23 | 2026-06-23 |
+| [ADR-074](../archive/decisions/ADR-074-wms-t-rendering-strategy.md) | WMS-T rendering strategy | LibreWxR (XYZ tiles) | 2026-06-26 |
 
 ## Amendments (2026-06-21)
 

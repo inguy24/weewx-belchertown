@@ -1,6 +1,6 @@
 # Security baseline
 
-> **ARCHIVED — 2026-06-18.** Absorbed into [`docs/OPERATIONS-MANUAL.md`](../OPERATIONS-MANUAL.md) §10 (Security Model). This file is no longer authoritative. Consult the Operations Manual for current security rules.
+> **ARCHIVED — 2026-06-18.** Absorbed into [`docs/manuals/OPERATIONS-MANUAL.md`](../manuals/OPERATIONS-MANUAL.md) §10 (Security Model). This file is no longer authoritative. Consult the Operations Manual for current security rules.
 
 **Status:** Archived (was Draft; absorbed into OPERATIONS-MANUAL.md)
 **Last updated:** 2026-06-14 (post-merge architecture: realtime folded into API per ADR-058; Phase 5 hardening complete)

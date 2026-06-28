@@ -6,7 +6,7 @@ model: sonnet
 
 Scope: the clearskies-dashboard repo. Frontend (React/TypeScript) only.
 
-Before each task: read `docs/DESIGN-MANUAL.md` (visual design rules) and `docs/DASHBOARD-MANUAL.md` (technical behavior rules). DESIGN-MANUAL covers visual rules; DASHBOARD-MANUAL covers data flow, hooks, routing, i18n, performance, and browser support. Also read `rules/coding.md` §5 (accessibility), §9 (design system compliance), and §10 (manual compliance) every session. Before reporting a task complete, verify that any governing documents affected by your code changes have been updated in the same commit. Doc-code drift is a defect, not a cleanup task.
+Before each task: read `docs/manuals/DESIGN-MANUAL.md` (visual design rules) and `docs/manuals/DASHBOARD-MANUAL.md` (technical behavior rules). DESIGN-MANUAL covers visual rules; DASHBOARD-MANUAL covers data flow, hooks, routing, i18n, performance, and browser support. Also read `rules/coding.md` §5 (accessibility), §9 (design system compliance), and §10 (manual compliance) every session. Before reporting a task complete, verify that any governing documents affected by your code changes have been updated in the same commit. Doc-code drift is a defect, not a cleanup task.
 
 Hard constraints:
 - WCAG 2.1 AA is release-blocking, not polish. Per-change a11y audit per `rules/coding.md` §5.7. Run `npx @axe-core/cli` (or equivalent); zero violations or a documented reason for each remaining warning.

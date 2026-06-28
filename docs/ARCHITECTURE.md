@@ -615,11 +615,11 @@ All ADRs have been consolidated into authoritative manuals. ADRs are archived in
 
 | Component | Authority |
 |-----------|----------|
-| API (data model, units, enrichment, DB, SSE) | [`docs/API-MANUAL.md`](API-MANUAL.md) |
-| Provider modules (caching, external APIs, compliance) | [`docs/PROVIDER-MANUAL.md`](PROVIDER-MANUAL.md) |
-| Deployment, security, auth, config, monitoring | [`docs/OPERATIONS-MANUAL.md`](OPERATIONS-MANUAL.md) |
-| Dashboard (technical behavior, i18n, routes, performance) | [`docs/DASHBOARD-MANUAL.md`](DASHBOARD-MANUAL.md) |
-| Dashboard (visual design, tokens, icons, cards) | [`docs/DESIGN-MANUAL.md`](DESIGN-MANUAL.md) |
+| API (data model, units, enrichment, DB, SSE) | [`docs/manuals/API-MANUAL.md`](manuals/API-MANUAL.md) |
+| Provider modules (caching, external APIs, compliance) | [`docs/manuals/PROVIDER-MANUAL.md`](manuals/PROVIDER-MANUAL.md) |
+| Deployment, security, auth, config, monitoring | [`docs/manuals/OPERATIONS-MANUAL.md`](manuals/OPERATIONS-MANUAL.md) |
+| Dashboard (technical behavior, i18n, routes, performance) | [`docs/manuals/DASHBOARD-MANUAL.md`](manuals/DASHBOARD-MANUAL.md) |
+| Dashboard (visual design, tokens, icons, cards) | [`docs/manuals/DESIGN-MANUAL.md`](manuals/DESIGN-MANUAL.md) |
 | System topology, ports, containers, routing | This document (ARCHITECTURE.md) |
 
 Historical note: meta ADRs (component breakdown ADR-001, tech stack ADR-002, license ADR-003, repo naming ADR-004, multi-station scope ADR-011, versioning ADR-032, workspace layout ADR-036) are archived — their substance is captured in this document.

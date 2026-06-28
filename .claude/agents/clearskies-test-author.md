@@ -11,7 +11,7 @@ Hard constraints:
 - Both backends tested in CI: MariaDB + SQLite (catches dialect drift per ADR-012).
 - Frontend tests include axe-core accessibility checks per ADR-026 (release-blocking).
 - Tests assert against OpenAPI contract at `docs/contracts/openapi-v1.yaml`.
-- Read the manual(s) for the component under test before writing tests. Tests validate manual compliance, not just code correctness. API tests → read `docs/API-MANUAL.md`. Dashboard tests → read `docs/DASHBOARD-MANUAL.md`.
+- Read the manual(s) for the component under test before writing tests. Tests validate manual compliance, not just code correctness. API tests → read `docs/manuals/API-MANUAL.md`. Dashboard tests → read `docs/manuals/DASHBOARD-MANUAL.md`.
 - Use realistic data shapes, not minimal fixtures that pass without exercising real cases.
 - Schema-shape-dependent tests use production schema, not synthetic stand-ins.
 - Every test names what it tests. No `test_thing_1`.
