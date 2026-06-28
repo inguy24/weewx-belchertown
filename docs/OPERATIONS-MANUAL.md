@@ -518,7 +518,7 @@ The config UI serves an admin landing page at `/admin`. This is the default post
 | Now Page Layout | `now-layout.json` | Card layout editor (drag-and-drop) |
 | Column Mapping | `api.conf [column_mapping]` | Observation column mapping |
 | TLS | `stack.conf [tls]` | Mode, domain, email, provider |
-| Sky Classification | `api.conf [sky_classification]` | CAELUS threshold calibration |
+| Sky Classification | `api.conf [conditions]` (`sky_*` keys) | CAELUS threshold calibration: decay rate, clear threshold, threshold floor, min elevation |
 | Haze Calibration | `api.conf [conditions]` + calibration storage | Per-month calibration status (12-month grid), drift warnings, active sensor display, sensor override (dropdown + manual ID), reset button, gamma override |
 
 The Haze Calibration section shows a 12-month status grid with each month's sample count, learned baseline Kcs value, and calibration status (green = fully calibrated, amber = bootstrapping, gray = no data). An overall summary shows "N of 12 months calibrated." When sensor drift or a station type change is detected, a warning banner is shown. The section also provides a "Reset Calibration" button (clears all samples and baselines, triggers re-bootstrap), a toggle to enable or disable haze detection without removing calibration data, and a gamma override input for the hygroscopic correction exponent.

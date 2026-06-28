@@ -1,9 +1,9 @@
 ---
-status: Accepted
+status: Superseded
 date: 2026-05-02
 deciders: shane
 supersedes:
-superseded-by:
+superseded-by: ADR-075
 ---
 
 # ADR-020: Time zone handling

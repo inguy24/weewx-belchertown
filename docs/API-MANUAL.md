@@ -995,6 +995,10 @@ The following keys in the `[conditions]` section of `api.conf` control haze dete
 | `haze_detection` | bool | `true` | Enable or disable haze detection entirely. When `false`, `detect_haze()` always returns `None`. |
 | `haze_aqi_provider` | str or absent | (inherits from `[aqi]`) | Override the AQI provider used for haze PM data. If absent or empty, uses the provider configured in `[aqi]`. |
 | `gamma` | float | `0.45` | Hygroscopic correction exponent γ (Hanel 1976 / Tang 1996). Controls how strongly relative humidity amplifies apparent aerosol extinction. Advanced operator override — the default 0.45 is the composition-unknown value suitable for most stations. Range: 0.1–1.0. |
+| `sky_decay_rate` | float | `0.06` | Controls how aggressively sky classification thresholds adjust at lower sun angles. Smaller values = more threshold reduction at moderate elevation (20–30°). Maps to the `b` parameter in the exponential decay formula. Range: 0.01–0.20. |
+| `sky_clear_threshold` | float | `0.80` | Km boundary for "Clear" classification in the uniform branch. Higher values require more solar radiation to classify as clear. Range: 0.5–1.0. |
+| `sky_threshold_floor` | float | `0.35` | Minimum threshold value at the horizon — the floor that all dynamic thresholds decay toward at low sun angles. Range: 0.1–0.5. |
+| `sky_min_elevation` | float | `15.0` | Minimum solar elevation (degrees) for sky classification. Below this angle, the classifier returns None and defers to provider cloud cover. Range: 5.0–30.0. |
 
 Validation errors in any of these keys cause a fatal startup failure with a descriptive message.
 

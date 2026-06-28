@@ -575,9 +575,9 @@ Where:
 - K_min = floor value at zero elevation (the lowest meaningful threshold, accounting for maximum atmospheric path-length effects)
 - b = scaling factor (controls how quickly the threshold rises from K_min toward K_max as elevation increases)
 
-**Shape:** At α = 0, the formula returns K_min. As α increases, the threshold rises exponentially toward K_max. By α = 30°, it is within ~5% of K_max (for b = 0.1). This matches the physical picture: the threshold converges to the traditional fixed value at moderate and high elevations, and relaxes toward K_min at low elevations.
+**Shape:** At α = 0, the formula returns K_min. As α increases, the threshold rises exponentially toward K_max. By α = 30°, it is within ~16% of K_max (for b = 0.06). This matches the physical picture: the threshold converges to the traditional fixed value at moderate and high elevations, and relaxes toward K_min at low elevations.
 
-**Default parameters:** K_max = 0.80 (clear boundary), K_min = 0.35 (horizon floor), b = 0.1 (scaling factor).
+**Default parameters:** K_max = 0.80 (clear boundary), K_min = 0.35 (horizon floor), b = 0.06 (scaling factor).
 
 The same formula is applied to each variable-branch boundary with its own K_max (0.80 / 0.60 / 0.40), while K_min and b are shared. This preserves the boundary-ratio structure at high elevations while relaxing all boundaries proportionally at low elevations.
 
